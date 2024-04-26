@@ -40,6 +40,9 @@ def main():
     np.random.seed(42)
     F += 0.01*np.random.randn(Ny,Nx,NL)
     X, Y = np.meshgrid(range(Nx), range(Ny))
+
+    print(X)
+    print(Y)
     
     print("Line: " + str(currentframe().f_lineno) + " size of X: ", str(X.shape))
     print("Line: " + str(currentframe().f_lineno) + " size of Y: ", str(Y.shape))

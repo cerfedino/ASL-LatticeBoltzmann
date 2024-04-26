@@ -28,6 +28,9 @@
 
 using namespace std;
 
+
+// TODO for now x and y are switched wrongly
+
 const int Nx = 400;    // resolution in x
 const int Ny = 100;    // resolution in y
 const int rho0 = 100;  // average density
@@ -43,18 +46,18 @@ const double w[9] = {4 / 9, 1 / 9,  1 / 36, 1 / 9, 1 / 36,
                      1 / 9, 1 / 36, 1 / 9,  1 / 36};  // sums to 1
 
 void meshgrid(int **x_coords, int **y_coords) {
-  // Fill coordinate matrices
-  for (int i = 0; i < Ny; ++i) {
-    for (int j = 0; j < Nx; ++j) {
-      x_coords[i][j] = j;
-      y_coords[i][j] = i;
+  // TODO verify if this is correct
+  for (int i = 0; i < Nx; ++i) {
+    for (int j = 0; j < Ny; ++j) {
+      x_coords[j][i] = i;
+      y_coords[j][i] = j;
     }
   }
 }
 
 void roll_array(int i, int cx, int cy, double ***F) {
   // Temporary array to hold rolled values
-  double temp[Ny][Nx];
+  /*double temp[Ny][Nx];
 
   // Roll operation along axis 1 (cx)
   for (int j = 0; j < Ny; ++j) {
@@ -68,8 +71,67 @@ void roll_array(int i, int cx, int cy, double ***F) {
     for (int k = 0; k < Nx; ++k) {
       F[i][(j + cy + Ny) % Ny][k] = temp[j][k];
     }
-  }
+  }*/
 }
+
+
+//orig [1 2 3 4 5]
+//roll [4 5 1 2 3]
+// if called on np.roll(array, 2)
+void roll1D(double *array, int size, int shift) {
+  double *temp = (double *)malloc(size * sizeof(double));
+
+  for (int i = 0; i < size; i++) {
+    temp[(i + shift + size) % size] = array[i];
+  }
+
+  for (int i = 0; i < size; i++) {
+    array[i] = temp[i];
+  }
+
+  free(temp);
+}
+
+
+/*orig
+ [[1 2 3]
+ [4 5 6]
+ [7 8 9]]
+roll
+ [[3 1 2]
+ [6 4 5]
+ [9 7 8]]
+ if called on np.roll(array, 1, axis=0)
+ */
+// similar to roll1D
+void roll2D(double **array, int x, int y, int shift, int axis){
+  double **temp = malloc_2d_double(x, y);
+
+  if(axis == 0){
+    for (int i = 0; i < x; i++) {
+      for (int j = 0; j < y; j++) {
+        temp[(i + shift + x) % x][j] = array[i][j];
+      }
+    }
+  } else if(axis == 1){
+    for (int i = 0; i < x; i++) {
+      for (int j = 0; j < y; j++) {
+        temp[i][(j + shift + y) % y] = array[i][j];
+      }
+    }
+  }
+
+  for (int i = 0; i < x; i++) {
+    for (int j = 0; j < y; j++) {
+      array[i][j] = temp[i][j];
+    }
+  }
+
+  free(temp);
+}
+
+
+// TODO do we need roll3D?
 
 
 // TODO if fancy make generic functions for double, float, int and so on
@@ -114,7 +176,7 @@ void save_npy_3d_double(double ***array, int x, int y, int z, string filename) {
 
 void save_npy_2d_double(double **array, int x, int y, string filename) {
   npy::npy_data_ptr<double> d;
-  d.data_ptr = &array[0][0];
+  d.data_ptr = array[0]; // &array[0][0
   d.shape = {(unsigned long)x, (unsigned long)y};
   d.fortran_order = false; // optional
 
@@ -123,28 +185,13 @@ void save_npy_2d_double(double **array, int x, int y, string filename) {
 }
 
 void save_npy_2d_int(int **array, int x, int y, string filename) {
-  debug_printf("Saving %s\n", filename.c_str());
-
-  debug_printf("Pointer: %p\n", &array[0][0]);
-
-  // print first 10 values
-  for (int i = 0; i < 10; i++) {
-    debug_printf("%d ", array[0][i]);
-  }
-
-  debug_print("\n");
-
   npy::npy_data_ptr<int> d;
   d.data_ptr = &array[0][0];
   d.shape = {(unsigned long)x, (unsigned long)y};
   d.fortran_order = false; // optional
 
-  debug_printf("Creating %s\n", filename.c_str());
-
   const std::string path{filename};
   npy::write_npy(path, d);
-
-  debug_printf("Saved %s\n", filename.c_str());
 }
 
 string prepare_output() {
@@ -166,12 +213,12 @@ string prepare_output() {
   tm *ltm = localtime(&now);
 
   char folder_name[100];
-  sprintf(folder_name, "output/%d_%d_%d_%d_%d_%d", 1900 + ltm->tm_year,
+  sprintf(folder_name, "output/%02d_%02d_%02d_%02d_%02d_%02d", 1900 + ltm->tm_year,
           1 + ltm->tm_mon, ltm->tm_mday, ltm->tm_hour, ltm->tm_min,
           ltm->tm_sec);
 
   char command[100];
-  sprintf(command, "mkdir output/%d_%d_%d_%d_%d_%d", 1900 + ltm->tm_year,
+  sprintf(command, "mkdir output/%02d_%02d_%02d_%02d_%02d_%02d", 1900 + ltm->tm_year,
           1 + ltm->tm_mon, ltm->tm_mday, ltm->tm_hour, ltm->tm_min,
           ltm->tm_sec);
 
@@ -206,66 +253,86 @@ int main() {
   // distribution function
 
   // TODO creating array directly segfaults because of size
-  double ***F = malloc_3d(Nx, Ny, NL);
+  double ***F = malloc_3d(Ny, Nx, NL);
   debug_print("Initializing\n");
 
   // srand(42);  // some seed
 
   debug_print("Seed set\n");
 
+  debug_printf("rand: %d\n", rand());
+
   // Initialize F
-  for (int i = 0; i < Nx; i++) {
-    for (int j = 0; j < Ny; j++) {
+  for (int i = 0; i < Ny; i++) {
+    for (int j = 0; j < Nx; j++) {
       for (int k = 0; k < NL; k++) {
-        F[i][j][k] = 1 + 0.01 * 0.5;  // TODO randomize
+        double rand_val = ((double) rand() / (RAND_MAX)) + 1;
+        F[i][j][k] = 1 + 0.01 * rand_val;
       }
     }
   }
 
-  save_npy_3d_double(F, Nx, Ny, NL, folder_name + "/F.npy");
+  debug_printf("F shape: %02d %02d %02d\n", Ny, Nx, NL);
 
-  // TODO maybe also malloc at some point
-  int **x_coords = malloc_2d(Nx, Ny);
-  int **y_coords = malloc_2d(Nx, Ny);
+  save_npy_3d_double(F, Ny, Nx, NL, folder_name + "/F.npy");
+  debug_print("Saved F\n");  
+
+
+  int **x_coords = malloc_2d(Ny, Nx);
+  int **y_coords = malloc_2d(Ny, Nx);
 
   meshgrid(x_coords, y_coords);
 
   // F[:,:,3] += 2 * (1+0.2*np.cos(2*np.pi*X/Nx*4))
-  for (int i = 0; i < Nx; i++) {
-    for (int j = 0; j < Ny; j++) {
+  for (int i = 0; i < Ny; i++) {
+    for (int j = 0; j < Nx; j++) {
       F[i][j][3] += 2 * (1 + 0.2 * cos(2 * M_PI * x_coords[i][j] / Nx * 4));
     }
   }
 
+  debug_print("F[:,:,3] calculated\n");
+
   // rho = np.sum(F, axis=2)
-  int rho = 0;
-  for (int i = 0; i < Nx; i++) {
-    for (int j = 0; j < Ny; j++) {
+  double **rho = malloc_2d_double(Ny, Nx);
+  for (int i = 0; i < Ny; i++) {
+    for (int j = 0; j < Nx; j++) {
+      rho[i][j] = 0;
       for (int k = 0; k < NL; k++) {
-        rho += F[i][j][k];
+        rho[i][j] += F[i][j][k];
       }
     }
   }
+
+  debug_print("rho calculated\n");
 
   // 	for i in idxs:		F[:,:,i] *= rho0 / rho
   for (int i = 0; i < NL; i++) {
-    for (int j = 0; j < Nx; j++) {
-      for (int k = 0; k < Ny; k++) {
-        F[j][k][i] *= rho0 / rho;
+    for (int j = 0; j < Ny; j++) {
+      for (int k = 0; k < Nx; k++) {
+        if(rho[j][k] != 0)
+          F[j][k][i] *= rho0 / rho[j][k];
+        else
+          F[j][k][i] = 0; // TODO check if this is correct
       }
     }
   }
 
-  // Cylinder boundary
-  int **cylinderX = malloc_2d(Nx, Ny);
-  int **cylinderY = malloc_2d(Nx, Ny);
-  int **cylinder = malloc_2d(Nx, Ny);
+  debug_print("F normalized\n");
 
+
+  // Cylinder boundary
+  int **cylinderX = malloc_2d(Ny, Nx);
+  int **cylinderY = malloc_2d(Ny, Nx);
+  int **cylinder = malloc_2d(Ny, Nx);
+
+  // TODO isnt this redundant? we already have x_coords and y_coords calculated which should be same???
   meshgrid(cylinderX, cylinderY);
 
+  debug_print("Meshgrid calculated\n");
+
   // cylinder = (X - Nx/4)**2 + (Y - Ny/2)**2 < (Ny/4)**2
-  for (int i = 0; i < Nx; i++) {
-    for (int j = 0; j < Ny; j++) {
+  for (int i = 0; i < Ny; i++) {
+    for (int j = 0; j < Nx; j++) {
       if ((pow(x_coords[i][j] - Nx / 4, 2) + pow(y_coords[i][j] - Ny / 2, 2)) <
           pow(Ny / 4, 2)) {
         cylinder[i][j] = 1;
@@ -274,25 +341,25 @@ int main() {
       }
     }
   }
-
+  
+  debug_print("Saving cylinder\n");
   save_npy_2d_int(cylinder, Nx, Ny, folder_name + "/cylinder.npy");
-
-  debug_print("Starting simulation\n");
 
   // Simulation
   for (int i = 0; i < Nt; i++) {
-    printf("Timestep %d\n", i);
+    printf("Timestep %05d\n", i);
 
     // Drift IDK about this one
     for (int j = 0; j < NL; j++) {
+      // TODO array slicing
       roll_array(j, cxs[j], cys[j], F);
     }
 
     // bndryF = F[cylinder,:]
     // its 2d of size 1941x9 but no idea how this is calculated ??????
-    double ***bndryF = malloc_3d(Nx, Ny, NL);
-    for (int j = 0; j < Nx; j++) {
-      for (int k = 0; k < Ny; k++) {
+    double ***bndryF = malloc_3d(Ny, Nx, NL);
+    for (int j = 0; j < Ny; j++) {
+      for (int k = 0; k < Nx; k++) {
         if (cylinder[j][k] == 1) {
           for (int l = 0; l < NL; l++) {
             bndryF[j][k][l] = F[j][k][l];
@@ -300,6 +367,8 @@ int main() {
         }
       }
     }
+
+    debug_print("bndryF calculated\n");
 
     // translate bndryF = bndryF[:,[0,5,6,7,8,1,2,3,4]]
     for (int j = 0; j < Nx; j++) {
@@ -309,19 +378,21 @@ int main() {
     }
 
     // np.sum(F,2) sum over 2nd axis
-    double **rho = malloc_2d_double(Nx, Ny);
-    for (int j = 0; j < Nx; j++) {
-      for (int k = 0; k < Ny; k++) {
+    double **rho = malloc_2d_double(Ny, Nx);
+    for (int j = 0; j < Ny; j++) {
+      for (int k = 0; k < Nx; k++) {
         for (int l = 0; l < NL; l++) {
           rho[j][k] += F[j][k][l];
         }
       }
     }
 
+    debug_print("rho calculated\n");
+
     // ux = np.sum(F * cxs, 2) / rho
-    double **ux = malloc_2d_double(Nx, Ny);
-    for (int j = 0; j < Nx; j++) {
-      for (int k = 0; k < Ny; k++) {
+    double **ux = malloc_2d_double(Ny, Nx);
+    for (int j = 0; j < Ny; j++) {
+      for (int k = 0; k < Nx; k++) {
         for (int l = 0; l < NL; l++) {
           ux[j][k] += F[j][k][l] * cxs[l];
         }
@@ -329,10 +400,12 @@ int main() {
       }
     }
 
+    debug_print("ux calculated\n");
+
     // uy = np.sum(F * cys, 2) / rho
-    double **uy = malloc_2d_double(Nx, Ny);
-    for (int j = 0; j < Nx; j++) {
-      for (int k = 0; k < Ny; k++) {
+    double **uy = malloc_2d_double(Ny, Nx);
+    for (int j = 0; j < Ny; j++) {
+      for (int k = 0; k < Nx; k++) {
         for (int l = 0; l < NL; l++) {
           uy[j][k] += F[j][k][l] * cys[l];
         }
@@ -340,24 +413,26 @@ int main() {
       }
     }
 
-    double ***Feq = malloc_3d(Nx, Ny, NL);
+    debug_print("uy calculated\n");
+
+    double ***Feq = malloc_3d(Ny, Nx, NL);
     // set to zero
-    for (int j = 0; j < Nx; j++) {
-      for (int k = 0; k < Ny; k++) {
+    for (int j = 0; j < Ny; j++) {
+      for (int k = 0; k < Nx; k++) {
         for (int l = 0; l < NL; l++) {
           Feq[j][k][l] = 0;
         }
       }
     }
 
-    debug_printf("Feq shape: %d %d %d\n", Nx, Ny, NL);
+    debug_printf("Feq shape: %02d %02d %02d\n", Nx, Ny, NL);
 
     // for i, cx, cy, w in zip(idxs, cxs, cys, weights):
     //         Feq[:,:,i] = rho * w * ( 1 + 3*(cx*ux+cy*uy)  +
     //         9*(cx*ux+cy*uy)**2/2 - 3*(ux**2+uy**2)/2 )
     for (int k = 0; k < NL; k++) {
-      for (int j = 0; j < Nx; j++) {
-        for (int l = 0; l < Ny; l++) {
+      for (int j = 0; j < Ny; j++) {
+        for (int l = 0; l < Nx; l++) {
           Feq[j][l][k] =
               rho[j][l] * w[k] *
               (1 + 3 * (cxs[k] * ux[j][l] + cys[k] * uy[j][l]) +
@@ -367,19 +442,23 @@ int main() {
       }
     }
 
+    debug_print("Feq calculated\n");
+
     // F += -(1.0/tau) * (F - Feq)
-    for (int j = 0; j < Nx; j++) {
-      for (int k = 0; k < Ny; k++) {
+    for (int j = 0; j < Ny; j++) {
+      for (int k = 0; k < Nx; k++) {
         for (int l = 0; l < NL; l++) {
           F[j][k][l] += -(1.0 / tau) * (F[j][k][l] - Feq[j][k][l]);
         }
       }
     }
 
+    debug_print("F calculated\n");
+
     // Apply boundary
     // F[cylinder,:] = bndryF
-    for (int j = 0; j < Nx; j++) {
-      for (int k = 0; k < Ny; k++) {
+    for (int j = 0; j < Ny; j++) {
+      for (int k = 0; k < Nx; k++) {
         if (cylinder[j][k] == 1) {
           for (int l = 0; l < NL; l++) {
             F[j][k][l] = bndryF[j][k][l];
@@ -388,19 +467,25 @@ int main() {
       }
     }
 
+    debug_print("Boundary applied\n");
+
     // vorticity = (np.roll(ux, -1, axis=0) - np.roll(ux, 1, axis=0)) -
     // (np.roll(uy, -1, axis=1) - np.roll(uy, 1, axis=1)) vorticity[cylinder]
     // = np.nan vorticity = np.ma.array(vorticity, mask=cylinder)
-    double **vorticity = malloc_2d_double(Nx, Ny);
-    for (int j = 0; j < Nx; j++) {
-      for (int k = 0; k < Ny; k++) {
-        //vorticity[j][k] = (ux[(j + 1 + Nx) % Nx][k] - ux[(j - 1 + Nx) % Nx][k]) -
-        //                  (uy[j][(k + 1 + Ny) % Ny] - uy[j][(k - 1 + Ny) % Ny]);
+    double **vorticity = malloc_2d_double(Ny, Nx);
+    for (int j = 0; j < Ny; j++) {
+      for (int k = 0; k < Nx; k++) {
+        /*vorticity[j][k] = (ux[(j + 1 + Nx) % Nx][k] - ux[(j - 1 + Nx) % Nx][k]) -
+                          (uy[j][(k + 1 + Ny) % Ny] - uy[j][(k - 1 + Ny) % Ny]);*/
       }
     }
 
+    // use i as 5 leading zeros
+    char vortex_filename[100];
+    sprintf(vortex_filename, "%s/vorticity_%05d.npy", folder_name.c_str(), i);
+    save_npy_2d_double(vorticity, Ny, Nx, vortex_filename);
+    
     // Save vorticity
-    save_npy_2d_double(vorticity, Nx, Ny, folder_name + "/step_" + to_string(i) + "_vorticity.npy");
   }
 
   return 0;

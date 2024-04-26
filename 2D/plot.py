@@ -10,6 +10,9 @@ for folder in output_folders:
         output_folders.remove(folder)
         os.rmdir(folder)
     
+# remove folders that end in images or video
+output_folders = [folder for folder in output_folders if not folder.endswith("images") and not folder.endswith("video")]
+
 output_folders.sort(reverse=True)
     
 # TODO show may last x ones
@@ -36,14 +39,18 @@ print(f"Data: {data[:5]}")
 
 
 # get all .npy that start with step_
-npy_files = [file for file in files if file.startswith("step_")]
+npy_files = [file for file in files if file.startswith("vorticity_")]
 
 # sort the files
 npy_files.sort()
 
 
-cylinder = np.load("cylinder.npy") # todo store cylinder numpy array in the output folder
+cylinder = np.load(folder + "/cylinder.npy") # todo store cylinder numpy array in the output folder
+print(f"Shape of cylinder: {cylinder.shape}")
 
+# create images folder
+if not os.path.exists(f"{folder}/images"):
+    os.mkdir(f"{folder}/images")
 
 # plot the files
 count = 0
@@ -54,16 +61,32 @@ for file in npy_files:
     
     # load the file
     vorticity = np.load(f"{folder}/{file}")
+    print(f"Shape of vorticity: {vorticity.shape}")
+
     
     plt.cla()
-
+    #vorticity[cylinder] = np.nan
     vorticity = np.ma.array(vorticity, mask=cylinder)
     plt.imshow(vorticity, cmap='bwr')
     plt.imshow(~cylinder, cmap='gray', alpha=0.3)
+
+    # put filename as title
+    plt.title(file)
+
     plt.clim(-.1, .1)
     ax = plt.gca()
     ax.invert_yaxis()
     ax.get_xaxis().set_visible(False)
     ax.get_yaxis().set_visible(False)    
     ax.set_aspect('equal')    
-    plt.pause(0.001)
+    plt.pause(0.05)
+    # save image in the same folder under /images
+    plt.savefig(f"{folder}/images/{count}.png")
+    count += 1
+
+
+if not os.path.exists(f"{folder}/video"):
+    os.mkdir(f"{folder}/video")
+
+# combine the images into a video
+os.system(f"ffmpeg -r 10 -i {folder}/images/%01d.png -vcodec mpeg4 -y {folder}/video/video.mp4")
