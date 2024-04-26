@@ -132,8 +132,6 @@ void roll2D(double **array, int x, int y, int shift, int axis){
 
 
 // TODO do we need roll3D?
-
-
 // TODO if fancy make generic functions for double, float, int and so on
 
 double ***malloc_3d(int x, int y, int z) {
