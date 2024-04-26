@@ -1,24 +1,17 @@
 import matplotlib.pyplot as plt
 import numpy as np
-
-# get all folders in output folders
 import os
 
-# get all folders in output folders
 output_folders = [x[0] for x in os.walk("output/")][1:]
 
 # if the output folder is empty, remove it
 for folder in output_folders:
     if len(os.listdir(folder)) == 0:
         output_folders.remove(folder)
-        # delete the folder
         os.rmdir(folder)
     
-    
-# order folders descending
 output_folders.sort(reverse=True)
     
-# present list of folders to select as a list [0] name of folder
 # TODO show may last x ones
 print("Select a folder to plot:")
 for i, folder in enumerate(output_folders):
@@ -28,15 +21,13 @@ for i, folder in enumerate(output_folders):
 folder = output_folders[int(input("Enter the number of the folder to plot: "))]
 print(f"Selected folder: {folder}")
 
-# in that folder find npy files and display its shape and first few elements
 files = os.listdir(folder)
 npy_files = [file for file in files if file.endswith(".npy")]
 
-# take first file
+# take first file for now
 file = npy_files[0]
 print(f"Selected file: {file}")
 
-# load the file
 data = np.load(f"{folder}/{file}")
 
 print(f"Shape of data: {data.shape}")
