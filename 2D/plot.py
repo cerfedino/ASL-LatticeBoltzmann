@@ -48,6 +48,44 @@ npy_files.sort()
 cylinder = np.load(folder + "/cylinder.npy") # todo store cylinder numpy array in the output folder
 print(f"Shape of cylinder: {cylinder.shape}")
 
+#convert cylinder to int values
+cylinder = cylinder.astype(int)
+
+# draw the cylinder on a seperate plot
+plt.imshow(cylinder, cmap='gray')
+# wait for 5sec
+plt.pause(3)
+
+# plot cylinderX, cylinderY
+#cylinderX = np.load(folder + "/cylinderX.npy")
+#cylinderY = np.load(folder + "/cylinderY.npy")
+
+#plt.imshow(cylinderX, cmap='gray')
+#plt.pause(3)
+
+#plt.imshow(cylinderY, cmap='gray')
+#plt.pause(3)
+
+#Nx = cylinderX.shape[1]
+#Ny = cylinderY.shape[0]
+
+#X, Y = np.meshgrid(range(400), range(100))
+
+# check if X and cylinderX are the same
+#print(f"X == cylinderX: {np.all(X == cylinderX)}")
+#print(f"Y == cylinderY: {np.all(Y == cylinderY)}")
+
+# convert X and CylinderX to txt files
+
+# if not the same find the difference
+
+
+ # print first row of X and Y
+#print(f"X[0]: {X[0]}")
+#print(f"cylinderX[0]: {cylinderX[0]}")
+#print(f"Y[0]: {Y[0]}")
+#print(f"cylinderY[0]: {cylinderY[0]}")
+
 # create images folder
 if not os.path.exists(f"{folder}/images"):
     os.mkdir(f"{folder}/images")
@@ -55,8 +93,11 @@ if not os.path.exists(f"{folder}/images"):
 # plot the files
 count = 0
 
+fig = plt.figure(figsize=(8,4), dpi=80)
+
+
+
 for file in npy_files:
-    
     print(f"Plotting file: {file}")
     
     # load the file
@@ -79,7 +120,7 @@ for file in npy_files:
     ax.get_xaxis().set_visible(False)
     ax.get_yaxis().set_visible(False)    
     ax.set_aspect('equal')    
-    plt.pause(0.05)
+    plt.pause(0.02)
     # save image in the same folder under /images
     plt.savefig(f"{folder}/images/{count}.png")
     count += 1
@@ -89,4 +130,5 @@ if not os.path.exists(f"{folder}/video"):
     os.mkdir(f"{folder}/video")
 
 # combine the images into a video
-os.system(f"ffmpeg -r 10 -i {folder}/images/%01d.png -vcodec mpeg4 -y {folder}/video/video.mp4")
+# use codec H264
+os.system(f"ffmpeg -r 10 -i {folder}/images/%01d.png -vcodec libx264 -y {folder}/video/output.mp4")

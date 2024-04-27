@@ -47,10 +47,10 @@ const double w[9] = {4 / 9, 1 / 9,  1 / 36, 1 / 9, 1 / 36,
 
 void meshgrid(int **x_coords, int **y_coords) {
   // TODO verify if this is correct
-  for (int i = 0; i < Nx; ++i) {
-    for (int j = 0; j < Ny; ++j) {
-      x_coords[j][i] = i;
-      y_coords[j][i] = j;
+  for (int i = 0; i < Ny; ++i) {
+    for (int j = 0; j < Nx; ++j) {
+      x_coords[i][j] = j;
+      y_coords[i][j] = i;
     }
   }
 }
@@ -75,60 +75,6 @@ void roll_array(int i, int cx, int cy, double ***F) {
 }
 
 
-//orig [1 2 3 4 5]
-//roll [4 5 1 2 3]
-// if called on np.roll(array, 2)
-void roll1D(double *array, int size, int shift) {
-  double *temp = (double *)malloc(size * sizeof(double));
-
-  for (int i = 0; i < size; i++) {
-    temp[(i + shift + size) % size] = array[i];
-  }
-
-  for (int i = 0; i < size; i++) {
-    array[i] = temp[i];
-  }
-
-  free(temp);
-}
-
-
-/*orig
- [[1 2 3]
- [4 5 6]
- [7 8 9]]
-roll
- [[3 1 2]
- [6 4 5]
- [9 7 8]]
- if called on np.roll(array, 1, axis=0)
- */
-// similar to roll1D
-void roll2D(double **array, int x, int y, int shift, int axis){
-  double **temp = malloc_2d_double(x, y);
-
-  if(axis == 0){
-    for (int i = 0; i < x; i++) {
-      for (int j = 0; j < y; j++) {
-        temp[(i + shift + x) % x][j] = array[i][j];
-      }
-    }
-  } else if(axis == 1){
-    for (int i = 0; i < x; i++) {
-      for (int j = 0; j < y; j++) {
-        temp[i][(j + shift + y) % y] = array[i][j];
-      }
-    }
-  }
-
-  for (int i = 0; i < x; i++) {
-    for (int j = 0; j < y; j++) {
-      array[i][j] = temp[i][j];
-    }
-  }
-
-  free(temp);
-}
 
 
 // TODO do we need roll3D?
@@ -190,6 +136,62 @@ void save_npy_2d_int(int **array, int x, int y, string filename) {
 
   const std::string path{filename};
   npy::write_npy(path, d);
+}
+
+
+//orig [1 2 3 4 5]
+//roll [4 5 1 2 3]
+// if called on np.roll(array, 2)
+void roll1D(double *array, int size, int shift) {
+  double *temp = (double *)malloc(size * sizeof(double));
+
+  for (int i = 0; i < size; i++) {
+    temp[(i + shift + size) % size] = array[i];
+  }
+
+  for (int i = 0; i < size; i++) {
+    array[i] = temp[i];
+  }
+
+  free(temp);
+}
+
+
+/*orig
+ [[1 2 3]
+ [4 5 6]
+ [7 8 9]]
+roll
+ [[3 1 2]
+ [6 4 5]
+ [9 7 8]]
+ if called on np.roll(array, 1, axis=0)
+ */
+// similar to roll1D
+void roll2D(double **array, int x, int y, int shift, int axis){
+  double **temp = malloc_2d_double(x, y);
+
+  if(axis == 0){
+    for (int i = 0; i < x; i++) {
+      for (int j = 0; j < y; j++) {
+        temp[(i + shift + x) % x][j] = array[i][j];
+      }
+    }
+  } else if(axis == 1){
+    for (int i = 0; i < x; i++) {
+      for (int j = 0; j < y; j++) {
+        temp[i][(j + shift + y) % y] = array[i][j];
+      }
+    }
+  }
+
+  for (int i = 0; i < x; i++) {
+    for (int j = 0; j < y; j++) {
+      array[i][j] = temp[i][j];
+    }
+  }
+
+  free(temp);
 }
 
 string prepare_output() {
@@ -321,12 +323,29 @@ int main() {
   // Cylinder boundary
   int **cylinderX = malloc_2d(Ny, Nx);
   int **cylinderY = malloc_2d(Ny, Nx);
-  int **cylinder = malloc_2d(Ny, Nx);
+  double **cylinder = malloc_2d_double(Ny, Nx);
 
   // TODO isnt this redundant? we already have x_coords and y_coords calculated which should be same???
   meshgrid(cylinderX, cylinderY);
 
+  // print first 10 values of cylinderX and cylinderY
+  for (int i = 0; i < 10; i++) {
+    debug_printf("cylinderX: %d %d\n", cylinderX[0][i], cylinderY[0][i]);
+  }
+
   debug_print("Meshgrid calculated\n");
+
+  // check if cylinderX and cylinderY have any value higher than 400
+  for (int i = 0; i < Ny; i++) {
+    for (int j = 0; j < Nx; j++) {
+      if (cylinderX[i][j] >= 500) {
+        debug_printf("cylinderX: %d %d\n", cylinderX[i][j]);
+      }
+    }
+  }
+
+  //save_npy_2d_int(cylinderX, Ny, Nx, folder_name + "/cylinderX.npy");
+  //save_npy_2d_int(cylinderY, Ny, Nx, folder_name + "/cylinderY.npy");
 
   // cylinder = (X - Nx/4)**2 + (Y - Ny/2)**2 < (Ny/4)**2
   for (int i = 0; i < Ny; i++) {
@@ -341,16 +360,19 @@ int main() {
   }
   
   debug_print("Saving cylinder\n");
-  save_npy_2d_int(cylinder, Nx, Ny, folder_name + "/cylinder.npy");
+  save_npy_2d_double(cylinder, Ny, Nx, folder_name + "/cylinder.npy");
 
   // Simulation
   for (int i = 0; i < Nt; i++) {
     printf("Timestep %05d\n", i);
 
-    // Drift IDK about this one
+    //# Drift
+    //    for i, cx, cy in zip(idxs, cxs, cys):
+    //        F[:,:,i] = np.roll(F[:,:,i], cx, axis=1)
+    //        F[:,:,i] = np.roll(F[:,:,i], cy, axis=0)
     for (int j = 0; j < NL; j++) {
-      // TODO array slicing
-      roll_array(j, cxs[j], cys[j], F);
+      roll2D(F[j], Ny, Nx, cxs[j], 1); // no idea if this is correct
+      roll2D(F[j], Ny, Nx, cys[j], 0);      
     }
 
     // bndryF = F[cylinder,:]
@@ -367,11 +389,28 @@ int main() {
     }
 
     debug_print("bndryF calculated\n");
+                                        // 0,1,2,3,4,5,6,7,8  INDEXES
+    // treorder columns bndryF = bndryF[:,[0,5,6,7,8,1,2,3,4]]
+    for (int j = 0; j < Ny; j++) {
+      for (int k = 0; k < Nx; k++) {
+        // we love pointers dont we?
+        double temp = bndryF[j][k][1];
+        bndryF[j][k][1] = bndryF[j][k][5];
+        bndryF[j][k][5] = temp;
 
-    // translate bndryF = bndryF[:,[0,5,6,7,8,1,2,3,4]]
-    for (int j = 0; j < Nx; j++) {
-      for (int k = 0; k < Ny; k++) {
-        // TODO bnryF[:,[0,5,6,7,8,1,2,3,4]]
+        temp = bndryF[j][k][2];
+        bndryF[j][k][2] = bndryF[j][k][6];
+        bndryF[j][k][6] = temp;
+
+        temp = bndryF[j][k][3];
+        bndryF[j][k][3] = bndryF[j][k][7];
+        bndryF[j][k][7] = temp;
+
+        temp = bndryF[j][k][4];
+        bndryF[j][k][4] = bndryF[j][k][8];
+        bndryF[j][k][8] = temp;
+
+        // TODO check if this is correct
       }
     }
 
@@ -467,23 +506,34 @@ int main() {
 
     debug_print("Boundary applied\n");
 
+    // set ux and uy to zero where cylinder is 1
+    for (int j = 0; j < Ny; j++) {
+      for (int k = 0; k < Nx; k++) {
+        if (cylinder[j][k] == 1) {
+          ux[j][k] = 0;
+          uy[j][k] = 0;
+        }
+      }
+    }
+
     // vorticity = (np.roll(ux, -1, axis=0) - np.roll(ux, 1, axis=0)) -
     // (np.roll(uy, -1, axis=1) - np.roll(uy, 1, axis=1)) vorticity[cylinder]
     // = np.nan vorticity = np.ma.array(vorticity, mask=cylinder)
     double **vorticity = malloc_2d_double(Ny, Nx);
     for (int j = 0; j < Ny; j++) {
       for (int k = 0; k < Nx; k++) {
-        /*vorticity[j][k] = (ux[(j + 1 + Nx) % Nx][k] - ux[(j - 1 + Nx) % Nx][k]) -
-                          (uy[j][(k + 1 + Ny) % Ny] - uy[j][(k - 1 + Ny) % Ny]);*/
+        vorticity[j][k] =
+            (ux[(j + 1 + Ny) % Ny][k] - ux[(j - 1 + Ny) % Ny][k]) -
+            (uy[j][(k + 1 + Nx) % Nx] - uy[j][(k - 1 + Nx) % Nx]);
+        if (cylinder[j][k] == 1) {
+          vorticity[j][k] = 1;
+        }
       }
     }
 
-    // use i as 5 leading zeros
     char vortex_filename[100];
     sprintf(vortex_filename, "%s/vorticity_%05d.npy", folder_name.c_str(), i);
     save_npy_2d_double(vorticity, Ny, Nx, vortex_filename);
-    
-    // Save vorticity
   }
 
   return 0;

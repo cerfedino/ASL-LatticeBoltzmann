@@ -62,6 +62,17 @@ def main():
     print("Line: " + str(currentframe().f_lineno) + " size of cylinder Y: ", str(Y.shape))
     
     cylinder = (X - Nx/4)**2 + (Y - Ny/2)**2 < (Ny/4)**2
+
+    # print first 10 elements of X and Y
+    print("Line: " + str(currentframe().f_lineno) + " X: ", str(X[:10]))
+    print("Line: " + str(currentframe().f_lineno) + " Y: ", str(Y[:10]))
+
+    #plot cylinder
+    plt.imshow(cylinder, cmap='gray')
+    plt.show()
+
+    # wait for 5sec
+    plt.pause(5)
     
     print("Line: " + str(currentframe().f_lineno) + " size of cylinder: ", str(cylinder.shape))
 
