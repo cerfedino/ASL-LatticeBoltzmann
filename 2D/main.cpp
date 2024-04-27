@@ -33,19 +33,29 @@ using namespace std;
 
 const int Nx = 400;    // resolution in x
 const int Ny = 100;    // resolution in y
-const int rho0 = 100;  // average density
-const int tau = 0.6;   // collision timescale
+const double rho0 = 100;  // average density
+const double tau = 0.6;   // collision timescale
 const int Nt = 100;   // number of timesteps
 
 // Lattice speeds / weights
 const int NL = 9;
-const int idx[9] = {0, 1, 2, 3, 4, 5, 6, 7, 8};
-const int cxs[9] = {0, 0, 1, 1, 1, 0, -1, -1, -1};
-const int cys[9] = {0, 1, 1, 0, -1, -1, -1, 0, 1};
+const double idx[9] = {0, 1, 2, 3, 4, 5, 6, 7, 8};
+const double cxs[9] = {0, 0, 1, 1, 1, 0, -1, -1, -1};
+const double cys[9] = {0, 1, 1, 0, -1, -1, -1, 0, 1};
 const double w[9] = {4 / 9, 1 / 9,  1 / 36, 1 / 9, 1 / 36,
                      1 / 9, 1 / 36, 1 / 9,  1 / 36};  // sums to 1
 
 void meshgrid(int **x_coords, int **y_coords) {
+  // TODO verify if this is correct
+  for (int i = 0; i < Ny; ++i) {
+    for (int j = 0; j < Nx; ++j) {
+      x_coords[i][j] = j;
+      y_coords[i][j] = i;
+    }
+  }
+}
+
+void meshgrid(double **x_coords, double **y_coords) {
   // TODO verify if this is correct
   for (int i = 0; i < Ny; ++i) {
     for (int j = 0; j < Nx; ++j) {
@@ -109,8 +119,20 @@ double **malloc_2d_double(int x, int y) {
 
 void save_npy_3d_double(double ***array, int x, int y, int z, string filename) {
   
-  npy::npy_data_ptr<double> d;
-  d.data_ptr = &array[0][0][0];
+  // convert array to vector
+  vector<double> vec;
+
+  for (int i = 0; i < x; i++) {
+    for (int j = 0; j < y; j++) {
+      for (int k = 0; k < z; k++) {
+        vec.push_back(array[i][j][k]);
+      }
+    }
+  }
+
+
+  npy::npy_data<double> d;
+  d.data = vec;
   d.shape = {(unsigned long)x, (unsigned long)y, (unsigned long)z};
   d.fortran_order = false; // optional
 
@@ -119,8 +141,19 @@ void save_npy_3d_double(double ***array, int x, int y, int z, string filename) {
 }
 
 void save_npy_2d_double(double **array, int x, int y, string filename) {
-  npy::npy_data_ptr<double> d;
-  d.data_ptr = array[0]; // &array[0][0
+
+  // convert array to vector
+  vector<double> vec;
+
+  for (int i = 0; i < x; i++) {
+    for (int j = 0; j < y; j++) {
+      vec.push_back(array[i][j]);
+    }
+  }
+
+
+  npy::npy_data<double> d;
+  d.data = vec; // &array[0][0
   d.shape = {(unsigned long)x, (unsigned long)y};
   d.fortran_order = false; // optional
 
@@ -129,8 +162,17 @@ void save_npy_2d_double(double **array, int x, int y, string filename) {
 }
 
 void save_npy_2d_int(int **array, int x, int y, string filename) {
-  npy::npy_data_ptr<int> d;
-  d.data_ptr = &array[0][0];
+
+  // convert array to vector
+  vector<int> vec;
+  for (int i = 0; i < x; i++) {
+    for (int j = 0; j < y; j++) {
+      vec.push_back(array[i][j]);
+    }
+  }
+
+  npy::npy_data<int> d;
+  d.data = vec;
   d.shape = {(unsigned long)x, (unsigned long)y};
   d.fortran_order = false; // optional
 
@@ -239,6 +281,20 @@ string prepare_output() {
   return string(folder_name);
 }
 
+void latest_outout(string folder){
+  // check if output/latest folder exists in the current folder
+  // if it does exist delete it
+  if (system("ls | grep output/00_latest") > 0) {
+    debug_print("Deleting latest output folder\n");
+    system("rm -r output/00_latest");
+  }
+
+  // copy over the latest output folder to output/latest
+  char command[100];
+  sprintf(command, "cp -r %s output/00_latest", folder.c_str());
+  system((const char *)command);
+}
+
 // TODO CHECK TYPES IF ALL CORRECT
 // TODO arrays need to be initialized likely with 0 values
 int main() {
@@ -294,6 +350,14 @@ int main() {
 
   // rho = np.sum(F, axis=2)
   double **rho = malloc_2d_double(Ny, Nx);
+  
+  // reset rho
+  for (int j = 0; j < Ny; j++) {
+    for (int k = 0; k < Nx; k++) {
+      rho[j][k] = 0;
+    }
+  }
+
   for (int i = 0; i < Ny; i++) {
     for (int j = 0; j < Nx; j++) {
       rho[i][j] = 0;
@@ -303,21 +367,21 @@ int main() {
     }
   }
 
+  save_npy_2d_double(rho, Ny, Nx, folder_name + "/rho_first.npy");
+
   debug_print("rho calculated\n");
 
   // 	for i in idxs:		F[:,:,i] *= rho0 / rho
   for (int i = 0; i < NL; i++) {
     for (int j = 0; j < Ny; j++) {
       for (int k = 0; k < Nx; k++) {
-        if(rho[j][k] != 0)
-          F[j][k][i] *= rho0 / rho[j][k];
-        else
-          F[j][k][i] = 0; // TODO check if this is correct
+        F[j][k][i] *= rho0 / rho[j][k];
       }
     }
   }
 
   debug_print("F normalized\n");
+
 
 
   // Cylinder boundary
@@ -327,25 +391,6 @@ int main() {
 
   // TODO isnt this redundant? we already have x_coords and y_coords calculated which should be same???
   meshgrid(cylinderX, cylinderY);
-
-  // print first 10 values of cylinderX and cylinderY
-  for (int i = 0; i < 10; i++) {
-    debug_printf("cylinderX: %d %d\n", cylinderX[0][i], cylinderY[0][i]);
-  }
-
-  debug_print("Meshgrid calculated\n");
-
-  // check if cylinderX and cylinderY have any value higher than 400
-  for (int i = 0; i < Ny; i++) {
-    for (int j = 0; j < Nx; j++) {
-      if (cylinderX[i][j] >= 500) {
-        debug_printf("cylinderX: %d %d\n", cylinderX[i][j]);
-      }
-    }
-  }
-
-  //save_npy_2d_int(cylinderX, Ny, Nx, folder_name + "/cylinderX.npy");
-  //save_npy_2d_int(cylinderY, Ny, Nx, folder_name + "/cylinderY.npy");
 
   // cylinder = (X - Nx/4)**2 + (Y - Ny/2)**2 < (Ny/4)**2
   for (int i = 0; i < Ny; i++) {
@@ -370,10 +415,15 @@ int main() {
     //    for i, cx, cy in zip(idxs, cxs, cys):
     //        F[:,:,i] = np.roll(F[:,:,i], cx, axis=1)
     //        F[:,:,i] = np.roll(F[:,:,i], cy, axis=0)
+    save_npy_3d_double(F, Ny, Nx, NL, folder_name + "/F_beroll_" + to_string(i) + ".npy");
+
+
     for (int j = 0; j < NL; j++) {
-      roll2D(F[j], Ny, Nx, cxs[j], 1); // no idea if this is correct
-      roll2D(F[j], Ny, Nx, cys[j], 0);      
+      //roll2D(F[j], Ny, Nx, cxs[j], 1); // no idea if this is correct
+      //roll2D(F[j], Ny, Nx, cys[j], 0);      
     }
+
+    save_npy_3d_double(F, Ny, Nx, NL, folder_name + "/F_roll_" + to_string(i) + ".npy");
 
     // bndryF = F[cylinder,:]
     // its 2d of size 1941x9 but no idea how this is calculated ??????
@@ -415,14 +465,36 @@ int main() {
     }
 
     // np.sum(F,2) sum over 2nd axis
-    double **rho = malloc_2d_double(Ny, Nx);
+    //double **rho = malloc_2d_double(Ny, Nx);
+
+    // reset rho
+    for (int j = 0; j < Ny; j++) {
+      for (int k = 0; k < Nx; k++) {
+        rho[j][k] = 0;
+      }
+    }
+
+    if(i == 2){
+      save_npy_3d_double(F, Ny, Nx, NL, folder_name + "/F_after_roll.npy");
+    }
+
     for (int j = 0; j < Ny; j++) {
       for (int k = 0; k < Nx; k++) {
         for (int l = 0; l < NL; l++) {
           rho[j][k] += F[j][k][l];
         }
+
+
       }
     }
+
+
+
+    // print 20th row of rho
+    for (int j = 0; j < Nx; j++) {
+      printf("%f ", rho[20][j]);
+    }
+    printf("\n");
 
     debug_print("rho calculated\n");
 
@@ -437,6 +509,7 @@ int main() {
       }
     }
 
+
     debug_print("ux calculated\n");
 
     // uy = np.sum(F * cys, 2) / rho
@@ -449,6 +522,11 @@ int main() {
         uy[j][k] /= rho[j][k];
       }
     }
+
+    
+    save_npy_2d_double(ux, Ny, Nx, folder_name + "/rho.npy");
+    save_npy_2d_double(ux, Ny, Nx, folder_name + "/ux.npy");
+    save_npy_2d_double(ux, Ny, Nx, folder_name + "/uy.npy");
 
     debug_print("uy calculated\n");
 
@@ -525,6 +603,8 @@ int main() {
         vorticity[j][k] =
             (ux[(j + 1 + Ny) % Ny][k] - ux[(j - 1 + Ny) % Ny][k]) -
             (uy[j][(k + 1 + Nx) % Nx] - uy[j][(k - 1 + Nx) % Nx]);
+
+            //vorticity[j][k] = 0.25;
         if (cylinder[j][k] == 1) {
           vorticity[j][k] = 1;
         }
@@ -535,6 +615,8 @@ int main() {
     sprintf(vortex_filename, "%s/vorticity_%05d.npy", folder_name.c_str(), i);
     save_npy_2d_double(vorticity, Ny, Nx, vortex_filename);
   }
+
+  latest_outout(folder_name);
 
   return 0;
 }

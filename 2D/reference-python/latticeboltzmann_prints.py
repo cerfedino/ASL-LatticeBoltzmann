@@ -49,6 +49,9 @@ def main():
     
     F[:,:,3] += 2 * (1+0.2*np.cos(2*np.pi*X/Nx*4))
     rho = np.sum(F,2)
+
+    # print first row of rho    
+    print("Line: " + str(currentframe().f_lineno) + " rho: ", str(rho[0]))
     
     print("Line: " + str(currentframe().f_lineno) + " size of rho: ", str(rho.shape))
 

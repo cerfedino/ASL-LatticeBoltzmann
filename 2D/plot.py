@@ -1,6 +1,8 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import os
+import matplotlib   
+matplotlib.use("Qt5agg")
 
 output_folders = [x[0] for x in os.walk("output/")][1:]
 
@@ -48,43 +50,28 @@ npy_files.sort()
 cylinder = np.load(folder + "/cylinder.npy") # todo store cylinder numpy array in the output folder
 print(f"Shape of cylinder: {cylinder.shape}")
 
+
 #convert cylinder to int values
-cylinder = cylinder.astype(int)
-
-# draw the cylinder on a seperate plot
-plt.imshow(cylinder, cmap='gray')
-# wait for 5sec
-plt.pause(3)
-
-# plot cylinderX, cylinderY
-#cylinderX = np.load(folder + "/cylinderX.npy")
-#cylinderY = np.load(folder + "/cylinderY.npy")
-
-#plt.imshow(cylinderX, cmap='gray')
-#plt.pause(3)
-
-#plt.imshow(cylinderY, cmap='gray')
-#plt.pause(3)
-
-#Nx = cylinderX.shape[1]
-#Ny = cylinderY.shape[0]
-
-#X, Y = np.meshgrid(range(400), range(100))
-
-# check if X and cylinderX are the same
-#print(f"X == cylinderX: {np.all(X == cylinderX)}")
-#print(f"Y == cylinderY: {np.all(Y == cylinderY)}")
-
-# convert X and CylinderX to txt files
-
-# if not the same find the difference
+cylinder = cylinder.astype(bool)
 
 
- # print first row of X and Y
-#print(f"X[0]: {X[0]}")
-#print(f"cylinderX[0]: {cylinderX[0]}")
-#print(f"Y[0]: {Y[0]}")
-#print(f"cylinderY[0]: {cylinderY[0]}")
+
+Nx = cylinder.shape[1]
+Ny = cylinder.shape[0]
+
+X, Y = np.meshgrid(range(Nx), range(Ny))
+cylinder_reference = (X - Nx/4)**2 + (Y - Ny/2)**2 < (Ny/4)**2
+
+
+print(f"cylinder == cylinder_reference: {np.all(cylinder == cylinder_reference)}")
+
+
+
+# write cyliner_reference to txt file
+np.savetxt(f"{folder}/00_cylinder_reference.txt", cylinder_reference, fmt="%d")
+
+# write cyliner to txt file
+np.savetxt(f"{folder}/00_cylinder.txt", cylinder, fmt="%d")
 
 # create images folder
 if not os.path.exists(f"{folder}/images"):
@@ -99,10 +86,15 @@ fig = plt.figure(figsize=(8,4), dpi=80)
 
 for file in npy_files:
     print(f"Plotting file: {file}")
+    # save the 50th file to txt
+    if count == 50:
+        np.savetxt(f"{folder}/50_vorticity.txt", np.load(f"{folder}/{file}"), fmt="%.6f")
+
+    #print(f"Plotting file: {file}")
     
     # load the file
     vorticity = np.load(f"{folder}/{file}")
-    print(f"Shape of vorticity: {vorticity.shape}")
+    #print(f"Shape of vorticity: {vorticity.shape}")
 
     
     plt.cla()
@@ -120,7 +112,7 @@ for file in npy_files:
     ax.get_xaxis().set_visible(False)
     ax.get_yaxis().set_visible(False)    
     ax.set_aspect('equal')    
-    plt.pause(0.02)
+    #plt.pause(0.02)
     # save image in the same folder under /images
     plt.savefig(f"{folder}/images/{count}.png")
     count += 1
@@ -131,4 +123,4 @@ if not os.path.exists(f"{folder}/video"):
 
 # combine the images into a video
 # use codec H264
-os.system(f"ffmpeg -r 10 -i {folder}/images/%01d.png -vcodec libx264 -y {folder}/video/output.mp4")
+os.system(f"ffmpeg -r 30 -i {folder}/images/%01d.png -vcodec libx264 -y {folder}/video/output.mp4")
