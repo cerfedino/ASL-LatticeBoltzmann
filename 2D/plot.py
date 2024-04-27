@@ -39,73 +39,36 @@ data = np.load(f"{folder}/{file}")
 print(f"Shape of data: {data.shape}")
 print(f"Data: {data[:5]}")
 
-
-
-# get all .npy that start with step_
 npy_files = [file for file in files if file.startswith("vorticity_")]
 
-# sort the files
 npy_files.sort()
-
 
 cylinder = np.load(folder + "/cylinder.npy") # todo store cylinder numpy array in the output folder
 print(f"Shape of cylinder: {cylinder.shape}")
 
-
-#convert cylinder to int values
+#convert cylinder to bool values
 cylinder = cylinder.astype(bool)
 
 
-
-Nx = cylinder.shape[1]
-Ny = cylinder.shape[0]
-
-X, Y = np.meshgrid(range(Nx), range(Ny))
-cylinder_reference = (X - Nx/4)**2 + (Y - Ny/2)**2 < (Ny/4)**2
-
-
-print(f"cylinder == cylinder_reference: {np.all(cylinder == cylinder_reference)}")
-
-
-
-# write cyliner_reference to txt file
-np.savetxt(f"{folder}/00_cylinder_reference.txt", cylinder_reference, fmt="%d")
-
-# write cyliner to txt file
-np.savetxt(f"{folder}/00_cylinder.txt", cylinder, fmt="%d")
-
-# create images folder
 if not os.path.exists(f"{folder}/images"):
     os.mkdir(f"{folder}/images")
 
-# plot the files
 count = 0
 
 fig = plt.figure(figsize=(8,4), dpi=80)
 
 
-
 for file in npy_files:
     print(f"Plotting file: {file}")
-    # save the 50th file to txt
-    if count == 50:
-        np.savetxt(f"{folder}/50_vorticity.txt", np.load(f"{folder}/{file}"), fmt="%.6f")
-
-    #print(f"Plotting file: {file}")
-    
-    # load the file
     vorticity = np.load(f"{folder}/{file}")
-    #print(f"Shape of vorticity: {vorticity.shape}")
-
     
     plt.cla()
     #vorticity[cylinder] = np.nan
     vorticity = np.ma.array(vorticity, mask=cylinder)
+
     plt.imshow(vorticity, cmap='bwr')
     plt.imshow(~cylinder, cmap='gray', alpha=0.3)
-
-    # put filename as title
-    plt.title(file)
+    plt.title(f"{folder}/{file}")
 
     plt.clim(-.1, .1)
     ax = plt.gca()
@@ -113,8 +76,7 @@ for file in npy_files:
     ax.get_xaxis().set_visible(False)
     ax.get_yaxis().set_visible(False)    
     ax.set_aspect('equal')    
-    plt.pause(0.02)
-    # save image in the same folder under /images
+    #plt.pause(0.02)
     plt.savefig(f"{folder}/images/{count}.png")
     count += 1
 
