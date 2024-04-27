@@ -35,14 +35,14 @@ const int Nx = 400;    // resolution in x
 const int Ny = 100;    // resolution in y
 const double rho0 = 100;  // average density
 const double tau = 0.6;   // collision timescale
-const int Nt = 100;   // number of timesteps
+const int Nt = 200;   // number of timesteps
 
 // Lattice speeds / weights
 const int NL = 9;
 const double idx[9] = {0, 1, 2, 3, 4, 5, 6, 7, 8};
 const double cxs[9] = {0, 0, 1, 1, 1, 0, -1, -1, -1};
 const double cys[9] = {0, 1, 1, 0, -1, -1, -1, 0, 1};
-const double w[9] = {4 / 9, 1 / 9,  1 / 36, 1 / 9, 1 / 36,
+const double weights[9] = {4 / 9, 1 / 9,  1 / 36, 1 / 9, 1 / 36,
                      1 / 9, 1 / 36, 1 / 9,  1 / 36};  // sums to 1
 
 void meshgrid(int **x_coords, int **y_coords) {
@@ -65,7 +65,7 @@ void meshgrid(double **x_coords, double **y_coords) {
   }
 }
 
-void roll_array(int i, int cx, int cy, double ***F) {
+//void roll_array(int i, int cx, int cy, double ***F) {
   // Temporary array to hold rolled values
   /*double temp[Ny][Nx];
 
@@ -82,7 +82,7 @@ void roll_array(int i, int cx, int cy, double ***F) {
       F[i][(j + cy + Ny) % Ny][k] = temp[j][k];
     }
   }*/
-}
+//}
 
 
 
@@ -210,25 +210,31 @@ roll
  if called on np.roll(array, 1, axis=0)
  */
 // similar to roll1D
-void roll2D(double **array, int x, int y, int shift, int axis){
-  double **temp = malloc_2d_double(x, y);
+void roll2D(double **array, int height, int width, int shift, int axis){
+  double **temp = malloc_2d_double(height, width);
+
+  // matrix is array[Y][X]
+
+  // axis = 0 -> roll along x
+  // axis = 1 -> roll along y
 
   if(axis == 0){
-    for (int i = 0; i < x; i++) {
-      for (int j = 0; j < y; j++) {
-        temp[(i + shift + x) % x][j] = array[i][j];
+    for (int i = 0; i < height; i++) {
+      for (int j = 0; j < width; j++) {
+        temp[i][(j + shift + width) % width] = array[i][j];
       }
     }
-  } else if(axis == 1){
-    for (int i = 0; i < x; i++) {
-      for (int j = 0; j < y; j++) {
-        temp[i][(j + shift + y) % y] = array[i][j];
+  } else {
+    for (int i = 0; i < height; i++) {
+      for (int j = 0; j < width; j++) {
+        temp[(i + shift + height) % height][j] = array[i][j];
       }
     }
   }
+     
 
-  for (int i = 0; i < x; i++) {
-    for (int j = 0; j < y; j++) {
+  for (int i = 0; i < height; i++) {
+    for (int j = 0; j < width; j++) {
       array[i][j] = temp[i][j];
     }
   }
@@ -342,7 +348,7 @@ int main() {
   // F[:,:,3] += 2 * (1+0.2*np.cos(2*np.pi*X/Nx*4))
   for (int i = 0; i < Ny; i++) {
     for (int j = 0; j < Nx; j++) {
-      F[i][j][3] += 2 * (1 + 0.2 * cos(2 * M_PI * x_coords[i][j] / Nx * 4));
+      F[i][j][3] += 2 * (1 + 0.2 * cos(2 * M_PI * (double)x_coords[i][j] / (double)Nx * 4));
     }
   }
 
@@ -395,7 +401,7 @@ int main() {
   // cylinder = (X - Nx/4)**2 + (Y - Ny/2)**2 < (Ny/4)**2
   for (int i = 0; i < Ny; i++) {
     for (int j = 0; j < Nx; j++) {
-      if ((pow(x_coords[i][j] - Nx / 4, 2) + pow(y_coords[i][j] - Ny / 2, 2)) <
+      if ((pow((double)x_coords[i][j] - (double)Nx / 4, 2) + pow((double)y_coords[i][j] - (double)Ny / 2, 2)) <
           pow(Ny / 4, 2)) {
         cylinder[i][j] = 1;
       } else {
@@ -419,11 +425,43 @@ int main() {
 
 
     for (int j = 0; j < NL; j++) {
-      //roll2D(F[j], Ny, Nx, cxs[j], 1); // no idea if this is correct
-      //roll2D(F[j], Ny, Nx, cys[j], 0);      
+
+      double **temp = malloc_2d_double(Ny, Nx);
+
+      for (int k = 0; k < Ny; k++) {
+        for (int l = 0; l < Nx; l++) {
+          temp[k][l] = F[k][l][j];
+        }
+      }
+
+      roll2D(temp, Ny, Nx, cxs[j], 1);
+
+      for (int k = 0; k < Ny; k++) {
+        for (int l = 0; l < Nx; l++) {
+          F[k][l][j] = temp[k][l];
+        }
+      }
+
+      free(temp);
+
+      temp = malloc_2d_double(Ny, Nx);
+
+      for (int k = 0; k < Ny; k++) {
+        for (int l = 0; l < Nx; l++) {
+          temp[k][l] = F[k][l][j];
+        }
+      }
+
+      roll2D(temp, Ny, Nx, cys[j], 0);
+
+      for (int k = 0; k < Ny; k++) {
+        for (int l = 0; l < Nx; l++) {
+          F[k][l][j] = temp[k][l];
+        }
+      }
     }
 
-    save_npy_3d_double(F, Ny, Nx, NL, folder_name + "/F_roll_" + to_string(i) + ".npy");
+    //save_npy_3d_double(F, Ny, Nx, NL, folder_name + "/F_roll_" + to_string(i) + ".npy");
 
     // bndryF = F[cylinder,:]
     // its 2d of size 1941x9 but no idea how this is calculated ??????
@@ -464,37 +502,17 @@ int main() {
       }
     }
 
-    // np.sum(F,2) sum over 2nd axis
-    //double **rho = malloc_2d_double(Ny, Nx);
 
-    // reset rho
+
+    // rho = np.sum(F,2)
     for (int j = 0; j < Ny; j++) {
       for (int k = 0; k < Nx; k++) {
         rho[j][k] = 0;
-      }
-    }
-
-    if(i == 2){
-      save_npy_3d_double(F, Ny, Nx, NL, folder_name + "/F_after_roll.npy");
-    }
-
-    for (int j = 0; j < Ny; j++) {
-      for (int k = 0; k < Nx; k++) {
         for (int l = 0; l < NL; l++) {
           rho[j][k] += F[j][k][l];
         }
-
-
       }
     }
-
-
-
-    // print 20th row of rho
-    for (int j = 0; j < Nx; j++) {
-      printf("%f ", rho[20][j]);
-    }
-    printf("\n");
 
     debug_print("rho calculated\n");
 
@@ -502,6 +520,7 @@ int main() {
     double **ux = malloc_2d_double(Ny, Nx);
     for (int j = 0; j < Ny; j++) {
       for (int k = 0; k < Nx; k++) {
+        ux[j][k] = 0;
         for (int l = 0; l < NL; l++) {
           ux[j][k] += F[j][k][l] * cxs[l];
         }
@@ -516,6 +535,7 @@ int main() {
     double **uy = malloc_2d_double(Ny, Nx);
     for (int j = 0; j < Ny; j++) {
       for (int k = 0; k < Nx; k++) {
+        uy[j][k] = 0;
         for (int l = 0; l < NL; l++) {
           uy[j][k] += F[j][k][l] * cys[l];
         }
@@ -549,7 +569,7 @@ int main() {
       for (int j = 0; j < Ny; j++) {
         for (int l = 0; l < Nx; l++) {
           Feq[j][l][k] =
-              rho[j][l] * w[k] *
+              rho[j][l] * weights[k] *
               (1 + 3 * (cxs[k] * ux[j][l] + cys[k] * uy[j][l]) +
                9 * pow(cxs[k] * ux[j][l] + cys[k] * uy[j][l], 2) / 2 -
                3 * (pow(ux[j][l], 2) + pow(uy[j][l], 2)) / 2);
@@ -600,13 +620,27 @@ int main() {
     double **vorticity = malloc_2d_double(Ny, Nx);
     for (int j = 0; j < Ny; j++) {
       for (int k = 0; k < Nx; k++) {
-        vorticity[j][k] =
+
+
+        // (np.roll(ux, -1, axis=0) - np.roll(ux, 1, axis=0))
+        double ux_roll = ux[j][(k - 1 + Nx) % Nx] - ux[j][(k + 1 + Nx) % Nx];
+
+        // (np.roll(uy, -1, axis=1) - np.roll(uy, 1, axis=1))
+        double uy_roll = uy[(j - 1 + Ny) % Ny][k] - uy[(j + 1 + Ny) % Ny][k];
+
+        vorticity[j][k] = ux_roll - uy_roll;
+
+
+
+
+        /*vorticity[j][k] =
             (ux[(j + 1 + Ny) % Ny][k] - ux[(j - 1 + Ny) % Ny][k]) -
-            (uy[j][(k + 1 + Nx) % Nx] - uy[j][(k - 1 + Nx) % Nx]);
+            (uy[j][(k + 1 + Nx) % Nx] - uy[j][(k - 1 + Nx) % Nx]);*/
 
             //vorticity[j][k] = 0.25;
         if (cylinder[j][k] == 1) {
-          vorticity[j][k] = 1;
+          // vorticity[cylinder] = np.nan
+          vorticity[j][k] = 0; 
         }
       }
     }

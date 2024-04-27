@@ -2,7 +2,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 import matplotlib   
-matplotlib.use("Qt5agg")
+
+#matplotlib.use("Qt5agg")
 
 output_folders = [x[0] for x in os.walk("output/")][1:]
 
@@ -112,7 +113,7 @@ for file in npy_files:
     ax.get_xaxis().set_visible(False)
     ax.get_yaxis().set_visible(False)    
     ax.set_aspect('equal')    
-    #plt.pause(0.02)
+    plt.pause(0.02)
     # save image in the same folder under /images
     plt.savefig(f"{folder}/images/{count}.png")
     count += 1
