@@ -6,14 +6,17 @@
 #include <cmath>
 #include <exception>
 #include <stdexcept>
-#include "include/npy.hpp"
 #include <vector>
 #include <string>
+
+#include "include/npy.hpp"
+#include "include/utils.h"
 
 #ifdef DEBUG
 #define debug_printf(fmt, ...) fprintf(stdout, fmt, __VA_ARGS__)
 #define debug_print(fmt) fprintf(stdout, fmt)
 #else
+// If DEBUG is not defined expands macros to whitespace
 #define debug_printf(fmt, ...)
 #define debug_print(fmt)
 #endif
@@ -25,7 +28,7 @@ const int Nx = 400;    // resolution in x
 const int Ny = 100;    // resolution in y
 const double rho0 = 100;  // average density
 const double tau = 0.6;   // collision timescale
-const int Nt = 5000;   // number of timesteps
+const int Nt = 300;   // number of timesteps
 
 // Lattice speeds / weights
 const int NL = 9;
@@ -84,75 +87,6 @@ double **malloc_2d_double(int x, int y) {
   return array;
 }
 
-void save_npy_3d_double(double ***array, int x, int y, int z, string filename) {
-  
-  // convert array to vector  
-  // this is needed because npy::write_npy expects a vector and cant deal with pointers to arrays somehow
-
-  vector<double> vec;
-
-  for (int i = 0; i < x; i++) {
-    for (int j = 0; j < y; j++) {
-      for (int k = 0; k < z; k++) {
-        vec.push_back(array[i][j][k]);
-      }
-    }
-  }
-
-
-  npy::npy_data<double> d;
-  d.data = vec;
-  d.shape = {(unsigned long)x, (unsigned long)y, (unsigned long)z};
-  d.fortran_order = false; // optional
-
-  const std::string path{filename};
-  npy::write_npy(path, d);
-}
-
-void save_npy_2d_double(double **array, int x, int y, string filename) {
-
-  // convert array to vector  
-  // this is needed because npy::write_npy expects a vector and cant deal with pointers to arrays somehow
-
-  vector<double> vec;
-
-  for (int i = 0; i < x; i++) {
-    for (int j = 0; j < y; j++) {
-      vec.push_back(array[i][j]);
-    }
-  }
-
-
-  npy::npy_data<double> d;
-  d.data = vec;
-  d.shape = {(unsigned long)x, (unsigned long)y};
-  d.fortran_order = false; // optional
-
-  const std::string path{filename};
-  npy::write_npy(path, d);
-}
-
-void save_npy_2d_int(int **array, int x, int y, string filename) {
-
-  // convert array to vector
-  // this is needed because npy::write_npy expects a vector and cant deal with pointers to arrays somehow
-  // NOTE THIS FUNCTION SHOULD LIKELY NOT BE USED AS INT STORING SOMEHOW DOESNT WORK AND SAVES INCORRECTLY THE DATA
-
-  vector<int> vec;
-  for (int i = 0; i < x; i++) {
-    for (int j = 0; j < y; j++) {
-      vec.push_back(array[i][j]);
-    }
-  }
-
-  npy::npy_data<int> d;
-  d.data = vec;
-  d.shape = {(unsigned long)x, (unsigned long)y};
-  d.fortran_order = false; // optional
-
-  const std::string path{filename};
-  npy::write_npy(path, d);
-}
 
 
 //orig [1 2 3 4 5]
@@ -304,6 +238,7 @@ int main() {
     for (int j = 0; j < Nx; j++) {
       // in python we access [3] but here we do on [1] what this dictates is the direction we go
       // maybe something else too, but my brain is more fried than a kfc chicken
+      // AHAHAHAHAHAHAH HILARIOUS KARLO LOL IM LITERALLY DYING OF LAUGHTER
       F[i][j][1] += 2.0 * (1.0 + 0.2 * cos(2.0 * M_PI * (double)x_coords[i][j] / (double)Nx * 4.0));
     }
   }
@@ -573,5 +508,3 @@ int main() {
 
   return 0;
 }
-
-// to run and compile run: clear && g++ -o 2D/2D 2D/main.cpp -lm && 2D/2D
