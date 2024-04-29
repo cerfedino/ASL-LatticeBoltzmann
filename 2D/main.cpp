@@ -10,21 +10,13 @@
 #include <vector>
 #include <string>
 
-#define PRINT 1
-
-#define debug_printf(fmt, ...)           \
-  do {                                   \
-    if (PRINT) {                         \
-      fprintf(stdout, fmt, __VA_ARGS__); \
-    }                                    \
-  } while (0)
-
-#define debug_print(fmt)    \
-  do {                      \
-    if (PRINT) {            \
-      fprintf(stdout, fmt); \
-    }                       \
-  } while (0)
+#ifdef DEBUG
+#define debug_printf(fmt, ...) fprintf(stdout, fmt, __VA_ARGS__)
+#define debug_print(fmt) fprintf(stdout, fmt)
+#else
+#define debug_printf(fmt, ...)
+#define debug_print(fmt)
+#endif
 
 using namespace std;
 
