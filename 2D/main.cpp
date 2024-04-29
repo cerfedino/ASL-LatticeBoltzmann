@@ -15,10 +15,16 @@
 #ifdef DEBUG
 #define debug_printf(fmt, ...) fprintf(stdout, fmt, __VA_ARGS__)
 #define debug_print(fmt) fprintf(stdout, fmt)
+
 #else
 // If DEBUG is not defined expands macros to whitespace
-#define debug_printf(fmt, ...)
-#define debug_print(fmt)
+#define debug_printf(fmt, ...);
+#define debug_print(fmt);
+#define save_npy_3d_double(array, x, y, z, filename);
+#define save_npy_2d_double(array, x, y, filename); 
+#define save_npy_2d_int(array, x, y, filename); 
+#define make_output_folder() ""
+#define make_latest_output(folder);
 #endif
 
 using namespace std;
@@ -150,62 +156,11 @@ void roll2D(double **array, int height, int width, int shift, int axis){
   free(temp);
 }
 
-/// @brief This function prepares the output main output folder and creates a new folder with the current date and time
-/// @return 
-string prepare_output() {
-  if (system("ls | grep output") != 0) {
-    debug_print("Creating main output folder\n");
-    system("mkdir output");
-
-    if (system("ls | grep output") != 0) {
-      debug_print("Could not create output folder\n");
-    }
-  }
-
-  // create new folder of format YYYY_MM_DD_HH_MM_SS
-  time_t now = time(0);
-  tm *ltm = localtime(&now);
-
-  // its this ugly because i cant be bothered to do const char shenanigans
-  char folder_name[100];
-  sprintf(folder_name, "output/%02d_%02d_%02d_%02d_%02d_%02d", 1900 + ltm->tm_year,
-          1 + ltm->tm_mon, ltm->tm_mday, ltm->tm_hour, ltm->tm_min,
-          ltm->tm_sec);
-
-  char command[100];
-  sprintf(command, "mkdir output/%02d_%02d_%02d_%02d_%02d_%02d", 1900 + ltm->tm_year,
-          1 + ltm->tm_mon, ltm->tm_mday, ltm->tm_hour, ltm->tm_min,
-          ltm->tm_sec);
-
-  system((const char *)command);
-
-  if (system(folder_name) != 0) {
-    debug_printf("Could not create output folder with name %s\n", folder_name);
-    /*throw runtime_error("Could not create output folder with name " +
-                        string(folder_name));*/
-  }
-
-  return string(folder_name);
-}
-
-void latest_outout(string folder){
-  // check if output/latest folder exists in the current folder
-  // if it does exist delete it
-  if (system("ls | grep output/00_latest") > 0) {
-    debug_print("Deleting latest output folder\n");
-    system("rm -r output/00_latest");
-  }
-
-  // copy over the latest output folder to output/latest
-  char command[100];
-  sprintf(command, "cp -r %s output/00_latest", folder.c_str());
-  system((const char *)command);
-}
 
 // TODO CHECK TYPES IF ALL CORRECT
 // TODO arrays need to be initialized likely with 0 values
 int main() {
-  string folder_name = prepare_output(); // TODO delete empty folders
+  string folder_name = make_output_folder(); // TODO delete empty folders
 
   debug_printf("Output folder: %s\n", folder_name.c_str());
 
@@ -294,7 +249,7 @@ int main() {
 
   // Simulation loop
   for (int i = 0; i < Nt; i++) {
-    printf("Timestep %05d\n", i);
+    debug_printf("Timestep %05d\n", i);
 
     //# Drift
     for (int j = 0; j < NL; j++) {
@@ -504,7 +459,7 @@ int main() {
     save_npy_2d_double(vorticity, Ny, Nx, vortex_filename);
   }
 
-  latest_outout(folder_name);
+  make_latest_output(folder_name);
 
   return 0;
 }
