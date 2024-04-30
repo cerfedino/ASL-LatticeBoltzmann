@@ -7,7 +7,7 @@
 #define debug_printf(fmt, ...) fprintf(stdout, fmt, __VA_ARGS__)
 #define debug_print(fmt) fprintf(stdout, fmt)
 
-void save_npy_3d_double(double ***array, int x, int y, int z, std::string filename) {
+void save_npy_3d_double(double *array, int x, int y, int z, std::string filename) {
   // convert array to vector  
   // this is needed because npy::write_npy expects a vector and cant deal with pointers to arrays somehow
 
@@ -16,7 +16,7 @@ void save_npy_3d_double(double ***array, int x, int y, int z, std::string filena
   for (int i = 0; i < x; i++) {
     for (int j = 0; j < y; j++) {
       for (int k = 0; k < z; k++) {
-        vec.push_back(array[i][j][k]);
+        vec.push_back(array[i*(y*z) +j*(z) +k]);
       }
     }
   }
@@ -32,7 +32,7 @@ void save_npy_3d_double(double ***array, int x, int y, int z, std::string filena
 }
 
 
-void save_npy_2d_double(double **array, int x, int y, std::string filename) {
+void save_npy_2d_double(double *array, int x, int y, std::string filename) {
   // convert array to vector  
   // this is needed because npy::write_npy expects a vector and cant deal with pointers to arrays somehow
 
@@ -40,7 +40,7 @@ void save_npy_2d_double(double **array, int x, int y, std::string filename) {
 
   for (int i = 0; i < x; i++) {
     for (int j = 0; j < y; j++) {
-      vec.push_back(array[i][j]);
+      vec.push_back(array[i*y +j]);
     }
   }
 
@@ -55,7 +55,7 @@ void save_npy_2d_double(double **array, int x, int y, std::string filename) {
 }
 
 
-void save_npy_2d_int(int **array, int x, int y, std::string filename) {
+void save_npy_2d_int(int *array, int x, int y, std::string filename) {
   // convert array to vector
   // this is needed because npy::write_npy expects a vector and cant deal with pointers to arrays somehow
   // NOTE THIS FUNCTION SHOULD LIKELY NOT BE USED AS INT STORING SOMEHOW DOESNT WORK AND SAVES INCORRECTLY THE DATA
@@ -63,7 +63,7 @@ void save_npy_2d_int(int **array, int x, int y, std::string filename) {
   std::vector<int> vec;
   for (int i = 0; i < x; i++) {
     for (int j = 0; j < y; j++) {
-      vec.push_back(array[i][j]);
+      vec.push_back(array[i*y +j]);
     }
   }
 

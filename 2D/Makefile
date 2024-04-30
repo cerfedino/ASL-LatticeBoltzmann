@@ -4,7 +4,7 @@ CFLAGS = -DDEBUG
 
 all: build run test
 clean:
-	find . -iname '*.o' -print -delete; rm output/timestamp.txt
+	find . -iname '*.o' -print -delete; rm -f output/timestamp.txt; rm -f output/reference/timestamp.txt
 
 
 build: ./main.o
@@ -17,7 +17,7 @@ run: output/timestamp.txt
 output/timestamp.txt: ./main.o
 	mkdir -p output/; echo "ciao mamma" > output/timestamp.txt ; ./main.o
 
-test: run output/reference/
+test: run output/reference/timestamp.txt
 	python3 compare.py
-output/reference/: reference-python/latticeboltzmann_prints.py
-	python3 reference-python/latticeboltzmann_prints.py
+output/reference/timestamp.txt: reference-python/latticeboltzmann_prints.py
+	echo "ciao mamma" > output/reference/timestamp.txt; python3 reference-python/latticeboltzmann_prints.py

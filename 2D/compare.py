@@ -98,7 +98,7 @@ for i in range(N):
 
     # is_equal(output_folder, f"Feq_{i}")
 
-    error = error or is_equal(output_folder, f"vorticity_{i:05}")
+    error = is_equal(output_folder, f"vorticity_{i:05}") or error 
 
 print(f"[-] Checked the first {N} timesteps")    
 if error:
