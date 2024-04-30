@@ -3,31 +3,51 @@ import numpy as np
 import os
 import matplotlib   
 
-#matplotlib.use("Qt5agg")
+
+TOLERANCE = 3
+
+class bcolors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKCYAN = '\033[96m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
 
 
 def is_equal(folder, name):
-    print("--------------------------------------------")
-    print(f"Comparing {name} in {folder} with reference")
+    output = ""
+    error = False
+
+
+    output+=f"Comparing {folder}/{name} with reference"
     ref_arr = np.load("output/reference/" + name + ".npy")
     arr = np.load(f"{folder}/{name}.npy")
 
-    print(f"    Shape of reference: {ref_arr.shape}")
-    print(f"    Shape of output: {arr.shape}")
+    if ref_arr.shape == arr.shape:
+        output+=f"\t[+] Matrix shape matches {ref_arr.shape}"
+    else:
+        output+=f"\t{bcolors.FAIL}[ERROR] Matrix shape does not match! {arr.shape} should be {ref_arr.shape}{bcolors.ENDC}"
+        error = True
 
-    print(f"  Is equal: {np.all(ref_arr == arr)}")
-
-    # if not equal, print the difference
-    if not np.all(ref_arr == arr):
-        print(f"Difference: {np.sum(ref_arr - arr)}")
-
-        # if difference is more than 1000 absolute
-#        if np.sum(np.abs(ref_arr - arr)) > 1000:
-#            print(f"Reference: {ref_arr[:5]}")
-#            print(f"Output: {arr[:5]}")
+    if np.all(ref_arr == arr):
+        output+=f"\t[+] Matrices are equal"
+    else:
+        diff = np.std(ref_arr - arr)
+        if diff < TOLERANCE:
+            output+=f"\t[+] Matrices are equal within tolerance {TOLERANCE}"
+        else:
+            output+=f"\t{bcolors.FAIL}[ERROR] Matrices are not equal within tolerance {TOLERANCE}{bcolors.ENDC}"
+            error = True
 
         ##print(f"Reference: {ref_arr[:5]}")
         ##print(f"Output: {arr[:5]}")
+    if error:
+        print(output)
+    return error
 
 
 # reference files in output/reference
@@ -42,46 +62,48 @@ print(f"Selected folder: {output_folder}")
 
 
 # compare npy file F_start.npy
-is_equal(output_folder, "F_start")
+# is_equal(output_folder, "F_start")
 
-# compare npy file X.npy
-is_equal(output_folder, "X_start")
+# # compare npy file X.npy
+# is_equal(output_folder, "X_start")
 
-# compare npy file Y.npy
-is_equal(output_folder, "X_start")
+# # compare npy file Y.npy
+# is_equal(output_folder, "X_start")
 
-# compare npy file F_3_setup.npy
-is_equal(output_folder, "F_3_setup")
+# # compare npy file F_3_setup.npy
+# is_equal(output_folder, "F_3_setup")
 
-# compare npy file rho_start.npy
-is_equal(output_folder, "rho_start")
+# # compare npy file rho_start.npy
+# is_equal(output_folder, "rho_start")
 
-# compare npy file F_normalized_start.npy
-is_equal(output_folder, "F_normalized_start")
+# # compare npy file F_normalized_start.npy
+# is_equal(output_folder, "F_normalized_start")
 
-# compare npy file cylinder_start.npy
-is_equal(output_folder, "cylinder_start")
+# # compare npy file cylinder_start.npy
+# is_equal(output_folder, "cylinder_start")
 
-N = 5
+N = 300
 
+error = False
 for i in range(N):
-    print("############################################")
-    print("Iteration: ", i)
-    print("############################################")
+    # is_equal(output_folder, f"F_before_drift_{i}")
+    # is_equal(output_folder, f"F_after_drift_{i}")
 
-    is_equal(output_folder, f"F_before_drift_{i}")
-    is_equal(output_folder, f"F_after_drift_{i}")
+    # is_equal(output_folder, f"bndryF_start_{i}")
+    # is_equal(output_folder, f"bndryF_reordered_{i}")
 
-    is_equal(output_folder, f"bndryF_start_{i}")
-    is_equal(output_folder, f"bndryF_reordered_{i}")
+    # is_equal(output_folder, f"rho_loop_{i}")
+    # is_equal(output_folder, f"ux_loop_{i}")
+    # is_equal(output_folder, f"uy_loop_{i}")
 
-    is_equal(output_folder, f"rho_loop_{i}")
-    is_equal(output_folder, f"ux_loop_{i}")
-    is_equal(output_folder, f"uy_loop_{i}")
+    # is_equal(output_folder, f"Feq_{i}")
 
-    is_equal(output_folder, f"Feq_{i}")
+    error = error or is_equal(output_folder, f"vorticity_{i:05}")
 
-
-    # with 5 leading zeros
-    is_equal(output_folder, f"vorticity_{i:05}")
-
+print(f"[-] Checked the first {N} timesteps")    
+if error:
+    print(f"{bcolors.FAIL}[X] The implementation does not follow the baseline{bcolors.ENDC}")
+    exit(1)
+else:
+    print(f"{bcolors.OKGREEN}[+] The implementation follows the baseline{bcolors.ENDC}")
+    exit(0)

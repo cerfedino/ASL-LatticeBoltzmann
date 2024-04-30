@@ -17,7 +17,7 @@
 #define debug_print(fmt) fprintf(stdout, fmt)
 
 #else
-// If DEBUG is not defined expands macros to whitespace
+// If DEBUG is not defined we expand macros to whitespace
 #define debug_printf(fmt, ...);
 #define debug_print(fmt);
 #define save_npy_3d_double(array, x, y, z, filename);
@@ -406,7 +406,6 @@ int main() {
       }
     }
 
-    debug_print("F calculated\n");
 
     // Apply boundary
     // F[cylinder,:] = bndryF
