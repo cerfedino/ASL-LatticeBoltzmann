@@ -1,5 +1,6 @@
 #include <string>
 #include <vector>
+#include <sys/stat.h>
 #include "./npy.hpp"
 #include "./utils.h"
 
@@ -80,15 +81,6 @@ void save_npy_2d_int(int **array, int x, int y, std::string filename) {
 /// @brief This function prepares the output main output folder and creates a new folder with the current date and time
 /// @return 
 std::string make_output_folder() {
-  if (system("ls | grep output") != 0) {
-    debug_print("Creating main output folder\n");
-    system("mkdir output");
-
-    if (system("ls | grep output") != 0) {
-      debug_print("Could not create output folder\n");
-    }
-  }
-
   // create new folder of format YYYY_MM_DD_HH_MM_SS
   time_t now = time(0);
   tm *ltm = localtime(&now);
@@ -99,14 +91,7 @@ std::string make_output_folder() {
           1 + ltm->tm_mon, ltm->tm_mday, ltm->tm_hour, ltm->tm_min,
           ltm->tm_sec);
 
-  char command[100];
-  sprintf(command, "mkdir output/%02d_%02d_%02d_%02d_%02d_%02d", 1900 + ltm->tm_year,
-          1 + ltm->tm_mon, ltm->tm_mday, ltm->tm_hour, ltm->tm_min,
-          ltm->tm_sec);
-
-  system((const char *)command);
-
-  if (system(folder_name) != 0) {
+  if (mkdir(folder_name, 0755) == -1) {
     debug_printf("Could not create output folder with name %s\n", folder_name);
     /*throw runtime_error("Could not create output folder with name " +
                         string(folder_name));*/
