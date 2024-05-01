@@ -160,7 +160,7 @@ const int Nx = 400;    // resolution in x
 const int Ny = 100;    // resolution in y
 const double rho0 = 100;  // average density
 const double tau = 0.6;   // collision timescale
-const int Nt = 30;   // number of timesteps
+const int Nt = 20;   // number of timesteps
 
 // Lattice speeds / weights
 const int NL = 9;
@@ -302,7 +302,7 @@ void roll2D(double **array, int height, int width, int shift, int axis){
     }
   }
 
-  free(temp);
+  free_2d(temp, height);
 }
 
 
