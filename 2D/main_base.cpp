@@ -419,7 +419,7 @@ int main() {
         }
       }
 
-      free(temp);
+      free_2d(temp, Ny);
 
       temp = malloc_2d_double(Ny, Nx);
       
@@ -437,7 +437,7 @@ int main() {
         }
       }
 
-      free(temp);
+      free_2d(temp, Ny);
       
     }
 
