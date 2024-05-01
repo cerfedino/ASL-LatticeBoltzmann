@@ -144,6 +144,12 @@ int main() {
   debug_print("Starting\n");
 
   double *F = malloc_3d(Ny, Nx, NL);
+  int *x_coords = malloc_2d(Ny, Nx);
+  int *y_coords = malloc_2d(Ny, Nx);
+  double *rho = malloc_2d_double(Ny, Nx);
+  // Cylinder boundary
+  double *cylinder = malloc_2d_double(Ny, Nx);
+
   debug_print("Initializing\n");
 
   srand(42);  // some seed
@@ -158,8 +164,7 @@ int main() {
     }
   }
 
-  int *x_coords = malloc_2d(Ny, Nx);
-  int *y_coords = malloc_2d(Ny, Nx);
+
 
   meshgrid(x_coords, y_coords);
 
@@ -173,8 +178,6 @@ int main() {
     }
   }
 
-  // rho = np.sum(F, axis=2)
-  double *rho = malloc_2d_double(Ny, Nx);
   
   // reset rho
   for (int j = 0; j < Ny; j++) {
@@ -201,8 +204,7 @@ int main() {
     }
   }
 
-  // Cylinder boundary
-  double *cylinder = malloc_2d_double(Ny, Nx);
+
 
   // cylinder = (X - Nx/4)**2 + (Y - Ny/2)**2 < (Ny/4)**2
   for (int i = 0; i < Ny; i++) {
@@ -216,7 +218,11 @@ int main() {
     }
   }
   
-
+  double *ux = malloc_2d_double(Ny, Nx);
+  double *uy = malloc_2d_double(Ny, Nx);
+  double *Feq = malloc_3d(Ny, Nx, NL);
+  double *vorticity = malloc_2d_double(Ny, Nx);
+  double *bndryF = malloc_2d_double(1941, NL);
   // Simulation loop
   for (int i = 0; i < Nt; i++) {
     debug_printf("Timestep %05d\n", i);
@@ -265,7 +271,6 @@ int main() {
     // its 2d of size 1941x9 but no idea how this is calculated ??????
     // TODO to support dynamic sized we could evaluate the size of the array and then allocate memory
     // for now its hardcoded :pikashrug:
-    double *bndryF = malloc_2d_double(1941, NL);
     int index_bndryF = 0;
     for (int j = 0; j < Ny; j++) {
       for (int k = 0; k < Nx; k++) {
@@ -311,7 +316,6 @@ int main() {
 
 
     // ux = np.sum(F * cxs, 2) / rho
-    double *ux = malloc_2d_double(Ny, Nx);
     for (int j = 0; j < Ny; j++) {
       for (int k = 0; k < Nx; k++) {
         ux[j*Nx +k] = 0;
@@ -323,7 +327,6 @@ int main() {
     }
 
     // uy = np.sum(F * cys, 2) / rho
-    double *uy = malloc_2d_double(Ny, Nx);
     for (int j = 0; j < Ny; j++) {
       for (int k = 0; k < Nx; k++) {
         uy[j*Nx +k] = 0;
@@ -334,7 +337,6 @@ int main() {
       }
     }
 
-    double *Feq = malloc_3d(Ny, Nx, NL);
     // set to zero
     for (int j = 0; j < Ny; j++) {
       for (int k = 0; k < Nx; k++) {
@@ -404,7 +406,6 @@ int main() {
     // vorticity = (np.roll(ux, -1, axis=0) - np.roll(ux, 1, axis=0)) -
     // (np.roll(uy, -1, axis=1) - np.roll(uy, 1, axis=1)) vorticity[cylinder]
     // = np.nan vorticity = np.ma.array(vorticity, mask=cylinder)
-    double *vorticity = malloc_2d_double(Ny, Nx);
     for (int j = 0; j < Ny; j++) {
       for (int k = 0; k < Nx; k++) {
 
@@ -428,7 +429,24 @@ int main() {
     // TODO for benchmarking only save vorticity from the last step
     save_npy_2d_double(vorticity, Ny, Nx, vortex_filename);
     #endif
+
+    
+    
+    
+    
+    
   }
+  
+  free(ux);
+  free(uy);
+  free(Feq);
+  free(vorticity);
+  free(bndryF);
+  free(F);
+  free(x_coords);
+  free(y_coords);
+  free(rho);
+  free(cylinder);
 
   make_latest_output(folder_name);
 

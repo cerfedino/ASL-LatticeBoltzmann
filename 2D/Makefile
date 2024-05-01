@@ -8,11 +8,11 @@ clean:
 
 build: ./main_base.o ./main_optimized.o 
 ./main_optimized.o: main.cpp ./include/utils.o
-	g++ $(CFLAGS) main.cpp ./include/utils.o -o ./main_optimized.o
+	g++ -O3 $(CFLAGS) main.cpp ./include/utils.o -o ./main_optimized.o
 ./main_base.o: main_base.cpp ./include/utils.o
 	g++ $(CFLAGS) main_base.cpp ./include/utils.o -o ./main_base.o
 ./include/utils.o: include/utils.h include/utils.c
-	g++ $(CFLAGS) -c include/utils.c -o ./include/utils.o
+	g++ -O3 $(CFLAGS) -c include/utils.c -o ./include/utils.o
 
 
 run: output/timestamp.txt
