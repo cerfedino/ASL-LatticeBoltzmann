@@ -4,7 +4,7 @@ import os
 import matplotlib   
 
 
-TOLERANCE = 3
+TOLERANCE = 0.01
 
 class bcolors:
     HEADER = '\033[95m'
@@ -23,24 +23,24 @@ def is_equal(folder, name):
     error = False
 
 
-    output+=f"Comparing {folder}/{name} with reference"
+    output+=f"\nComparing {folder}/{name} with reference"
     ref_arr = np.load("output/reference/" + name + ".npy")
     arr = np.load(f"{folder}/{name}.npy")
 
     if ref_arr.shape == arr.shape:
-        output+=f"\t[+] Matrix shape matches {ref_arr.shape}"
+        output+=f"\n\t[+] Matrix shape matches {ref_arr.shape}"
     else:
-        output+=f"\t{bcolors.FAIL}[ERROR] Matrix shape does not match! {arr.shape} should be {ref_arr.shape}{bcolors.ENDC}"
+        output+=f"\n\t{bcolors.FAIL}[ERROR] Matrix shape does not match! {arr.shape} should be {ref_arr.shape}{bcolors.ENDC}"
         error = True
 
     if np.all(ref_arr == arr):
-        output+=f"\t[+] Matrices are equal"
+        output+=f"\n\t[+] Matrices are equal"
     else:
         diff = np.std(ref_arr - arr)
         if diff < TOLERANCE:
-            output+=f"\t[+] Matrices are equal within tolerance {TOLERANCE}"
+            output+=f"\n\t[+] Matrices are equal within tolerance {TOLERANCE}"
         else:
-            output+=f"\t{bcolors.FAIL}[ERROR] Matrices are not equal within tolerance {TOLERANCE}{bcolors.ENDC}"
+            output+=f"\n\t{bcolors.FAIL}[ERROR] Matrices are not equal within tolerance {TOLERANCE}{bcolors.ENDC}"
             error = True
 
         ##print(f"Reference: {ref_arr[:5]}")
@@ -54,9 +54,10 @@ def is_equal(folder, name):
 output_refernce_folders = [x[0] for x in os.walk("output/reference")][1:]
 
 # get folders in output that start with 2024
-output_folders = [x[0] for x in os.walk("output/")][1:]
+# output_folders = [x[0] for x in os.walk("output/")][1:]
 
-output_folder = output_folders[0]
+# output_folder = output_folders[0]
+output_folder = "output/00_latest"
 
 print(f"Selected folder: {output_folder}")
 
@@ -82,7 +83,7 @@ print(f"Selected folder: {output_folder}")
 # # compare npy file cylinder_start.npy
 # is_equal(output_folder, "cylinder_start")
 
-N = 300
+N = 30
 
 error = False
 for i in range(N):

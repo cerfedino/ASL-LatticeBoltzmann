@@ -28,7 +28,7 @@ def main():
     Ny                     = 100    # resolution y-dir
     rho0                   = 100    # average density
     tau                    = 0.6    # collision timescale
-    Nt                     = 300   # number of timesteps
+    Nt                     = 30   # number of timesteps
     plotRealTime = True # switch on for plotting as the simulation goes along
     
     # Lattice speeds / weights
@@ -41,7 +41,7 @@ def main():
     # Initial Conditions
     F = np.ones((Ny,Nx,NL)) #* rho0 / 
     
-    print("Line: " + str(currentframe().f_lineno) + " size of F: ", str(F.shape))
+    # print("Line: " + str(currentframe().f_lineno) + " size of F: ", str(F.shape))
     
     np.random.seed(42)
     F += 0.01#*np.random.randn(Ny,Nx,NL)
@@ -53,11 +53,11 @@ def main():
     np.save("output/reference/X_start.npy", X)
     np.save("output/reference/Y_start.npy", Y)
 
-    print(X)
-    print(Y)
+    # print(X)
+    # print(Y)
     
-    print("Line: " + str(currentframe().f_lineno) + " size of X: ", str(X.shape))
-    print("Line: " + str(currentframe().f_lineno) + " size of Y: ", str(Y.shape))
+    # print("Line: " + str(currentframe().f_lineno) + " size of X: ", str(X.shape))
+    # print("Line: " + str(currentframe().f_lineno) + " size of Y: ", str(Y.shape))
     
     F[:,:,3] += 2 * (1+0.2*np.cos(2*np.pi*X/Nx*4))
 
@@ -68,9 +68,9 @@ def main():
     np.save("output/reference/rho_start.npy", rho)
 
     # print first row of rho    
-    print("Line: " + str(currentframe().f_lineno) + " rho: ", str(rho[0]))
+    # print("Line: " + str(currentframe().f_lineno) + " rho: ", str(rho[0]))
     
-    print("Line: " + str(currentframe().f_lineno) + " size of rho: ", str(rho.shape))
+    # print("Line: " + str(currentframe().f_lineno) + " size of rho: ", str(rho.shape))
 
     for i in idxs:
         F[:,:,i] *= rho0 / rho
@@ -80,8 +80,8 @@ def main():
     # Cylinder boundary
     X, Y = np.meshgrid(range(Nx), range(Ny))
     
-    print("Line: " + str(currentframe().f_lineno) + " size of cylinder X: ", str(X.shape))
-    print("Line: " + str(currentframe().f_lineno) + " size of cylinder Y: ", str(Y.shape))
+    # print("Line: " + str(currentframe().f_lineno) + " size of cylinder X: ", str(X.shape))
+    # print("Line: " + str(currentframe().f_lineno) + " size of cylinder Y: ", str(Y.shape))
     
     cylinder = (X - Nx/4)**2 + (Y - Ny/2)**2 < (Ny/4)**2
 
@@ -89,8 +89,8 @@ def main():
     np.save("output/reference/cylinder.npy", cylinder)
 
     # print first 10 elements of X and Y
-    print("Line: " + str(currentframe().f_lineno) + " X: ", str(X[:10]))
-    print("Line: " + str(currentframe().f_lineno) + " Y: ", str(Y[:10]))
+    # print("Line: " + str(currentframe().f_lineno) + " X: ", str(X[:10]))
+    # print("Line: " + str(currentframe().f_lineno) + " Y: ", str(Y[:10]))
 
     #plot cylinder
     #plt.imshow(cylinder, cmap='gray')
@@ -99,7 +99,7 @@ def main():
     # wait for 5sec
     #plt.pause(5)
     
-    print("Line: " + str(currentframe().f_lineno) + " size of cylinder: ", str(cylinder.shape))
+    # print("Line: " + str(currentframe().f_lineno) + " size of cylinder: ", str(cylinder.shape))
 
     
     # Prep figure
@@ -107,7 +107,8 @@ def main():
     
     # Simulation Main Loop
     for it in range(Nt):
-        print(it)
+        print(f"\r{it}", end='')
+
 
         #np.save(f"output/reference/F_before_drift_{it}.npy", F)
         
@@ -187,7 +188,7 @@ def main():
         ax.get_yaxis().set_visible(False)    
         ax.set_aspect('equal')    
         plt.pause(0.001)
-            
+    print("")
     
     # Save figure
     #plt.savefig('latticeboltzmann.png',dpi=240)

@@ -34,7 +34,7 @@ const int Nx = 400;    // resolution in x
 const int Ny = 100;    // resolution in y
 const double rho0 = 100;  // average density
 const double tau = 0.6;   // collision timescale
-const int Nt = 300;   // number of timesteps
+const int Nt = 30;   // number of timesteps
 
 // Lattice speeds / weights
 const int NL = 9;
@@ -143,7 +143,6 @@ int main() {
   // Lattice Boltzmann Simulation in 2D
   debug_print("Starting\n");
 
-  // TODO creating array directly segfaults because of size
   double *F = malloc_3d(Ny, Nx, NL);
   debug_print("Initializing\n");
 
@@ -242,7 +241,6 @@ int main() {
       }
 
       free(temp);
-
       temp = malloc_2d_double(Ny, Nx);
       
       for (int k = 0; k < Ny; k++) {
@@ -260,7 +258,6 @@ int main() {
       }
 
       free(temp);
-      
     }
 
 
@@ -392,6 +389,8 @@ int main() {
       }
     }
 
+    
+
     // set ux and uy to zero where cylinder is 1
     for (int j = 0; j < Ny; j++) {
       for (int k = 0; k < Nx; k++) {
@@ -423,10 +422,12 @@ int main() {
       }
     }
 
+    #ifdef DEBUG
     char vortex_filename[100];
     sprintf(vortex_filename, "%s/vorticity_%05d.npy", folder_name.c_str(), i);
     // TODO for benchmarking only save vorticity from the last step
     save_npy_2d_double(vorticity, Ny, Nx, vortex_filename);
+    #endif
   }
 
   make_latest_output(folder_name);
