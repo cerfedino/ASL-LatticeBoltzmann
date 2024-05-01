@@ -1,6 +1,6 @@
 # Compiles by default with the DEBUG flag
-CFLAGS = -g -O0 -DDEBUG
-.PHONY: all clean build run test leaks
+CFLAGS = -fno-strict-aliasing -DDEBUG
+.PHONY: all clean build run test leaks benchmark
 
 all: build run test leaks
 clean:

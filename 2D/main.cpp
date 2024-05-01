@@ -13,8 +13,8 @@
 #include "include/utils.h"
 
 #ifdef DEBUG
-#define debug_printf(fmt, ...) fprintf(stdout, fmt, __VA_ARGS__)
-#define debug_print(fmt) fprintf(stdout, fmt)
+#define debug_printf(fmt, ...)  fprintf(stdout, fmt, __VA_ARGS__)
+#define debug_print(fmt)        fprintf(stdout, fmt)
 
 #else
 // If DEBUG is not defined we expand macros to whitespace
@@ -29,15 +29,16 @@
 
 using namespace std;
 
+#define Nx 400   // resolution in x
+#define Ny 100   // resolution in y
+#define rho0 0.01 // reciprocal average density
+#define tau 0.6  // collision timescale
+#define Nt 500  // number of timesteps
 
-const int Nx = 400;    // resolution in x
-const int Ny = 100;    // resolution in y
-const double rho0 = 100;  // average density
-const double tau = 0.6;   // collision timescale
-const int Nt = 30;   // number of timesteps
+// #define Nt 30  // number of timesteps
 
 // Lattice speeds / weights
-const int NL = 9;
+#define NL 9
 const double idx[9] = {0, 1, 2, 3, 4, 5, 6, 7, 8};
 const double cxs[9] = {0.0, 0.0, 1.0, 1.0, 1.0, 0.0, -1.0, -1.0, -1.0};
 const double cys[9] = {0.0, 1.0, 1.0, 0.0, -1.0, -1.0, -1.0, 0.0, 1.0};
@@ -135,7 +136,7 @@ void roll2D(double *array, int height, int width, int shift, int axis){
 
 // TODO CHECK TYPES IF ALL CORRECT
 // TODO arrays need to be initialized likely with 0 values
-int main() {
+inline int run() {
   string folder_name = make_output_folder(); // TODO delete empty folders
 
   debug_printf("Output folder: %s\n", folder_name.c_str());
@@ -143,12 +144,27 @@ int main() {
   // Lattice Boltzmann Simulation in 2D
   debug_print("Starting\n");
 
-  double *F = malloc_3d(Ny, Nx, NL);
-  int *x_coords = malloc_2d(Ny, Nx);
-  int *y_coords = malloc_2d(Ny, Nx);
-  double *rho = malloc_2d_double(Ny, Nx);
-  // Cylinder boundary
-  double *cylinder = malloc_2d_double(Ny, Nx);
+  // double *BIG_CHUNGUS = (double *) malloc((2*(Ny*Nx*NL)+5*(Ny*Nx)+(1941*NL)) * sizeof(double) + 2*(Ny*Nx)*sizeof(int));
+  // debug_printf("Allocating %lu bytes for BIG_CHUNGUS\n", (2*(Ny*Nx*NL)+5*(Ny*Nx)+(1941*NL)) * sizeof(double) + 2*(Ny*Nx)*sizeof(int));
+  // if (BIG_CHUNGUS == NULL) {
+  //   printf("Memory allocation failed for BIG_CHUNGUS\n");
+  //   return 1;
+  // }
+  
+  
+
+  double *Feq =       (double *) malloc(Ny*Nx*NL*sizeof(double));
+  double *F =         (double *) malloc(Ny*Nx*NL*sizeof(double));
+  double *vorticity = (double *) malloc(Ny*Nx*sizeof(double));
+  double *rho =       (double *) calloc(Ny*Nx,sizeof(double));
+  double *cylinder =  (double *) malloc(Ny*Nx*sizeof(double));
+  double *ux =        (double *) malloc(Ny*Nx*sizeof(double));
+  double *uy =        (double *) malloc(Ny*Nx*sizeof(double));
+  double *bndryF =    (double *) malloc(1941*NL*sizeof(double));
+  int *x_coords =        (int *) malloc(Ny*Nx*sizeof(int));
+  int *y_coords =        (int *) malloc(Ny*Nx*sizeof(int));
+  double *temp = malloc_2d_double(Ny, Nx);
+
 
   debug_print("Initializing\n");
 
@@ -178,20 +194,15 @@ int main() {
     }
   }
 
-  
-  // reset rho
-  for (int j = 0; j < Ny; j++) {
-    for (int k = 0; k < Nx; k++) {
-      rho[j*Nx +k] = 0;
-    }
-  }
 
+  int res = 0;
   for (int i = 0; i < Ny; i++) {
     for (int j = 0; j < Nx; j++) {
-      rho[i*Nx +j] = 0;
+      res = 0;
       for (int k = 0; k < NL; k++) {
-        rho[i*Nx +j] += F[i*(Nx*NL)+ j*NL +k];
+        res += F[i*(Nx*NL)+ j*NL +k];
       }
+      rho[i*Nx +j] = res;
     }
   }
 
@@ -199,7 +210,7 @@ int main() {
   for (int i = 0; i < NL; i++) {
     for (int j = 0; j < Ny; j++) {
       for (int k = 0; k < Nx; k++) {
-        F[j*(Nx*NL)+ k*NL +i] *= rho0 / rho[j*Nx +k];
+        F[j*(Nx*NL)+ k*NL +i] *= rho0 * rho[j*Nx +k];
       }
     }
   }
@@ -209,20 +220,11 @@ int main() {
   // cylinder = (X - Nx/4)**2 + (Y - Ny/2)**2 < (Ny/4)**2
   for (int i = 0; i < Ny; i++) {
     for (int j = 0; j < Nx; j++) {
-      if ((pow((double)x_coords[i*Nx +j] - (double)Nx / 4, 2) + pow((double)y_coords[i*Nx +j] - (double)Ny / 2, 2)) <
-          pow(Ny / 4, 2)) {
-        cylinder[i*Nx +j] = 1;
-      } else {
-        cylinder[i*Nx +j] = 0;
-      }
+      cylinder[i*Nx +j] = (pow((double)x_coords[i*Nx +j] - (double)Nx / 4, 2) + pow((double)y_coords[i*Nx +j] - (double)Ny / 2, 2)) < pow(Ny / 4, 2);
     }
   }
   
-  double *ux = malloc_2d_double(Ny, Nx);
-  double *uy = malloc_2d_double(Ny, Nx);
-  double *Feq = malloc_3d(Ny, Nx, NL);
-  double *vorticity = malloc_2d_double(Ny, Nx);
-  double *bndryF = malloc_2d_double(1941, NL);
+  
   // Simulation loop
   for (int i = 0; i < Nt; i++) {
     debug_printf("Timestep %05d\n", i);
@@ -230,7 +232,6 @@ int main() {
     //# Drift
     for (int j = 0; j < NL; j++) {
 
-      double *temp = malloc_2d_double(Ny, Nx);
 
       for (int k = 0; k < Ny; k++) {
         for (int l = 0; l < Nx; l++) {
@@ -246,8 +247,6 @@ int main() {
         }
       }
 
-      free(temp);
-      temp = malloc_2d_double(Ny, Nx);
       
       for (int k = 0; k < Ny; k++) {
         for (int l = 0; l < Nx; l++) {
@@ -262,8 +261,6 @@ int main() {
           F[k*(Nx*NL)+ l*NL +j] = temp[k*Nx +l];
         }
       }
-
-      free(temp);
     }
 
 
@@ -326,6 +323,8 @@ int main() {
       }
     }
 
+    
+
     // uy = np.sum(F * cys, 2) / rho
     for (int j = 0; j < Ny; j++) {
       for (int k = 0; k < Nx; k++) {
@@ -338,13 +337,7 @@ int main() {
     }
 
     // set to zero
-    for (int j = 0; j < Ny; j++) {
-      for (int k = 0; k < Nx; k++) {
-        for (int l = 0; l < NL; l++) {
-          Feq[j*(Nx*NL)+ k*NL +l] = 0;
-        }
-      }
-    }
+    memset(Feq, 0, Ny*Nx*NL*sizeof(double));
 
     for (int k = 0; k < NL; k++) {
       for (int j = 0; j < Ny; j++) {
@@ -447,8 +440,28 @@ int main() {
   free(y_coords);
   free(rho);
   free(cylinder);
+  free(temp);
+  // free(BIG_CHUNGUS);
 
   make_latest_output(folder_name);
+
+  return 0;
+}
+
+
+
+
+int main(int argc, char const *argv[])
+{
+
+  unsigned long long start_cycle, end_cycle;
+  time_t start_sec, end_sec;
+  asm volatile ("RDTSC" : "=A" (start_cycle));
+  time(&start_sec);
+  run();
+  asm volatile ("RDTSC" : "=A" (end_cycle));
+  time(&end_sec);
+  printf("Cycles taken: %llu (%ld seconds)\n", end_cycle - start_cycle, end_sec - start_sec);
 
   return 0;
 }

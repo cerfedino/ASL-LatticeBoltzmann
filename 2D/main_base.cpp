@@ -12,7 +12,6 @@
    
 
 
-
 using namespace std;
 
 
@@ -160,7 +159,8 @@ const int Nx = 400;    // resolution in x
 const int Ny = 100;    // resolution in y
 const double rho0 = 100;  // average density
 const double tau = 0.6;   // collision timescale
-const int Nt = 20;   // number of timesteps
+const int Nt = 500;   // number of timesteps
+// const int Nt = 30;   // number of timesteps
 
 // Lattice speeds / weights
 const int NL = 9;
@@ -191,12 +191,12 @@ void meshgrid(double **x_coords, double **y_coords) {
 
 
 // TODO if fancy make generic functions for double, float, int and so on
-double ***malloc_3d(int height, int width, int depth) {
-  double ***array = (double ***)malloc(height * sizeof(double **));
-  for (int i = 0; i < height; ++i) {
-    array[i] = (double **)malloc(width * sizeof(double *));
-    for (int j = 0; j < width; ++j) {
-      array[i][j] = (double *)malloc(depth * sizeof(double));
+double ***malloc_3d(int x, int y, int z) {
+  double ***array = (double ***)malloc(x * sizeof(double **));
+  for (int i = 0; i < x; ++i) {
+    array[i] = (double **)malloc(y * sizeof(double *));
+    for (int j = 0; j < y; ++j) {
+      array[i][j] = (double *)malloc(z * sizeof(double));
     }
   }
   return array;
@@ -309,7 +309,7 @@ void roll2D(double **array, int height, int width, int shift, int axis){
 
 // TODO CHECK TYPES IF ALL CORRECT
 // TODO arrays need to be initialized likely with 0 values
-int main() {
+int run() {
   string folder_name = prepare_output(); // TODO delete empty folders
 
   debug_printf("Output folder: %s\n", folder_name.c_str());
@@ -617,7 +617,22 @@ int main() {
   }
 
   latest_outout(folder_name);
-  //make_latest_output(folder_name);
 
+  return 0;
+}
+
+
+int main(int argc, char const *argv[])
+{
+
+  unsigned long long start_cycle, end_cycle;
+  time_t start_sec, end_sec;
+  asm volatile ("RDTSC" : "=A" (start_cycle));
+  time(&start_sec);
+  run();
+  asm volatile ("RDTSC" : "=A" (end_cycle));
+  time(&end_sec);
+  printf("Cycles taken: %llu (%ld seconds)\n", end_cycle - start_cycle, end_sec - start_sec);
+  
   return 0;
 }
