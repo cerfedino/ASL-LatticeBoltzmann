@@ -219,6 +219,30 @@ double **malloc_2d_double(int x, int y) {
   return array;
 }
 
+void free_3d(double ***array, int height, int width) {
+  for (int i = 0; i < height; ++i) {
+    for (int j = 0; j < width; ++j) {
+      free(array[i][j]);
+    }
+    free(array[i]);
+  }
+  free(array);
+}
+
+void free_2d(int **array, int x) {
+  for (int i = 0; i < x; ++i) {
+    free(array[i]);
+  }
+  free(array);
+}
+
+void free_2d(double **array, int x) {
+  for (int i = 0; i < x; ++i) {
+    free(array[i]);
+  }
+  free(array);
+}
+
 
 //orig [1 2 3 4 5]
 //roll [4 5 1 2 3]
@@ -583,10 +607,17 @@ int main() {
     // TODO for benchmarking only save vorticity from the last step
     save_npy_2d_double(vorticity, Ny, Nx, vortex_filename);
     #endif
+
+    free_2d(ux, Ny);
+    free_2d(uy, Ny);
+    free_2d(vorticity, Ny);
+
+    free_3d(Feq, Ny, Nx);
+    free_2d(bndryF, 1941);
   }
 
   latest_outout(folder_name);
-  make_latest_output(folder_name);
+  //make_latest_output(folder_name);
 
   return 0;
 }
