@@ -32,8 +32,8 @@ using namespace std;
 #define Nx 400   // resolution in x
 #define Ny 100   // resolution in y
 #define rho0 0.01 // reciprocal average density
-#define tau 0.6  // collision timescale
-#define Nt 500  // number of timesteps
+#define tau 1.66666667  // reciprocal collision timescale (1/0.6)
+#define Nt 5000  // number of timesteps
 
 // #define Nt 30  // number of timesteps
 
@@ -115,12 +115,11 @@ inline int run() {
   double *rho =       (double *) calloc(Ny*Nx,sizeof(double));
   double *cylinder =  (double *) malloc(Ny*Nx*sizeof(double));
   double *ux =        (double *) malloc(Ny*Nx*sizeof(double));
-  double *uy =        (double *) malloc(Ny*Nx*sizeof(double));
+  double *uy =        (double *) malloc(Ny*Nx*sizeof(double)); 
   double *bndryF =    (double *) malloc(1941*NL*sizeof(double));
   int *x_coords =        (int *) malloc(Ny*Nx*sizeof(int));
   int *y_coords =        (int *) malloc(Ny*Nx*sizeof(int));
   double *temp =      (double *) malloc(Ny*Nx*sizeof(double));;
-  double *temp2 =     (double *) malloc(Ny*Nx*sizeof(double));;
 
 
   debug_print("Initializing\n");
@@ -164,9 +163,9 @@ inline int run() {
   }
 
   // 	for i in idxs:		F[:,:,i] *= rho0 / rho
-  for (int i = 0; i < NL; i++) {
-    for (int j = 0; j < Ny; j++) {
-      for (int k = 0; k < Nx; k++) {
+  for (int j = 0; j < Ny; j++) {
+    for (int k = 0; k < Nx; k++) {
+      for (int i = 0; i < NL; i++) {
         F[j*(Nx*NL)+ k*NL +i] *= rho0 * rho[j*Nx +k];
       }
     }
@@ -194,13 +193,13 @@ inline int run() {
       int shiftY = cxs[j];
       for (int k = 0; k < Ny; k++) {
         for (int l = 0; l < Nx; l++) {
-          temp2[((k + shiftY + Ny) % Ny)*Nx +((l + shiftX + Nx) % Nx)] = F[k*(Nx*NL)+ l*NL +j];
+          temp[((k + shiftY + Ny) % Ny)*Nx +((l + shiftX + Nx) % Nx)] = F[k*(Nx*NL)+ l*NL +j];
         }
       }
-      
+
       for (int k = 0; k < Ny; k++) {
         for (int l = 0; l < Nx; l++) {
-          F[k*(Nx*NL)+ l*NL +j] = temp2[k*Nx +l];
+          F[k*(Nx*NL)+ l*NL +j] = temp[k*Nx +l];
         }
       }
     }
@@ -210,6 +209,7 @@ inline int run() {
     // its 2d of size 1941x9 but no idea how this is calculated ??????
     // TODO to support dynamic sized we could evaluate the size of the array and then allocate memory
     // for now its hardcoded :pikashrug:
+    // TODO: FIX
     int index_bndryF = 0;
     for (int j = 0; j < Ny; j++) {
       for (int k = 0; k < Nx; k++) {
@@ -246,35 +246,17 @@ inline int run() {
     // rho = np.sum(F,2)
     for (int j = 0; j < Ny; j++) {
       for (int k = 0; k < Nx; k++) {
-        rho[j*Nx +k] = 0;
+        double res1 = 0;
+        double res2 = 0;
+        double res3 = 0;
         for (int l = 0; l < NL; l++) {
-          rho[j*Nx +k] += F[j*(Nx*NL)+ k*NL +l];
+          res1 += F[j*(Nx*NL)+ k*NL +l];
+          res2 += F[j*(Nx*NL)+ k*NL +l] * cxs[l];
+          res3 += F[j*(Nx*NL)+ k*NL +l] * cys[l];
         }
-      }
-    }
-
-
-    // ux = np.sum(F * cxs, 2) / rho
-    for (int j = 0; j < Ny; j++) {
-      for (int k = 0; k < Nx; k++) {
-        ux[j*Nx +k] = 0;
-        for (int l = 0; l < NL; l++) {
-          ux[j*Nx +k] += F[j*(Nx*NL)+ k*NL +l] * cxs[l];
-        }
-        ux[j*Nx +k] /= rho[j*Nx +k];
-      }
-    }
-
-    
-
-    // uy = np.sum(F * cys, 2) / rho
-    for (int j = 0; j < Ny; j++) {
-      for (int k = 0; k < Nx; k++) {
-        uy[j*Nx +k] = 0;
-        for (int l = 0; l < NL; l++) {
-          uy[j*Nx +k] += F[j*(Nx*NL)+ k*NL +l] * cys[l];
-        }
-        uy[j*Nx +k] /= rho[j*Nx +k];
+        rho[j*Nx +k] = res1;
+        ux[j*Nx +k] = res2 / res1;
+        uy[j*Nx +k] = res3 / res1;
       }
     }
 
@@ -306,7 +288,7 @@ inline int run() {
     for (int j = 0; j < Ny; j++) {
       for (int k = 0; k < Nx; k++) {
         for (int l = 0; l < NL; l++) {
-          F[j*(Nx*NL)+ k*NL +l] += -(1.0 / tau) * (F[j*(Nx*NL)+ k*NL +l] - Feq[j*(Nx*NL)+ k*NL +l]);
+          F[j*(Nx*NL)+ k*NL +l] += -tau * (F[j*(Nx*NL)+ k*NL +l] - Feq[j*(Nx*NL)+ k*NL +l]);
         }
       }
     }
@@ -350,11 +332,7 @@ inline int run() {
         // (np.roll(uy, -1, axis=1) - np.roll(uy, 1, axis=1))
         double uy_roll = uy[((j - 1 + Ny) % Ny)*Nx +k] - uy[((j + 1 + Ny) % Ny)*Nx +k];
 
-        vorticity[j*Nx +k] = ux_roll - uy_roll;
-
-        if (cylinder[j*Nx +k] == 1) {
-          vorticity[j*Nx +k] = 0; 
-        }
+        vorticity[j*Nx +k] = cylinder[j*Nx +k] == 1 ? 0 : ux_roll - uy_roll;
       }
     }
 
@@ -372,7 +350,7 @@ inline int run() {
     
   }
   printf("\n");
-  
+
   free(ux);
   free(uy);
   free(Feq);
@@ -384,8 +362,6 @@ inline int run() {
   free(rho);
   free(cylinder);
   free(temp);
-  free(temp2);
-  // free(BIG_CHUNGUS);
 
   make_latest_output(folder_name);
 
