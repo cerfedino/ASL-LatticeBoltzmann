@@ -29,8 +29,8 @@
 
 using namespace std;
 
-#define Nx 400   // resolution in x
-#define Ny 100   // resolution in y
+int Nx = 400;   // resolution in x
+int Ny = 100;   // resolution in y
 #define rho0 0.01 // reciprocal average density
 #define tau 0.6  // collision timescale
 #define Nt 500  // number of timesteps
@@ -453,6 +453,7 @@ inline int run() {
 
 int main(int argc, char const *argv[])
 {
+  std::cin>>Nx>>Ny;
 
   unsigned long long start_cycle, end_cycle;
   time_t start_sec, end_sec;
