@@ -90,50 +90,6 @@ void roll1D(double *array, int size, int shift) {
 }
 
 
-/*orig
- [[1 2 3]
- [4 5 6]
- [7 8 9]]
-roll
- [[3 1 2]
- [6 4 5]
- [9 7 8]]
- if called on np.roll(array, 1, axis=0)
- */
-// similar to roll1D
-void roll2D(double *array, int height, int width, int shift, int axis){
-  double *temp = malloc_2d_double(height, width);
-
-  // matrix is array[Y][X]
-
-  // axis = 0 -> roll along x
-  // axis = 1 -> roll along y
-
-  if(axis == 0){
-    for (int i = 0; i < height; i++) {
-      for (int j = 0; j < width; j++) {
-        temp[i*Nx +(j + shift + width) % width] = array[i*width +j];
-      }
-    }
-  } else {
-    for (int i = 0; i < height; i++) {
-      for (int j = 0; j < width; j++) {
-        temp[((i + shift + height) % height)*Nx +j] = array[i*width +j];
-      }
-    }
-  }
-     
-
-  for (int i = 0; i < height; i++) {
-    for (int j = 0; j < width; j++) {
-      array[i*width +j] = temp[i*Nx +j];
-    }
-  }
-
-  free(temp);
-}
-
-
 // TODO CHECK TYPES IF ALL CORRECT
 // TODO arrays need to be initialized likely with 0 values
 inline int run() {
@@ -163,7 +119,8 @@ inline int run() {
   double *bndryF =    (double *) malloc(1941*NL*sizeof(double));
   int *x_coords =        (int *) malloc(Ny*Nx*sizeof(int));
   int *y_coords =        (int *) malloc(Ny*Nx*sizeof(int));
-  double *temp = malloc_2d_double(Ny, Nx);
+  double *temp =      (double *) malloc(Ny*Nx*sizeof(double));;
+  double *temp2 =     (double *) malloc(Ny*Nx*sizeof(double));;
 
 
   debug_print("Initializing\n");
@@ -227,38 +184,23 @@ inline int run() {
   
   // Simulation loop
   for (int i = 0; i < Nt; i++) {
-    debug_printf("Timestep %05d\n", i);
+    debug_printf("\r%d", i);
 
     //# Drift
     for (int j = 0; j < NL; j++) {
 
-
+      // Roll 
+      int shiftX = cys[j];
+      int shiftY = cxs[j];
       for (int k = 0; k < Ny; k++) {
         for (int l = 0; l < Nx; l++) {
-          temp[k*Nx +l] = F[k*(Nx*NL)+ l*NL +j];
+          temp2[((k + shiftY + Ny) % Ny)*Nx +((l + shiftX + Nx) % Nx)] = F[k*(Nx*NL)+ l*NL +j];
         }
       }
-
-      roll2D(temp, Ny, Nx, cxs[j], 1);
-
-      for (int k = 0; k < Ny; k++) {
-        for (int l = 0; l < Nx; l++) {
-          F[k*(Nx*NL)+ l*NL +j] = temp[k*Nx +l];
-        }
-      }
-
       
       for (int k = 0; k < Ny; k++) {
         for (int l = 0; l < Nx; l++) {
-          temp[k*Nx +l] = F[k*(Nx*NL)+ l*NL +j];
-        }
-      }
-
-      roll2D(temp, Ny, Nx, cys[j], 0);
-
-      for (int k = 0; k < Ny; k++) {
-        for (int l = 0; l < Nx; l++) {
-          F[k*(Nx*NL)+ l*NL +j] = temp[k*Nx +l];
+          F[k*(Nx*NL)+ l*NL +j] = temp2[k*Nx +l];
         }
       }
     }
@@ -429,6 +371,7 @@ inline int run() {
     
     
   }
+  printf("\n");
   
   free(ux);
   free(uy);
@@ -441,6 +384,7 @@ inline int run() {
   free(rho);
   free(cylinder);
   free(temp);
+  free(temp2);
   // free(BIG_CHUNGUS);
 
   make_latest_output(folder_name);

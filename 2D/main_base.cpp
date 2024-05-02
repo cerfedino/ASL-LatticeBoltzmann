@@ -398,7 +398,7 @@ int run() {
 
   // Simulation loop
   for (int i = 0; i < Nt; i++) {
-    debug_printf("Timestep %05d\n", i);
+    debug_printf("\r%d", i);
 
     //# Drift
     for (int j = 0; j < NL; j++) {
@@ -615,7 +615,7 @@ int run() {
     free_3d(Feq, Ny, Nx);
     free_2d(bndryF, 1941);
   }
-
+  debug_print("\n");
   latest_outout(folder_name);
 
   return 0;
