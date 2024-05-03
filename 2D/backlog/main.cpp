@@ -1,5 +1,7 @@
 //state after eb4e798a19b616a8f674b32f849117cc935f9365
-//flops = 
+//flops_total = Ny*Nx*NL*(add+mult) + Ny*Nx*(5 mults + 1 add + 1 div + 1 cos) + Ny*Nx(1 add) + Ny*NL*Nx*(2 mults) +  Ny*Nx(2 pows + 2 add + 2 div ) + Nt*( Ny*Nx*NL(1 add) + 2*Ny*Nx*NL(1 add + 1 div/NL) + NL*Ny*Nx(9 mults + 6 adds + 2 divs + 3 pows) + Ny*Nx*NL(3 add + 1 div + 1 mult) + Ny*Nx*3))
+//why am i doing this
+
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -139,6 +141,7 @@ void roll2D(double *array, int height, int width, int shift, int axis){
 
 // TODO CHECK TYPES IF ALL CORRECT
 // TODO arrays need to be initialized likely with 0 values
+//flops = Ny*Nx*NL*(add+mult) + Ny*Nx*(5 mults + 1 add + 1 div + 1 cos) + Ny*Nx(1 add) + Ny*NL*Nx*(2 mults) +  Ny*Nx(2 pows + 2 add + 2 div ) + Nt*( Ny*Nx*NL(1 add) + 2*Ny*Nx*NL(1 add + 1 div/NL) + NL*Ny*Nx(9 mults + 6 adds + 2 divs + 3 pows) + Ny*Nx*NL(3 add + 1 div + 1 mult) + Ny*Nx*3)
 inline int run() {
   string folder_name = make_output_folder(); // TODO delete empty folders
 
@@ -184,8 +187,6 @@ inline int run() {
     }
   }
 
-
-  //0 flops
   meshgrid(x_coords, y_coords);
 
   //flops = Ny*Nx*(5 mults + 1 add + 1 div + 1 cos)
@@ -224,7 +225,7 @@ inline int run() {
 
 
 
-  // no flops, only int ops
+  // flops = Ny*Nx(2 pows + 2 add + 2 div )
   // cylinder = (X - Nx/4)**2 + (Y - Ny/2)**2 < (Ny/4)**2
   for (int i = 0; i < Ny; i++) {
     for (int j = 0; j < Nx; j++) {
@@ -232,7 +233,7 @@ inline int run() {
     }
   }
   
-  //flops = Nt*NL*2(flops of roll2D) = 0, no flops there
+  //flops = Nt*( Ny*Nx*NL(1 add) + 2*Ny*Nx*NL(1 add + 1 div/NL) + NL*Ny*Nx(9 mults + 6 adds + 2 divs + 3 pows) + Ny*Nx*NL(3 add + 1 div + 1 mult) + Ny*Nx*3)
   // Simulation loop
   for (int i = 0; i < Nt; i++) {
     debug_printf("Timestep %05d\n", i);
@@ -290,7 +291,7 @@ inline int run() {
 
                                         // 0,1,2,3,4,5,6,7,8  INDEXES
     // reorder columns bndryF = bndryF[:,[0,5,6,7,8,1,2,3,4]]
-    
+    //flops = 0
     for (int j = 0; j < 1941; j++) {
         // we love pointers dont we?
         double temp = bndryF[j*NL +1];
@@ -375,7 +376,7 @@ inline int run() {
     }
 
     // F += -(1.0/tau) * (F - Feq)
-    //
+    //flops = Ny*Nx*NL(3 add + 1 div + 1 mult)
     for (int j = 0; j < Ny; j++) {
       for (int k = 0; k < Nx; k++) {
         for (int l = 0; l < NL; l++) {
@@ -387,6 +388,7 @@ inline int run() {
 
     // Apply boundary
     // F[cylinder,:] = bndryF
+    //flops = 0
     int index_bndryF2 = 0;
     for (int j = 0; j < Ny; j++) {
       for (int k = 0; k < Nx; k++) {
@@ -402,6 +404,7 @@ inline int run() {
     
 
     // set ux and uy to zero where cylinder is 1
+    //flops = 0
     for (int j = 0; j < Ny; j++) {
       for (int k = 0; k < Nx; k++) {
         if (cylinder[j*Nx +k] == 1) {
@@ -414,6 +417,7 @@ inline int run() {
     // vorticity = (np.roll(ux, -1, axis=0) - np.roll(ux, 1, axis=0)) -
     // (np.roll(uy, -1, axis=1) - np.roll(uy, 1, axis=1)) vorticity[cylinder]
     // = np.nan vorticity = np.ma.array(vorticity, mask=cylinder)
+    //flops = Ny*Nx*3
     for (int j = 0; j < Ny; j++) {
       for (int k = 0; k < Nx; k++) {
 
