@@ -7,14 +7,14 @@ clean:
 	find . -iname '*.o' -print -delete; rm -f output/timestamp_debug.txt; rm -f output/reference/timestamp.txt
 
 build: ./main_base.o ./main_base_debug.o ./main_optimized.o ./main_optimized_debug.o 
-./main_optimized.o: main.cpp ./include/utils.c ./include/utils.h
-	g++ $(CFLAGS) $(OPTIM_FLAGS) main.cpp ./include/utils.c -o ./main_optimized.o
-./main_optimized_debug.o: main.cpp ./include/utils.c ./include/utils.h
-	g++ $(CFLAGS) $(OPTIM_FLAGS) -DDEBUG main.cpp ./include/utils.c -o ./main_optimized_debug.o
-./main_base.o: main_base.cpp ./include/utils.c ./include/utils.h
-	g++ $(CFLAGS) main_base.cpp ./include/utils.c -o ./main_base.o
-./main_base_debug.o: main_base.cpp ./include/utils.c ./include/utils.h
-	g++ $(CFLAGS) -DDEBUG main_base.cpp ./include/utils.c -o ./main_base_debug.o
+./main_optimized.o: main.cpp ./include/utils.c ./include/utils.h ./include/profile.c
+	g++ $(CFLAGS) $(OPTIM_FLAGS) main.cpp ./include/utils.c ./include/profile.c -o ./main_optimized.o
+./main_optimized_debug.o: main.cpp ./include/utils.c ./include/utils.h ./include/profile.c
+	g++ $(CFLAGS) $(OPTIM_FLAGS) -DDEBUG main.cpp ./include/utils.c  ./include/profile.c -o ./main_optimized_debug.o
+./main_base.o: main_base.cpp ./include/utils.c ./include/utils.h ./include/profile.c
+	g++ $(CFLAGS) main_base.cpp ./include/utils.c  ./include/profile.c -o ./main_base.o
+./main_base_debug.o: main_base.cpp ./include/utils.c ./include/utils.h ./include/profile.c
+	g++ $(CFLAGS) -DDEBUG main_base.cpp ./include/utils.c ./include/profile.c -o ./main_base_debug.o
 
 run_debug: output/timestamp_debug.txt
 output/timestamp_debug.txt: ./main_optimized_debug.o

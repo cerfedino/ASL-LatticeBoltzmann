@@ -1,4 +1,5 @@
 #include <math.h>
+#include <profile.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -11,6 +12,7 @@
    
 #include "include/npy.hpp"
 #include "include/utils.h"
+#include "include/profile.h"
 
 #ifdef DEBUG
 #define debug_printf(fmt, ...)  fprintf(stdout, fmt, __VA_ARGS__)
@@ -251,6 +253,8 @@ inline int run() {
     }
 
     // F += -(1.0/tau) * (F - Feq)
+    profiler *p = init_profiler(3 * Ny * Nx * NL);
+    start_run(p);
     for (int j = 0; j < Ny; j++) {
       for (int k = 0; k < Nx; k++) {
         for (int l = 0; l < NL; l++) {
@@ -258,6 +262,9 @@ inline int run() {
         }
       }
     }
+    end_run(p);
+    profiler_stats ps = finish_profiler(p);
+    debug_printf("Cycles: %ld, Performance: %.2f", ps.cycles, ps.performance);
 
 
     // Apply boundary
