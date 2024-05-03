@@ -1,4 +1,5 @@
 #include "profile.h"
+#include <limits.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -22,7 +23,7 @@ uint64_t time() {
                      "lea  (%%rax, %%rdx),  %0;"
                      : "=r"(t)
                      :
-                     : "rax", "rdx");
+                     : "rax", "rdx", "rbx", "rcx");
     return t;
 }
 
@@ -41,6 +42,11 @@ void start_run(profiler *p) {
 
 void end_run(profiler *p) {
     uint64_t end_t = time();
+    uint64_t time_diff = end_t - p->_start;
+    if (p->_cycles > (UINT64_MAX - time_diff)) {
+        printf("\nOVERFLOW WHEN ENDING PROFILE RUN\n");
+        exit(1);
+    }
     p->_cycles += end_t - p->_start;
 }
 

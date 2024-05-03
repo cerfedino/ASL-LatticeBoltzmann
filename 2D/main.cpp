@@ -147,8 +147,19 @@ inline int run() {
       cylinder[i*Nx +j] = (pow((double)x_coords[i*Nx +j] - (double)Nx / 4, 2) + pow((double)y_coords[i*Nx +j] - (double)Ny / 2, 2)) < pow(Ny / 4, 2);
     }
   }
+
+  profiler *rho_profiler  = init_profiler(5 * Ny * Nx * NL + 2 * Ny * Nx),
+           *feq_profiler  = init_profiler(19 * Nx * Ny * NL),
+           *f_profiler    = init_profiler(3 * Nx * Ny * NL),
+           *vort_profiler = init_profiler(2 * Nx * Ny);
   
-  
+  #ifdef PROFILE
+  const int PROFILE_RUNS = 5;
+  const int PROFILE_DIGITS = floor(log10(PROFILE_RUNS)) + 1;
+  printf("\rRun %-*d/%d done", PROFILE_DIGITS, 0, PROFILE_RUNS);
+  fflush(stdout);
+  for (int profile_counter = 0; profile_counter < PROFILE_RUNS; profile_counter++) {
+  #endif
   // Simulation loop
   for (int i = 0; i < Nt; i++) {
     debug_printf("\r%d", i);
@@ -212,6 +223,7 @@ inline int run() {
     }
 
     // rho = np.sum(F,2)
+    start_run(rho_profiler);
     for (int j = 0; j < Ny; j++) {
       for (int k = 0; k < Nx; k++) {
         double res1 = 0;
@@ -227,10 +239,12 @@ inline int run() {
         uy[j*Nx +k] = res3 / res1;
       }
     }
+    end_run(rho_profiler);
 
     // set to zero
     memset(Feq, 0, Ny*Nx*NL*sizeof(double));
 
+    start_run(feq_profiler);
     for (int k = 0; k < NL; k++) {
       for (int j = 0; j < Ny; j++) {
         for (int l = 0; l < Nx; l++) {
@@ -251,10 +265,10 @@ inline int run() {
         }
       }
     }
+    end_run(feq_profiler);
 
     // F += -(1.0/tau) * (F - Feq)
-    profiler *p = init_profiler(3 * Ny * Nx * NL);
-    start_run(p);
+    start_run(f_profiler);
     for (int j = 0; j < Ny; j++) {
       for (int k = 0; k < Nx; k++) {
         for (int l = 0; l < NL; l++) {
@@ -262,10 +276,7 @@ inline int run() {
         }
       }
     }
-    end_run(p);
-    profiler_stats ps = finish_profiler(p);
-    debug_printf("Cycles: %ld, Performance: %.2f", ps.cycles, ps.performance);
-
+    end_run(f_profiler);
 
     // Apply boundary
     // F[cylinder,:] = bndryF
@@ -296,6 +307,7 @@ inline int run() {
     // vorticity = (np.roll(ux, -1, axis=0) - np.roll(ux, 1, axis=0)) -
     // (np.roll(uy, -1, axis=1) - np.roll(uy, 1, axis=1)) vorticity[cylinder]
     // = np.nan vorticity = np.ma.array(vorticity, mask=cylinder)
+    start_run(vort_profiler);
     for (int j = 0; j < Ny; j++) {
       for (int k = 0; k < Nx; k++) {
 
@@ -308,6 +320,7 @@ inline int run() {
         vorticity[j*Nx +k] = cylinder[j*Nx +k] == 1 ? 0 : ux_roll - uy_roll;
       }
     }
+    end_run(vort_profiler);
 
     #ifdef DEBUG
     char vortex_filename[100];
@@ -315,13 +328,28 @@ inline int run() {
     // TODO for benchmarking only save vorticity from the last step
     save_npy_2d_double(vorticity, Ny, Nx, vortex_filename);
     #endif
-
-    
     
     
     
     
   }
+  #ifdef PROFILE
+  printf("\rRun %-*d/%d done", PROFILE_DIGITS, profile_counter+1, PROFILE_RUNS);
+  fflush(stdout);
+  }
+  #endif
+  #ifdef PROFILE
+  printf("\nProfiling results:\n");
+  profiler_stats rho_stats = finish_profiler(rho_profiler);
+  printf("- Rho  Calculation: %4.2f Flops/Cycle, %10ld cycles in %d runs\n", rho_stats.performance, rho_stats.cycles, rho_stats.runs);
+  profiler_stats feq_stats = finish_profiler(feq_profiler);
+  printf("- FEQ  Calculation: %4.2f Flops/Cycle, %10ld cycles in %d runs\n", feq_stats.performance, feq_stats.cycles, feq_stats.runs);
+  profiler_stats f_stats = finish_profiler(f_profiler);
+  printf("- F    Calculation: %4.2f Flops/Cycle, %10ld cycles in %d runs\n", f_stats.performance, f_stats.cycles, f_stats.runs);
+  profiler_stats vort_stats = finish_profiler(vort_profiler);
+  printf("- Vort Calculation: %4.2f Flops/Cycle, %10ld cycles in %d runs\n", vort_stats.performance, vort_stats.cycles, vort_stats.runs);
+  #endif
+
   printf("\n");
 
   free(ux);
