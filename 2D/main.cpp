@@ -32,7 +32,7 @@ using namespace std;
 #define Nx 400   // resolution in x
 #define Ny 100   // resolution in y
 #define rho0 0.01 // reciprocal average density
-#define tau 1.66666667  // reciprocal collision timescale (1/0.6)
+#define tau -1.66666667  // reciprocal collision timescale (1/0.6)
 #define Nt 5000  // number of timesteps
 
 // #define Nt 30  // number of timesteps
@@ -56,40 +56,6 @@ void meshgrid(int *x_coords, int *y_coords) {
 }
 
 
-// TODO if fancy make generic functions for double, float, int and so on
-double *malloc_3d(int height, int width, int depth) {
-  return (double*) malloc(width*height*depth*sizeof(double));
-}
-
-
-int *malloc_2d(int height, int width) {
-  return (int*) malloc(width*height*sizeof(int));
-}
-
-
-double *malloc_2d_double(int width, int height) {
-  return (double*) malloc(width*height*sizeof(double));
-}
-
-
-//orig [1 2 3 4 5]
-//roll [4 5 1 2 3]
-// if called on np.roll(array, 2)
-void roll1D(double *array, int size, int shift) {
-  double *temp = (double *)malloc(size * sizeof(double));
-
-  for (int i = 0; i < size; i++) {
-    temp[(i + shift + size) % size] = array[i];
-  }
-
-  for (int i = 0; i < size; i++) {
-    array[i] = temp[i];
-  }
-
-  free(temp);
-}
-
-
 // TODO CHECK TYPES IF ALL CORRECT
 // TODO arrays need to be initialized likely with 0 values
 inline int run() {
@@ -100,13 +66,13 @@ inline int run() {
   // Lattice Boltzmann Simulation in 2D
   debug_print("Starting\n");
 
-  // double *BIG_CHUNGUS = (double *) malloc((2*(Ny*Nx*NL)+5*(Ny*Nx)+(1941*NL)) * sizeof(double) + 2*(Ny*Nx)*sizeof(int));
+  // double *BIG_CHUNGUS = (double *) malloc((2*(Ny*Nx*NL)+6*(Ny*Nx)+(1941*NL)) * sizeof(double) + 2*(Ny*Nx)*sizeof(int));
   // debug_printf("Allocating %lu bytes for BIG_CHUNGUS\n", (2*(Ny*Nx*NL)+5*(Ny*Nx)+(1941*NL)) * sizeof(double) + 2*(Ny*Nx)*sizeof(int));
   // if (BIG_CHUNGUS == NULL) {
   //   printf("Memory allocation failed for BIG_CHUNGUS\n");
   //   return 1;
   // }
-  
+
   
 
   double *Feq =       (double *) malloc(Ny*Nx*NL*sizeof(double));
@@ -116,10 +82,10 @@ inline int run() {
   double *cylinder =  (double *) malloc(Ny*Nx*sizeof(double));
   double *ux =        (double *) malloc(Ny*Nx*sizeof(double));
   double *uy =        (double *) malloc(Ny*Nx*sizeof(double)); 
+  double *temp =      (double *) malloc(Ny*Nx*sizeof(double));
   double *bndryF =    (double *) malloc(1941*NL*sizeof(double));
   int *x_coords =        (int *) malloc(Ny*Nx*sizeof(int));
   int *y_coords =        (int *) malloc(Ny*Nx*sizeof(int));
-  double *temp =      (double *) malloc(Ny*Nx*sizeof(double));;
 
 
   debug_print("Initializing\n");
@@ -288,7 +254,7 @@ inline int run() {
     for (int j = 0; j < Ny; j++) {
       for (int k = 0; k < Nx; k++) {
         for (int l = 0; l < NL; l++) {
-          F[j*(Nx*NL)+ k*NL +l] += -tau * (F[j*(Nx*NL)+ k*NL +l] - Feq[j*(Nx*NL)+ k*NL +l]);
+          F[j*(Nx*NL)+ k*NL +l] += tau * (F[j*(Nx*NL)+ k*NL +l] - Feq[j*(Nx*NL)+ k*NL +l]);
         }
       }
     }
@@ -362,7 +328,7 @@ inline int run() {
   free(rho);
   free(cylinder);
   free(temp);
-
+  // free(BIG_CHUNGUS);
   make_latest_output(folder_name);
 
   return 0;
