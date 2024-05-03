@@ -1,5 +1,9 @@
-//description = "....."
-//flops = Ny*Nx*NL(1 div + 1 add + 1 add + 1 mult)+ Ny*Nx( 2 add + 5 mult + 1 cos + 1 div )+Ny*Nx*NL*(1 add)+Ny*Nx*NL*(2 adds)+ Ny*Nx*(2 pow + 2 subs + 2 divs+ 1 add)+ Nt*(Ny*Nx*NL(3 adds + 2 mults) + Ny*Nx*(2 divs))+NL*Ny*Nx*(9 mults + 2 div  + 3 pows + 6 adds)+Ny*Nx*NL (2 add + 1 mult )+Ny*Nx*(3 adds)
+//state after eb4e798a19b616a8f674b32f849117cc935f9365
+//description = "misc optimizations???"
+
+//flops_total = Ny*Nx*NL*(add+mult) + Ny*Nx*(5 mults + 1 add + 1 div + 1 cos) + Ny*Nx(1 add) + Ny*NL*Nx*(2 mults) +  Ny*Nx(2 pows + 2 add + 2 div ) + Nt*( Ny*Nx*NL(1 add) + 2*Ny*Nx*NL(1 add + 1 div/NL) + NL*Ny*Nx(9 mults + 6 adds + 2 divs + 3 pows) + Ny*Nx*NL(3 add + 1 div + 1 mult) + Ny*Nx*3))
+//why am i doing this
+
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -34,8 +38,8 @@ using namespace std;
 int Nx = 400;   // resolution in x
 int Ny = 100;   // resolution in y
 #define rho0 0.01 // reciprocal average density
-#define tau -1.66666667  // reciprocal collision timescale (1/0.6)
-#define Nt 5000  // number of timesteps
+#define tau 0.6  // collision timescale
+#define Nt 500  // number of timesteps
 
 // #define Nt 30  // number of timesteps
 
@@ -58,8 +62,88 @@ void meshgrid(int *x_coords, int *y_coords) {
 }
 
 
+// TODO if fancy make generic functions for double, float, int and so on
+double *malloc_3d(int height, int width, int depth) {
+  return (double*) malloc(width*height*depth*sizeof(double));
+}
+
+
+int *malloc_2d(int height, int width) {
+  return (int*) malloc(width*height*sizeof(int));
+}
+
+
+double *malloc_2d_double(int width, int height) {
+  return (double*) malloc(width*height*sizeof(double));
+}
+
+
+//orig [1 2 3 4 5]
+//roll [4 5 1 2 3]
+// if called on np.roll(array, 2)
+void roll1D(double *array, int size, int shift) {
+  double *temp = (double *)malloc(size * sizeof(double));
+
+  for (int i = 0; i < size; i++) {
+    temp[(i + shift + size) % size] = array[i];
+  }
+
+  for (int i = 0; i < size; i++) {
+    array[i] = temp[i];
+  }
+
+  free(temp);
+}
+
+
+/*orig
+ [[1 2 3]
+ [4 5 6]
+ [7 8 9]]
+roll
+ [[3 1 2]
+ [6 4 5]
+ [9 7 8]]
+ if called on np.roll(array, 1, axis=0)
+ */
+// similar to roll1D
+
+void roll2D(double *array, int height, int width, int shift, int axis){
+  double *temp = malloc_2d_double(height, width);
+
+  // matrix is array[Y][X]
+
+  // axis = 0 -> roll along x
+  // axis = 1 -> roll along y
+
+  if(axis == 0){
+    for (int i = 0; i < height; i++) {
+      for (int j = 0; j < width; j++) {
+        temp[i*Nx +(j + shift + width) % width] = array[i*width +j];
+      }
+    }
+  } else {
+    for (int i = 0; i < height; i++) {
+      for (int j = 0; j < width; j++) {
+        temp[((i + shift + height) % height)*Nx +j] = array[i*width +j];
+      }
+    }
+  }
+     
+
+  for (int i = 0; i < height; i++) {
+    for (int j = 0; j < width; j++) {
+      array[i*width +j] = temp[i*Nx +j];
+    }
+  }
+
+  free(temp);
+}
+
+
 // TODO CHECK TYPES IF ALL CORRECT
 // TODO arrays need to be initialized likely with 0 values
+//flops = Ny*Nx*NL*(add+mult) + Ny*Nx*(5 mults + 1 add + 1 div + 1 cos) + Ny*Nx(1 add) + Ny*NL*Nx*(2 mults) +  Ny*Nx(2 pows + 2 add + 2 div ) + Nt*( Ny*Nx*NL(1 add) + 2*Ny*Nx*NL(1 add + 1 div/NL) + NL*Ny*Nx(9 mults + 6 adds + 2 divs + 3 pows) + Ny*Nx*NL(3 add + 1 div + 1 mult) + Ny*Nx*3)
 inline int run() {
   string folder_name = make_output_folder(); // TODO delete empty folders
 
@@ -68,13 +152,13 @@ inline int run() {
   // Lattice Boltzmann Simulation in 2D
   debug_print("Starting\n");
 
-  // double *BIG_CHUNGUS = (double *) malloc((2*(Ny*Nx*NL)+6*(Ny*Nx)+(1941*NL)) * sizeof(double) + 2*(Ny*Nx)*sizeof(int));
+  // double *BIG_CHUNGUS = (double *) malloc((2*(Ny*Nx*NL)+5*(Ny*Nx)+(1941*NL)) * sizeof(double) + 2*(Ny*Nx)*sizeof(int));
   // debug_printf("Allocating %lu bytes for BIG_CHUNGUS\n", (2*(Ny*Nx*NL)+5*(Ny*Nx)+(1941*NL)) * sizeof(double) + 2*(Ny*Nx)*sizeof(int));
   // if (BIG_CHUNGUS == NULL) {
   //   printf("Memory allocation failed for BIG_CHUNGUS\n");
   //   return 1;
   // }
-
+  
   
 
   double *Feq =       (double *) malloc(Ny*Nx*NL*sizeof(double));
@@ -83,19 +167,19 @@ inline int run() {
   double *rho =       (double *) calloc(Ny*Nx,sizeof(double));
   double *cylinder =  (double *) malloc(Ny*Nx*sizeof(double));
   double *ux =        (double *) malloc(Ny*Nx*sizeof(double));
-  double *uy =        (double *) malloc(Ny*Nx*sizeof(double)); 
-  double *temp =      (double *) malloc(Ny*Nx*sizeof(double));
+  double *uy =        (double *) malloc(Ny*Nx*sizeof(double));
   double *bndryF =    (double *) malloc(1941*NL*sizeof(double));
   int *x_coords =        (int *) malloc(Ny*Nx*sizeof(int));
   int *y_coords =        (int *) malloc(Ny*Nx*sizeof(int));
+  double *temp = malloc_2d_double(Ny, Nx);
 
 
   debug_print("Initializing\n");
 
   srand(42);  // some seed
 
+  //flops = Ny*Nx*NL*(add+mult)
   // Initialize F
-  //flops = Ny*Nx*NL(1 div + 1 add + 1 add + 1 mult)
   for (int i = 0; i < Ny; i++) {
     for (int j = 0; j < Nx; j++) {
       for (int k = 0; k < NL; k++) {
@@ -105,12 +189,10 @@ inline int run() {
     }
   }
 
-
-
   meshgrid(x_coords, y_coords);
 
+  //flops = Ny*Nx*(5 mults + 1 add + 1 div + 1 cos)
   // F[:,:,3] += 2 * (1+0.2*np.cos(2*np.pi*X/Nx*4))
-  //flops = Ny*Nx( 2 add + 5 mult + 1 cos + 1 div )
   for (int i = 0; i < Ny; i++) {
     for (int j = 0; j < Nx; j++) {
       // in python we access [3] but here we do on [1] what this dictates is the direction we go
@@ -120,8 +202,9 @@ inline int run() {
     }
   }
 
-  //flops = Ny*Nx*NL*(1 add)
+
   int res = 0;
+  //flops = Ny*Nx(1 add)
   for (int i = 0; i < Ny; i++) {
     for (int j = 0; j < Nx; j++) {
       res = 0;
@@ -132,11 +215,11 @@ inline int run() {
     }
   }
 
+  //flops = Ny*NL*Nx*(2 mults)
   // 	for i in idxs:		F[:,:,i] *= rho0 / rho
-  //flops = Ny*Nx*NL*(2 adds)
-  for (int j = 0; j < Ny; j++) {
-    for (int k = 0; k < Nx; k++) {
-      for (int i = 0; i < NL; i++) {
+  for (int i = 0; i < NL; i++) {
+    for (int j = 0; j < Ny; j++) {
+      for (int k = 0; k < Nx; k++) {
         F[j*(Nx*NL)+ k*NL +i] *= rho0 * rho[j*Nx +k];
       }
     }
@@ -144,32 +227,45 @@ inline int run() {
 
 
 
+  // flops = Ny*Nx(2 pows + 2 add + 2 div )
   // cylinder = (X - Nx/4)**2 + (Y - Ny/2)**2 < (Ny/4)**2
-  //flops = Ny*Nx*(2 pow + 2 subs + 2 divs+ 1 add)
   for (int i = 0; i < Ny; i++) {
     for (int j = 0; j < Nx; j++) {
       cylinder[i*Nx +j] = (pow((double)x_coords[i*Nx +j] - (double)Nx / 4, 2) + pow((double)y_coords[i*Nx +j] - (double)Ny / 2, 2)) < pow(Ny / 4, 2);
     }
   }
   
-  
+  //flops = Nt*( Ny*Nx*NL(1 add) + 2*Ny*Nx*NL(1 add + 1 div/NL) + NL*Ny*Nx(9 mults + 6 adds + 2 divs + 3 pows) + Ny*Nx*NL(3 add + 1 div + 1 mult) + Ny*Nx*3)
   // Simulation loop
-  // flops = Nt*(Ny*Nx*NL(3 adds + 2 mults) + Ny*Nx*(2 divs))+NL*Ny*Nx*(9 mults + 2 div  + 3 pows + 6 adds)+Ny*Nx*NL (2 add + 1 mult )+Ny*Nx*(3 adds)
   for (int i = 0; i < Nt; i++) {
-    debug_printf("\r%d", i);
+    debug_printf("Timestep %05d\n", i);
 
     //# Drift
-    //flops = 0
     for (int j = 0; j < NL; j++) {
 
-      // Roll 
-      int shiftX = cys[j];
-      int shiftY = cxs[j];
+
       for (int k = 0; k < Ny; k++) {
         for (int l = 0; l < Nx; l++) {
-          temp[((k + shiftY + Ny) % Ny)*Nx +((l + shiftX + Nx) % Nx)] = F[k*(Nx*NL)+ l*NL +j];
+          temp[k*Nx +l] = F[k*(Nx*NL)+ l*NL +j];
         }
       }
+
+      roll2D(temp, Ny, Nx, cxs[j], 1);
+
+      for (int k = 0; k < Ny; k++) {
+        for (int l = 0; l < Nx; l++) {
+          F[k*(Nx*NL)+ l*NL +j] = temp[k*Nx +l];
+        }
+      }
+
+      
+      for (int k = 0; k < Ny; k++) {
+        for (int l = 0; l < Nx; l++) {
+          temp[k*Nx +l] = F[k*(Nx*NL)+ l*NL +j];
+        }
+      }
+
+      roll2D(temp, Ny, Nx, cys[j], 0);
 
       for (int k = 0; k < Ny; k++) {
         for (int l = 0; l < Nx; l++) {
@@ -178,13 +274,11 @@ inline int run() {
       }
     }
 
-
+    //flops = 0
     // bndryF = F[cylinder,:]
     // its 2d of size 1941x9 but no idea how this is calculated ??????
     // TODO to support dynamic sized we could evaluate the size of the array and then allocate memory
     // for now its hardcoded :pikashrug:
-    // TODO: FIX
-    //flops = 0
     int index_bndryF = 0;
     for (int j = 0; j < Ny; j++) {
       for (int k = 0; k < Nx; k++) {
@@ -219,28 +313,49 @@ inline int run() {
         bndryF[j*NL +8] = temp;
     }
 
+
     // rho = np.sum(F,2)
-    //flops = Ny*Nx*NL(3 adds + 2 mults) + Ny*Nx*(2 divs)
+    //flops = Ny*Nx*NL(1 add)
     for (int j = 0; j < Ny; j++) {
       for (int k = 0; k < Nx; k++) {
-        double res1 = 0;
-        double res2 = 0;
-        double res3 = 0;
+        rho[j*Nx +k] = 0;
         for (int l = 0; l < NL; l++) {
-          res1 += F[j*(Nx*NL)+ k*NL +l];
-          res2 += F[j*(Nx*NL)+ k*NL +l] * cxs[l];
-          res3 += F[j*(Nx*NL)+ k*NL +l] * cys[l];
+          rho[j*Nx +k] += F[j*(Nx*NL)+ k*NL +l];
         }
-        rho[j*Nx +k] = res1;
-        ux[j*Nx +k] = res2 / res1;
-        uy[j*Nx +k] = res3 / res1;
+      }
+    }
+
+
+    // ux = np.sum(F * cxs, 2) / rho
+    //flops = Ny*Nx*NL(1 add + 1 div/NL)
+    for (int j = 0; j < Ny; j++) {
+      for (int k = 0; k < Nx; k++) {
+        ux[j*Nx +k] = 0;
+        for (int l = 0; l < NL; l++) {
+          ux[j*Nx +k] += F[j*(Nx*NL)+ k*NL +l] * cxs[l];
+        }
+        ux[j*Nx +k] /= rho[j*Nx +k];
+      }
+    }
+
+    
+
+    // uy = np.sum(F * cys, 2) / rho
+    //flops = Ny*Nx*NL(1 add + 1 div/NL)
+    for (int j = 0; j < Ny; j++) {
+      for (int k = 0; k < Nx; k++) {
+        uy[j*Nx +k] = 0;
+        for (int l = 0; l < NL; l++) {
+          uy[j*Nx +k] += F[j*(Nx*NL)+ k*NL +l] * cys[l];
+        }
+        uy[j*Nx +k] /= rho[j*Nx +k];
       }
     }
 
     // set to zero
     memset(Feq, 0, Ny*Nx*NL*sizeof(double));
 
-    //flops = NL*Ny*Nx*(9 mults + 2 div  + 3 pows + 6 adds)
+    //flops = NL*Ny*Nx(9 mults + 6 adds + 2 divs + 3 pows)
     for (int k = 0; k < NL; k++) {
       for (int j = 0; j < Ny; j++) {
         for (int l = 0; l < Nx; l++) {
@@ -263,11 +378,11 @@ inline int run() {
     }
 
     // F += -(1.0/tau) * (F - Feq)
-    // flops = Ny*Nx*NL (2 add + 1 mult )
+    //flops = Ny*Nx*NL(3 add + 1 div + 1 mult)
     for (int j = 0; j < Ny; j++) {
       for (int k = 0; k < Nx; k++) {
         for (int l = 0; l < NL; l++) {
-          F[j*(Nx*NL)+ k*NL +l] += tau * (F[j*(Nx*NL)+ k*NL +l] - Feq[j*(Nx*NL)+ k*NL +l]);
+          F[j*(Nx*NL)+ k*NL +l] += -(1.0 / tau) * (F[j*(Nx*NL)+ k*NL +l] - Feq[j*(Nx*NL)+ k*NL +l]);
         }
       }
     }
@@ -288,6 +403,8 @@ inline int run() {
       }
     }
 
+    
+
     // set ux and uy to zero where cylinder is 1
     //flops = 0
     for (int j = 0; j < Ny; j++) {
@@ -302,8 +419,7 @@ inline int run() {
     // vorticity = (np.roll(ux, -1, axis=0) - np.roll(ux, 1, axis=0)) -
     // (np.roll(uy, -1, axis=1) - np.roll(uy, 1, axis=1)) vorticity[cylinder]
     // = np.nan vorticity = np.ma.array(vorticity, mask=cylinder)
-
-    //flops = Ny*Nx*(3 adds)
+    //flops = Ny*Nx*3
     for (int j = 0; j < Ny; j++) {
       for (int k = 0; k < Nx; k++) {
 
@@ -313,7 +429,11 @@ inline int run() {
         // (np.roll(uy, -1, axis=1) - np.roll(uy, 1, axis=1))
         double uy_roll = uy[((j - 1 + Ny) % Ny)*Nx +k] - uy[((j + 1 + Ny) % Ny)*Nx +k];
 
-        vorticity[j*Nx +k] = cylinder[j*Nx +k] == 1 ? 0 : ux_roll - uy_roll;
+        vorticity[j*Nx +k] = ux_roll - uy_roll;
+
+        if (cylinder[j*Nx +k] == 1) {
+          vorticity[j*Nx +k] = 0; 
+        }
       }
     }
 
@@ -324,14 +444,8 @@ inline int run() {
     save_npy_2d_double(vorticity, Ny, Nx, vortex_filename);
     #endif
 
-    
-    
-    
-    
-    
   }
-  printf("\n");
-
+  
   free(ux);
   free(uy);
   free(Feq);
@@ -344,12 +458,11 @@ inline int run() {
   free(cylinder);
   free(temp);
   // free(BIG_CHUNGUS);
+
   make_latest_output(folder_name);
 
   return 0;
 }
-
-
 
 
 int main(int argc, char const *argv[])
