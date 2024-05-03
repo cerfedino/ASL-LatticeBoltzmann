@@ -1,3 +1,4 @@
+//flops = Ny*Nx*NL(1 div + 1 add + 1 add + 1 mult)+ Ny*Nx( 2 add + 5 mult + 1 cos + 1 div )+Ny*Nx*NL*(1 add)+Ny*Nx*NL*(2 adds)+ Ny*Nx*(2 pow + 2 subs + 2 divs+ 1 add)+ Nt*(Ny*Nx*NL(3 adds + 2 mults) + Ny*Nx*(2 divs))+NL*Ny*Nx*(9 mults + 2 div  + 3 pows + 6 adds)+Ny*Nx*NL (2 add + 1 mult )+Ny*Nx*(3 adds)
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -93,6 +94,7 @@ inline int run() {
   srand(42);  // some seed
 
   // Initialize F
+  //flops = Ny*Nx*NL(1 div + 1 add + 1 add + 1 mult)
   for (int i = 0; i < Ny; i++) {
     for (int j = 0; j < Nx; j++) {
       for (int k = 0; k < NL; k++) {
@@ -107,6 +109,7 @@ inline int run() {
   meshgrid(x_coords, y_coords);
 
   // F[:,:,3] += 2 * (1+0.2*np.cos(2*np.pi*X/Nx*4))
+  //flops = Ny*Nx( 2 add + 5 mult + 1 cos + 1 div )
   for (int i = 0; i < Ny; i++) {
     for (int j = 0; j < Nx; j++) {
       // in python we access [3] but here we do on [1] what this dictates is the direction we go
@@ -116,7 +119,7 @@ inline int run() {
     }
   }
 
-
+  //flops = Ny*Nx*NL*(1 add)
   int res = 0;
   for (int i = 0; i < Ny; i++) {
     for (int j = 0; j < Nx; j++) {
@@ -129,6 +132,7 @@ inline int run() {
   }
 
   // 	for i in idxs:		F[:,:,i] *= rho0 / rho
+  //flops = Ny*Nx*NL*(2 adds)
   for (int j = 0; j < Ny; j++) {
     for (int k = 0; k < Nx; k++) {
       for (int i = 0; i < NL; i++) {
@@ -140,6 +144,7 @@ inline int run() {
 
 
   // cylinder = (X - Nx/4)**2 + (Y - Ny/2)**2 < (Ny/4)**2
+  //flops = Ny*Nx*(2 pow + 2 subs + 2 divs+ 1 add)
   for (int i = 0; i < Ny; i++) {
     for (int j = 0; j < Nx; j++) {
       cylinder[i*Nx +j] = (pow((double)x_coords[i*Nx +j] - (double)Nx / 4, 2) + pow((double)y_coords[i*Nx +j] - (double)Ny / 2, 2)) < pow(Ny / 4, 2);
@@ -148,10 +153,12 @@ inline int run() {
   
   
   // Simulation loop
+  // flops = Nt*(Ny*Nx*NL(3 adds + 2 mults) + Ny*Nx*(2 divs))+NL*Ny*Nx*(9 mults + 2 div  + 3 pows + 6 adds)+Ny*Nx*NL (2 add + 1 mult )+Ny*Nx*(3 adds)
   for (int i = 0; i < Nt; i++) {
     debug_printf("\r%d", i);
 
     //# Drift
+    //flops = 0
     for (int j = 0; j < NL; j++) {
 
       // Roll 
@@ -176,6 +183,7 @@ inline int run() {
     // TODO to support dynamic sized we could evaluate the size of the array and then allocate memory
     // for now its hardcoded :pikashrug:
     // TODO: FIX
+    //flops = 0
     int index_bndryF = 0;
     for (int j = 0; j < Ny; j++) {
       for (int k = 0; k < Nx; k++) {
@@ -190,6 +198,7 @@ inline int run() {
 
                                         // 0,1,2,3,4,5,6,7,8  INDEXES
     // reorder columns bndryF = bndryF[:,[0,5,6,7,8,1,2,3,4]]
+    //flops = 0
     for (int j = 0; j < 1941; j++) {
         // we love pointers dont we?
         double temp = bndryF[j*NL +1];
@@ -210,6 +219,7 @@ inline int run() {
     }
 
     // rho = np.sum(F,2)
+    //flops = Ny*Nx*NL(3 adds + 2 mults) + Ny*Nx*(2 divs)
     for (int j = 0; j < Ny; j++) {
       for (int k = 0; k < Nx; k++) {
         double res1 = 0;
@@ -229,6 +239,7 @@ inline int run() {
     // set to zero
     memset(Feq, 0, Ny*Nx*NL*sizeof(double));
 
+    //flops = NL*Ny*Nx*(9 mults + 2 div  + 3 pows + 6 adds)
     for (int k = 0; k < NL; k++) {
       for (int j = 0; j < Ny; j++) {
         for (int l = 0; l < Nx; l++) {
@@ -251,6 +262,7 @@ inline int run() {
     }
 
     // F += -(1.0/tau) * (F - Feq)
+    // flops = Ny*Nx*NL (2 add + 1 mult )
     for (int j = 0; j < Ny; j++) {
       for (int k = 0; k < Nx; k++) {
         for (int l = 0; l < NL; l++) {
@@ -262,6 +274,7 @@ inline int run() {
 
     // Apply boundary
     // F[cylinder,:] = bndryF
+    //flops = 0
     int index_bndryF2 = 0;
     for (int j = 0; j < Ny; j++) {
       for (int k = 0; k < Nx; k++) {
@@ -274,9 +287,8 @@ inline int run() {
       }
     }
 
-    
-
     // set ux and uy to zero where cylinder is 1
+    //flops = 0
     for (int j = 0; j < Ny; j++) {
       for (int k = 0; k < Nx; k++) {
         if (cylinder[j*Nx +k] == 1) {
@@ -289,6 +301,8 @@ inline int run() {
     // vorticity = (np.roll(ux, -1, axis=0) - np.roll(ux, 1, axis=0)) -
     // (np.roll(uy, -1, axis=1) - np.roll(uy, 1, axis=1)) vorticity[cylinder]
     // = np.nan vorticity = np.ma.array(vorticity, mask=cylinder)
+
+    //flops = Ny*Nx*(3 adds)
     for (int j = 0; j < Ny; j++) {
       for (int k = 0; k < Nx; k++) {
 
