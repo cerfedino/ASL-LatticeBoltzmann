@@ -10,8 +10,8 @@ num_runs = 1
 inputs = ["8 2", "16 4", "32 8", "64 16", "128 32", "256 64", "400 100"]
 
 #CHANGE FROM HERE
-name = "test"
-description = "No optimizations"
+name = "eb4e798a19b616a8f674b32f849117cc935f9365"
+description = "Misc optmization"
 numb_flops = 10000
 #CHANGE TO HERE
 
@@ -28,7 +28,6 @@ def run_main_with_input(cpp_input):
         result = subprocess.run(["./main.exe"],input = cpp_input.encode(), stdout=subprocess.PIPE)
 
         #extract the number of cycles
-        
         print(result.stdout.decode().strip())
         if(len(result.stdout.decode().strip().split()) < 2 ): return -1
         output = result.stdout.decode().strip().split()[2]
