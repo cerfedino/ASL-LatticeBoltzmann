@@ -11,6 +11,8 @@ build: ./main_base.o ./main_base_debug.o ./main_optimized.o ./main_optimized_deb
 	g++ $(CFLAGS) $(OPTIM_FLAGS) main.cpp ./include/utils.c ./include/profile.c -o ./main_optimized.o
 ./main_optimized_debug.o: main.cpp ./include/utils.c ./include/utils.h ./include/profile.c
 	g++ $(CFLAGS) $(OPTIM_FLAGS) -DDEBUG main.cpp ./include/utils.c  ./include/profile.c -o ./main_optimized_debug.o
+./main_optimized_profile.o: main.cpp ./include/utils.c ./include/utils.h ./include/profile.c
+	g++ $(CFLAGS) $(OPTIM_FLAGS) -DPROFILE main.cpp ./include/utils.c  ./include/profile.c -o ./main_optimized_profile.o
 ./main_base.o: main_base.cpp ./include/utils.c ./include/utils.h ./include/profile.c
 	g++ $(CFLAGS) main_base.cpp ./include/utils.c  ./include/profile.c -o ./main_base.o
 ./main_base_debug.o: main_base.cpp ./include/utils.c ./include/utils.h ./include/profile.c
@@ -29,3 +31,5 @@ leaks: ./main_optimized_debug.o
 	valgrind --leak-check=full ./main_optimized_debug.o
 benchmark: ./main_optimized.o ./main_base.o
 	./main_optimized.o; ./main_base.o
+profile: ./main_optimized_profile.o
+	./main_optimized_profile.o
