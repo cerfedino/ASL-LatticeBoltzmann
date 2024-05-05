@@ -54,7 +54,7 @@ profiler_stats finish_profiler(profiler *p) {
     profiler_stats ps;
     ps.cycles = p->_cycles;
     ps.runs = p->_runs;
-    ps.performance = (double)p->_cycles / (p->_runs * p->flops);
+    ps.performance = (double)(p->_runs * p->flops) / p->_cycles;
     return ps;
 }
 #endif
