@@ -5,7 +5,7 @@
 #include <stdlib.h>
 
 #ifndef PROFILE
-profiler *init_profiler(uint64_t flops) { return NULL; }
+profiler *init_profiler(uint64_t flops, uint64_t bytes) { return NULL; }
 void start_run(profiler *p) {}
 void end_run(profiler *p) {}
 profiler_stats finish_profiler(profiler *p) {
@@ -27,11 +27,12 @@ uint64_t time() {
     return t;
 }
 
-profiler *init_profiler(uint64_t flops) {
+profiler *init_profiler(uint64_t flops, uint64_t bytes) {
     profiler *p = (profiler *)malloc(sizeof(profiler));
     p->_cycles = 0;
     p->_runs = 0;
     p->flops = flops;
+    p->bytes = bytes;
     return p;
 }
 
@@ -55,6 +56,7 @@ profiler_stats finish_profiler(profiler *p) {
     ps.cycles = p->_cycles;
     ps.runs = p->_runs;
     ps.performance = (double)(p->_runs * p->flops) / p->_cycles;
+    ps.arithmetic_intensity = (double)(p->flops) / p->bytes;
     return ps;
 }
 #endif

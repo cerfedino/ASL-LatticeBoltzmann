@@ -148,10 +148,15 @@ inline int run() {
     }
   }
 
-  profiler *rho_profiler  = init_profiler(5 * Ny * Nx * NL + 2 * Ny * Nx),
-           *feq_profiler  = init_profiler(19 * Nx * Ny * NL),
-           *f_profiler    = init_profiler(3 * Nx * Ny * NL),
-           *vort_profiler = init_profiler(2 * Nx * Ny);
+  // Currently assuming that every read/write is a miss
+  profiler *rho_profiler  = init_profiler(5 * Ny * Nx * NL + 2 * Ny * Nx,
+                                          8 * 5 * Ny * Nx * NL + 3 * Ny * Nx),
+           *feq_profiler  = init_profiler(19 * Nx * Ny * NL,
+                                          8 * 13 * Nx * Ny * NL),
+           *f_profiler    = init_profiler(3 * Nx * Ny * NL,
+                                          8 * 3 * Nx * Ny * NL),
+           *vort_profiler = init_profiler(2 * Nx * Ny,
+                                          8 * 6 * Nx * Ny);
   
   #ifdef PROFILE
   const int PROFILE_RUNS = 5;
@@ -341,13 +346,13 @@ inline int run() {
   #ifdef PROFILE
   printf("\nProfiling results:\n");
   profiler_stats rho_stats = finish_profiler(rho_profiler);
-  printf("- Rho  Calculation: %4.2f Flops/Cycle, %10ld cycles in %d runs\n", rho_stats.performance, rho_stats.cycles, rho_stats.runs);
+  printf("- Rho  Calculation: %4.2f Flops/Cycle, %10ld cycles in %d runs. Arithmetic intensity: %4.2f\n", rho_stats.performance, rho_stats.cycles, rho_stats.runs, rho_stats.arithmetic_intensity);
   profiler_stats feq_stats = finish_profiler(feq_profiler);
-  printf("- FEQ  Calculation: %4.2f Flops/Cycle, %10ld cycles in %d runs\n", feq_stats.performance, feq_stats.cycles, feq_stats.runs);
+  printf("- FEQ  Calculation: %4.2f Flops/Cycle, %10ld cycles in %d runs. Arithmetic intensity: %4.2f\n", feq_stats.performance, feq_stats.cycles, feq_stats.runs, feq_stats.arithmetic_intensity);
   profiler_stats f_stats = finish_profiler(f_profiler);
-  printf("- F    Calculation: %4.2f Flops/Cycle, %10ld cycles in %d runs\n", f_stats.performance, f_stats.cycles, f_stats.runs);
+  printf("- F    Calculation: %4.2f Flops/Cycle, %10ld cycles in %d runs. Arithmetic intensity: %4.2f\n", f_stats.performance, f_stats.cycles, f_stats.runs, f_stats.arithmetic_intensity);
   profiler_stats vort_stats = finish_profiler(vort_profiler);
-  printf("- Vort Calculation: %4.2f Flops/Cycle, %10ld cycles in %d runs\n", vort_stats.performance, vort_stats.cycles, vort_stats.runs);
+  printf("- Vort Calculation: %4.2f Flops/Cycle, %10ld cycles in %d runs. Arithmetic intensity: %4.2f\n", vort_stats.performance, vort_stats.cycles, vort_stats.runs, vort_stats.arithmetic_intensity);
   #endif
 
   printf("\n");
