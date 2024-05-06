@@ -7,35 +7,35 @@
 #include <cmath>
 #include <exception>
 #include <stdexcept>
-#include <vector>
 #include <string>
-   
+#include <vector>
+
 #include "include/npy.hpp"
-#include "include/utils.h"
 #include "include/profile.h"
+#include "include/utils.h"
 
 #ifdef DEBUG
-#define debug_printf(fmt, ...)  fprintf(stdout, fmt, __VA_ARGS__)
-#define debug_print(fmt)        fprintf(stdout, fmt)
+#define debug_printf(fmt, ...) fprintf(stdout, fmt, __VA_ARGS__)
+#define debug_print(fmt) fprintf(stdout, fmt)
 
 #else
 // If DEBUG is not defined we expand macros to whitespace
-#define debug_printf(fmt, ...);
-#define debug_print(fmt);
-#define save_npy_3d_double(array, x, y, z, filename);
-#define save_npy_2d_double(array, x, y, filename); 
-#define save_npy_2d_int(array, x, y, filename); 
+#define debug_printf(fmt, ...) ;
+#define debug_print(fmt) ;
+#define save_npy_3d_double(array, x, y, z, filename) ;
+#define save_npy_2d_double(array, x, y, filename) ;
+#define save_npy_2d_int(array, x, y, filename) ;
 #define make_output_folder() ""
-#define make_latest_output(folder);
+#define make_latest_output(folder) ;
 #endif
 
 using namespace std;
 
-#define Nx 400   // resolution in x
-#define Ny 100   // resolution in y
-#define rho0 0.01 // reciprocal average density
-#define tau -1.66666667  // reciprocal collision timescale (1/0.6)
-#define Nt 5000  // number of timesteps
+#define Nx 400          // resolution in x
+#define Ny 100          // resolution in y
+#define rho0 0.01       // reciprocal average density
+#define tau -1.66666667 // reciprocal collision timescale (1/0.6)
+#define Nt 5000         // number of timesteps
 
 // #define Nt 30  // number of timesteps
 
@@ -45,18 +45,16 @@ const double idx[9] = {0, 1, 2, 3, 4, 5, 6, 7, 8};
 const double cxs[9] = {0.0, 0.0, 1.0, 1.0, 1.0, 0.0, -1.0, -1.0, -1.0};
 const double cys[9] = {0.0, 1.0, 1.0, 0.0, -1.0, -1.0, -1.0, 0.0, 1.0};
 const double weights[9] = {4.0 / 9, 1.0 / 9,  1.0 / 36, 1.0 / 9, 1.0 / 36,
-                     1.0 / 9, 1.0 / 36, 1.0 / 9,  1.0 / 36};  // sums to 1
-
+                           1.0 / 9, 1.0 / 36, 1.0 / 9,  1.0 / 36}; // sums to 1
 
 void meshgrid(int *x_coords, int *y_coords) {
   for (int i = 0; i < Ny; ++i) {
     for (int j = 0; j < Nx; ++j) {
-      x_coords[i*Nx +j] = j;
-      y_coords[i*Nx +j] = i;
+      x_coords[i * Nx + j] = j;
+      y_coords[i * Nx + j] = i;
     }
   }
 }
-
 
 // TODO CHECK TYPES IF ALL CORRECT
 // TODO arrays need to be initialized likely with 0 values
@@ -68,65 +66,64 @@ inline int run() {
   // Lattice Boltzmann Simulation in 2D
   debug_print("Starting\n");
 
-  // double *BIG_CHUNGUS = (double *) malloc((2*(Ny*Nx*NL)+6*(Ny*Nx)+(1941*NL)) * sizeof(double) + 2*(Ny*Nx)*sizeof(int));
-  // debug_printf("Allocating %lu bytes for BIG_CHUNGUS\n", (2*(Ny*Nx*NL)+5*(Ny*Nx)+(1941*NL)) * sizeof(double) + 2*(Ny*Nx)*sizeof(int));
-  // if (BIG_CHUNGUS == NULL) {
+  // double *BIG_CHUNGUS = (double *)
+  // malloc((2*(Ny*Nx*NL)+6*(Ny*Nx)+(1941*NL)) * sizeof(double) +
+  // 2*(Ny*Nx)*sizeof(int)); debug_printf("Allocating %lu bytes for
+  // BIG_CHUNGUS\n", (2*(Ny*Nx*NL)+5*(Ny*Nx)+(1941*NL)) * sizeof(double) +
+  // 2*(Ny*Nx)*sizeof(int)); if (BIG_CHUNGUS == NULL) {
   //   printf("Memory allocation failed for BIG_CHUNGUS\n");
   //   return 1;
   // }
 
-  
-
-  double *Feq =       (double *) malloc(Ny*Nx*NL*sizeof(double));
-  double *F =         (double *) malloc(Ny*Nx*NL*sizeof(double));
-  double *vorticity = (double *) malloc(Ny*Nx*sizeof(double));
-  double *rho =       (double *) calloc(Ny*Nx,sizeof(double));
-  double *cylinder =  (double *) malloc(Ny*Nx*sizeof(double));
-  double *ux =        (double *) malloc(Ny*Nx*sizeof(double));
-  double *uy =        (double *) malloc(Ny*Nx*sizeof(double)); 
-  double *temp =      (double *) malloc(Ny*Nx*sizeof(double));
-  double *bndryF =    (double *) malloc(1941*NL*sizeof(double));
-  int *x_coords =        (int *) malloc(Ny*Nx*sizeof(int));
-  int *y_coords =        (int *) malloc(Ny*Nx*sizeof(int));
-
+  double *Feq = (double *)malloc(Ny * Nx * NL * sizeof(double));
+  double *F = (double *)malloc(Ny * Nx * NL * sizeof(double));
+  double *vorticity = (double *)malloc(Ny * Nx * sizeof(double));
+  double *rho = (double *)calloc(Ny * Nx, sizeof(double));
+  double *cylinder = (double *)malloc(Ny * Nx * sizeof(double));
+  double *ux = (double *)malloc(Ny * Nx * sizeof(double));
+  double *uy = (double *)malloc(Ny * Nx * sizeof(double));
+  double *temp = (double *)malloc(Ny * Nx * sizeof(double));
+  double *bndryF = (double *)malloc(1941 * NL * sizeof(double));
+  int *x_coords = (int *)malloc(Ny * Nx * sizeof(int));
+  int *y_coords = (int *)malloc(Ny * Nx * sizeof(int));
 
   debug_print("Initializing\n");
 
-  srand(42);  // some seed
+  srand(42); // some seed
 
   // Initialize F
   for (int i = 0; i < Ny; i++) {
     for (int j = 0; j < Nx; j++) {
       for (int k = 0; k < NL; k++) {
-        double rand_val = ((double) rand() / (RAND_MAX)) + 1;
-        F[i*(Nx*NL)+ j*NL + k] = 1 + 0.01 * rand_val;
+        double rand_val = ((double)rand() / (RAND_MAX)) + 1;
+        F[i * (Nx * NL) + j * NL + k] = 1 + 0.01 * rand_val;
       }
     }
   }
-
-
 
   meshgrid(x_coords, y_coords);
 
   // F[:,:,3] += 2 * (1+0.2*np.cos(2*np.pi*X/Nx*4))
   for (int i = 0; i < Ny; i++) {
     for (int j = 0; j < Nx; j++) {
-      // in python we access [3] but here we do on [1] what this dictates is the direction we go
-      // maybe something else too, but my brain is more fried than a kfc chicken
-      // AHAHAHAHAHAHAH HILARIOUS KARLO LOL IM LITERALLY DYING OF LAUGHTER
-      F[i*(Nx*NL) +j*NL +1] += 2.0 * (1.0 + 0.2 * cos(2.0 * M_PI * (double)x_coords[i*Nx +j] / (double)Nx * 4.0));
+      // in python we access [3] but here we do on [1] what this dictates
+      // is the direction we go maybe something else too, but my brain is
+      // more fried than a kfc chicken AHAHAHAHAHAHAH HILARIOUS KARLO LOL
+      // IM LITERALLY DYING OF LAUGHTER
+      F[i * (Nx * NL) + j * NL + 1] +=
+          2.0 * (1.0 + 0.2 * cos(2.0 * M_PI * (double)x_coords[i * Nx + j] /
+                                 (double)Nx * 4.0));
     }
   }
-
 
   int res = 0;
   for (int i = 0; i < Ny; i++) {
     for (int j = 0; j < Nx; j++) {
       res = 0;
       for (int k = 0; k < NL; k++) {
-        res += F[i*(Nx*NL)+ j*NL +k];
+        res += F[i * (Nx * NL) + j * NL + k];
       }
-      rho[i*Nx +j] = res;
+      rho[i * Nx + j] = res;
     }
   }
 
@@ -134,226 +131,244 @@ inline int run() {
   for (int j = 0; j < Ny; j++) {
     for (int k = 0; k < Nx; k++) {
       for (int i = 0; i < NL; i++) {
-        F[j*(Nx*NL)+ k*NL +i] *= rho0 * rho[j*Nx +k];
+        F[j * (Nx * NL) + k * NL + i] *= rho0 * rho[j * Nx + k];
       }
     }
   }
-
-
 
   // cylinder = (X - Nx/4)**2 + (Y - Ny/2)**2 < (Ny/4)**2
   for (int i = 0; i < Ny; i++) {
     for (int j = 0; j < Nx; j++) {
-      cylinder[i*Nx +j] = (pow((double)x_coords[i*Nx +j] - (double)Nx / 4, 2) + pow((double)y_coords[i*Nx +j] - (double)Ny / 2, 2)) < pow(Ny / 4, 2);
+      cylinder[i * Nx + j] =
+          (pow((double)x_coords[i * Nx + j] - (double)Nx / 4, 2) +
+           pow((double)y_coords[i * Nx + j] - (double)Ny / 2, 2)) <
+          pow(Ny / 4, 2);
     }
   }
 
   // Currently assuming that every read/write is a miss
-  profiler *rho_profiler  = init_profiler(5 * Ny * Nx * NL + 2 * Ny * Nx,
-                                          8 * 5 * Ny * Nx * NL + 3 * Ny * Nx),
-           *feq_profiler  = init_profiler(19 * Nx * Ny * NL,
-                                          8 * 13 * Nx * Ny * NL),
-           *f_profiler    = init_profiler(3 * Nx * Ny * NL,
-                                          8 * 3 * Nx * Ny * NL),
-           *vort_profiler = init_profiler(2 * Nx * Ny,
-                                          8 * 6 * Nx * Ny);
-  
-  #ifdef PROFILE
+  profiler *rho_profiler = init_profiler(5 * Ny * Nx * NL + 2 * Ny * Nx,
+                                         8 * 5 * Ny * Nx * NL + 3 * Ny * Nx),
+           *feq_profiler =
+               init_profiler(19 * Nx * Ny * NL, 8 * 13 * Nx * Ny * NL),
+           *f_profiler = init_profiler(3 * Nx * Ny * NL, 8 * 3 * Nx * Ny * NL),
+           *vort_profiler = init_profiler(2 * Nx * Ny, 8 * 6 * Nx * Ny);
+
+#ifdef PROFILE
   const int PROFILE_RUNS = 5;
   const int PROFILE_DIGITS = floor(log10(PROFILE_RUNS)) + 1;
   printf("\rRun %-*d/%d done", PROFILE_DIGITS, 0, PROFILE_RUNS);
   fflush(stdout);
-  for (int profile_counter = 0; profile_counter < PROFILE_RUNS; profile_counter++) {
-  #endif
-  // Simulation loop
-  for (int i = 0; i < Nt; i++) {
-    debug_printf("\r%d", i);
+  for (int profile_counter = 0; profile_counter < PROFILE_RUNS;
+       profile_counter++) {
+#endif
+    // Simulation loop
+    for (int i = 0; i < Nt; i++) {
+      debug_printf("\r%d", i);
 
-    //# Drift
-    for (int j = 0; j < NL; j++) {
+      // # Drift
+      for (int j = 0; j < NL; j++) {
 
-      // Roll 
-      int shiftX = cys[j];
-      int shiftY = cxs[j];
-      for (int k = 0; k < Ny; k++) {
-        for (int l = 0; l < Nx; l++) {
-          temp[((k + shiftY + Ny) % Ny)*Nx +((l + shiftX + Nx) % Nx)] = F[k*(Nx*NL)+ l*NL +j];
-        }
-      }
-
-      for (int k = 0; k < Ny; k++) {
-        for (int l = 0; l < Nx; l++) {
-          F[k*(Nx*NL)+ l*NL +j] = temp[k*Nx +l];
-        }
-      }
-    }
-
-
-    // bndryF = F[cylinder,:]
-    // its 2d of size 1941x9 but no idea how this is calculated ??????
-    // TODO to support dynamic sized we could evaluate the size of the array and then allocate memory
-    // for now its hardcoded :pikashrug:
-    // TODO: FIX
-    int index_bndryF = 0;
-    for (int j = 0; j < Ny; j++) {
-      for (int k = 0; k < Nx; k++) {
-        if (cylinder[j*Nx +k] == 1) {
-          for (int l = 0; l < NL; l++) {
-            bndryF[index_bndryF*NL +l] = F[j*(Nx*NL)+ k*NL +l];
+        // Roll
+        int shiftX = cys[j];
+        int shiftY = cxs[j];
+        for (int k = 0; k < Ny; k++) {
+          for (int l = 0; l < Nx; l++) {
+            temp[((k + shiftY + Ny) % Ny) * Nx + ((l + shiftX + Nx) % Nx)] =
+                F[k * (Nx * NL) + l * NL + j];
           }
-          index_bndryF++;
+        }
+
+        for (int k = 0; k < Ny; k++) {
+          for (int l = 0; l < Nx; l++) {
+            F[k * (Nx * NL) + l * NL + j] = temp[k * Nx + l];
+          }
         }
       }
-    }
 
-                                        // 0,1,2,3,4,5,6,7,8  INDEXES
-    // reorder columns bndryF = bndryF[:,[0,5,6,7,8,1,2,3,4]]
-    for (int j = 0; j < 1941; j++) {
-        // we love pointers dont we?
-        double temp = bndryF[j*NL +1];
-        bndryF[j*NL +1] = bndryF[j*NL +5];
-        bndryF[j*NL +5] = temp;
-
-        temp = bndryF[j*NL +2];
-        bndryF[j*NL +2] = bndryF[j*NL +6];
-        bndryF[j*NL +6] = temp;
-
-        temp = bndryF[j*NL +3];
-        bndryF[j*NL +3] = bndryF[j*NL +7];
-        bndryF[j*NL +7] = temp;
-
-        temp = bndryF[j*NL +4];
-        bndryF[j*NL +4] = bndryF[j*NL +8];
-        bndryF[j*NL +8] = temp;
-    }
-
-    // rho = np.sum(F,2)
-    start_run(rho_profiler);
-    for (int j = 0; j < Ny; j++) {
-      for (int k = 0; k < Nx; k++) {
-        double res1 = 0;
-        double res2 = 0;
-        double res3 = 0;
-        for (int l = 0; l < NL; l++) {
-          res1 += F[j*(Nx*NL)+ k*NL +l];
-          res2 += F[j*(Nx*NL)+ k*NL +l] * cxs[l];
-          res3 += F[j*(Nx*NL)+ k*NL +l] * cys[l];
-        }
-        rho[j*Nx +k] = res1;
-        ux[j*Nx +k] = res2 / res1;
-        uy[j*Nx +k] = res3 / res1;
-      }
-    }
-    end_run(rho_profiler);
-
-    // set to zero
-    memset(Feq, 0, Ny*Nx*NL*sizeof(double));
-
-    start_run(feq_profiler);
-    for (int k = 0; k < NL; k++) {
+      // bndryF = F[cylinder,:]
+      // its 2d of size 1941x9 but no idea how this is calculated ??????
+      // TODO to support dynamic sized we could evaluate the size of the
+      // array and then allocate memory for now its hardcoded :pikashrug:
+      // TODO: FIX
+      int index_bndryF = 0;
       for (int j = 0; j < Ny; j++) {
-        for (int l = 0; l < Nx; l++) {
-
-          double rho_val = rho[j*Nx +l];
-          double weight_val = weights[k];
-
-          // 3*(cx*ux+cy*uy)
-          double first = 3 * (cxs[k] * ux[j*Nx +l] + cys[k] * uy[j*Nx +l]);
-
-          // 9*(cx*ux+cy*uy)**2/2
-          double second = 9 * pow(cxs[k] * ux[j*Nx +l] + cys[k] * uy[j*Nx +l], 2) / 2;
-
-          // 3*(ux**2+uy**2)/2
-          double third = 3 * (pow(ux[j*Nx +l], 2) + pow(uy[j*Nx +l], 2)) / 2;
-
-          Feq[j*(Nx*NL)+ l*NL +k] = rho_val * weight_val * (1 + first + second - third);
-        }
-      }
-    }
-    end_run(feq_profiler);
-
-    // F += -(1.0/tau) * (F - Feq)
-    start_run(f_profiler);
-    for (int j = 0; j < Ny; j++) {
-      for (int k = 0; k < Nx; k++) {
-        for (int l = 0; l < NL; l++) {
-          F[j*(Nx*NL)+ k*NL +l] += tau * (F[j*(Nx*NL)+ k*NL +l] - Feq[j*(Nx*NL)+ k*NL +l]);
-        }
-      }
-    }
-    end_run(f_profiler);
-
-    // Apply boundary
-    // F[cylinder,:] = bndryF
-    int index_bndryF2 = 0;
-    for (int j = 0; j < Ny; j++) {
-      for (int k = 0; k < Nx; k++) {
-        if (cylinder[j*Nx +k] == 1) {
-          for (int l = 0; l < NL; l++) {
-            F[j*(Nx*NL)+ k*NL +l] = bndryF[index_bndryF2*NL +l];
+        for (int k = 0; k < Nx; k++) {
+          if (cylinder[j * Nx + k] == 1) {
+            for (int l = 0; l < NL; l++) {
+              bndryF[index_bndryF * NL + l] = F[j * (Nx * NL) + k * NL + l];
+            }
+            index_bndryF++;
           }
-          index_bndryF2++;
         }
       }
-    }
 
-    
+      // 0,1,2,3,4,5,6,7,8  INDEXES
+      // reorder columns bndryF = bndryF[:,[0,5,6,7,8,1,2,3,4]]
+      for (int j = 0; j < 1941; j++) {
+        // we love pointers dont we?
+        double temp = bndryF[j * NL + 1];
+        bndryF[j * NL + 1] = bndryF[j * NL + 5];
+        bndryF[j * NL + 5] = temp;
 
-    // set ux and uy to zero where cylinder is 1
-    for (int j = 0; j < Ny; j++) {
-      for (int k = 0; k < Nx; k++) {
-        if (cylinder[j*Nx +k] == 1) {
-          ux[j*Nx +k] = 0;
-          uy[j*Nx +k] = 0;
+        temp = bndryF[j * NL + 2];
+        bndryF[j * NL + 2] = bndryF[j * NL + 6];
+        bndryF[j * NL + 6] = temp;
+
+        temp = bndryF[j * NL + 3];
+        bndryF[j * NL + 3] = bndryF[j * NL + 7];
+        bndryF[j * NL + 7] = temp;
+
+        temp = bndryF[j * NL + 4];
+        bndryF[j * NL + 4] = bndryF[j * NL + 8];
+        bndryF[j * NL + 8] = temp;
+      }
+
+      // rho = np.sum(F,2)
+      start_run(rho_profiler);
+      for (int j = 0; j < Ny; j++) {
+        for (int k = 0; k < Nx; k++) {
+          double res1 = 0;
+          double res2 = 0;
+          double res3 = 0;
+          for (int l = 0; l < NL; l++) {
+            res1 += F[j * (Nx * NL) + k * NL + l];
+            res2 += F[j * (Nx * NL) + k * NL + l] * cxs[l];
+            res3 += F[j * (Nx * NL) + k * NL + l] * cys[l];
+          }
+          rho[j * Nx + k] = res1;
+          ux[j * Nx + k] = res2 / res1;
+          uy[j * Nx + k] = res3 / res1;
         }
       }
-    }
+      end_run(rho_profiler);
 
-    // vorticity = (np.roll(ux, -1, axis=0) - np.roll(ux, 1, axis=0)) -
-    // (np.roll(uy, -1, axis=1) - np.roll(uy, 1, axis=1)) vorticity[cylinder]
-    // = np.nan vorticity = np.ma.array(vorticity, mask=cylinder)
-    start_run(vort_profiler);
-    for (int j = 0; j < Ny; j++) {
-      for (int k = 0; k < Nx; k++) {
+      // set to zero
+      memset(Feq, 0, Ny * Nx * NL * sizeof(double));
 
-        // (np.roll(ux, -1, axis=0) - np.roll(ux, 1, axis=0))
-        double ux_roll = ux[j*Nx +(k - 1 + Nx) % Nx] - ux[j*Nx +(k + 1 + Nx) % Nx];
+      start_run(feq_profiler);
+      for (int k = 0; k < NL; k++) {
+        for (int j = 0; j < Ny; j++) {
+          for (int l = 0; l < Nx; l++) {
 
-        // (np.roll(uy, -1, axis=1) - np.roll(uy, 1, axis=1))
-        double uy_roll = uy[((j - 1 + Ny) % Ny)*Nx +k] - uy[((j + 1 + Ny) % Ny)*Nx +k];
+            double rho_val = rho[j * Nx + l];
+            double weight_val = weights[k];
 
-        vorticity[j*Nx +k] = cylinder[j*Nx +k] == 1 ? 0 : ux_roll - uy_roll;
+            // 3*(cx*ux+cy*uy)
+            double first =
+                3 * (cxs[k] * ux[j * Nx + l] + cys[k] * uy[j * Nx + l]);
+
+            // 9*(cx*ux+cy*uy)**2/2
+            double second =
+                9 * pow(cxs[k] * ux[j * Nx + l] + cys[k] * uy[j * Nx + l], 2) /
+                2;
+
+            // 3*(ux**2+uy**2)/2
+            double third =
+                3 * (pow(ux[j * Nx + l], 2) + pow(uy[j * Nx + l], 2)) / 2;
+
+            Feq[j * (Nx * NL) + l * NL + k] =
+                rho_val * weight_val * (1 + first + second - third);
+          }
+        }
       }
-    }
-    end_run(vort_profiler);
+      end_run(feq_profiler);
 
-    #ifdef DEBUG
-    char vortex_filename[100];
-    sprintf(vortex_filename, "%s/vorticity_%05d.npy", folder_name.c_str(), i);
-    // TODO for benchmarking only save vorticity from the last step
-    save_npy_2d_double(vorticity, Ny, Nx, vortex_filename);
-    #endif
-    
-    
-    
-    
+      // F += -(1.0/tau) * (F - Feq)
+      start_run(f_profiler);
+      for (int j = 0; j < Ny; j++) {
+        for (int k = 0; k < Nx; k++) {
+          for (int l = 0; l < NL; l++) {
+            F[j * (Nx * NL) + k * NL + l] +=
+                tau * (F[j * (Nx * NL) + k * NL + l] -
+                       Feq[j * (Nx * NL) + k * NL + l]);
+          }
+        }
+      }
+      end_run(f_profiler);
+
+      // Apply boundary
+      // F[cylinder,:] = bndryF
+      int index_bndryF2 = 0;
+      for (int j = 0; j < Ny; j++) {
+        for (int k = 0; k < Nx; k++) {
+          if (cylinder[j * Nx + k] == 1) {
+            for (int l = 0; l < NL; l++) {
+              F[j * (Nx * NL) + k * NL + l] = bndryF[index_bndryF2 * NL + l];
+            }
+            index_bndryF2++;
+          }
+        }
+      }
+
+      // set ux and uy to zero where cylinder is 1
+      for (int j = 0; j < Ny; j++) {
+        for (int k = 0; k < Nx; k++) {
+          if (cylinder[j * Nx + k] == 1) {
+            ux[j * Nx + k] = 0;
+            uy[j * Nx + k] = 0;
+          }
+        }
+      }
+
+      // vorticity = (np.roll(ux, -1, axis=0) - np.roll(ux, 1, axis=0)) -
+      // (np.roll(uy, -1, axis=1) - np.roll(uy, 1, axis=1))
+      // vorticity[cylinder] = np.nan vorticity = np.ma.array(vorticity,
+      // mask=cylinder)
+      start_run(vort_profiler);
+      for (int j = 0; j < Ny; j++) {
+        for (int k = 0; k < Nx; k++) {
+
+          // (np.roll(ux, -1, axis=0) - np.roll(ux, 1, axis=0))
+          double ux_roll =
+              ux[j * Nx + (k - 1 + Nx) % Nx] - ux[j * Nx + (k + 1 + Nx) % Nx];
+
+          // (np.roll(uy, -1, axis=1) - np.roll(uy, 1, axis=1))
+          double uy_roll = uy[((j - 1 + Ny) % Ny) * Nx + k] -
+                           uy[((j + 1 + Ny) % Ny) * Nx + k];
+
+          vorticity[j * Nx + k] =
+              cylinder[j * Nx + k] == 1 ? 0 : ux_roll - uy_roll;
+        }
+      }
+      end_run(vort_profiler);
+
+#ifdef DEBUG
+      char vortex_filename[100];
+      sprintf(vortex_filename, "%s/vorticity_%05d.npy", folder_name.c_str(), i);
+      // TODO for benchmarking only save vorticity from the last step
+      save_npy_2d_double(vorticity, Ny, Nx, vortex_filename);
+#endif
+    }
+#ifdef PROFILE
+    printf("\rRun %-*d/%d done", PROFILE_DIGITS, profile_counter + 1,
+           PROFILE_RUNS);
+    fflush(stdout);
   }
-  #ifdef PROFILE
-  printf("\rRun %-*d/%d done", PROFILE_DIGITS, profile_counter+1, PROFILE_RUNS);
-  fflush(stdout);
-  }
-  #endif
-  #ifdef PROFILE
+#endif
+#ifdef PROFILE
   printf("\nProfiling results:\n");
   profiler_stats rho_stats = finish_profiler(rho_profiler);
-  printf("- Rho  Calculation: %4.2f Flops/Cycle, %10ld cycles in %d runs. Arithmetic intensity: %4.2f\n", rho_stats.performance, rho_stats.cycles, rho_stats.runs, rho_stats.arithmetic_intensity);
+  printf("- Rho  Calculation: %4.2f Flops/Cycle, %10ld cycles in %d runs. "
+         "Arithmetic intensity: %4.2f\n",
+         rho_stats.performance, rho_stats.cycles, rho_stats.runs,
+         rho_stats.arithmetic_intensity);
   profiler_stats feq_stats = finish_profiler(feq_profiler);
-  printf("- FEQ  Calculation: %4.2f Flops/Cycle, %10ld cycles in %d runs. Arithmetic intensity: %4.2f\n", feq_stats.performance, feq_stats.cycles, feq_stats.runs, feq_stats.arithmetic_intensity);
+  printf("- FEQ  Calculation: %4.2f Flops/Cycle, %10ld cycles in %d runs. "
+         "Arithmetic intensity: %4.2f\n",
+         feq_stats.performance, feq_stats.cycles, feq_stats.runs,
+         feq_stats.arithmetic_intensity);
   profiler_stats f_stats = finish_profiler(f_profiler);
-  printf("- F    Calculation: %4.2f Flops/Cycle, %10ld cycles in %d runs. Arithmetic intensity: %4.2f\n", f_stats.performance, f_stats.cycles, f_stats.runs, f_stats.arithmetic_intensity);
+  printf("- F    Calculation: %4.2f Flops/Cycle, %10ld cycles in %d runs. "
+         "Arithmetic intensity: %4.2f\n",
+         f_stats.performance, f_stats.cycles, f_stats.runs,
+         f_stats.arithmetic_intensity);
   profiler_stats vort_stats = finish_profiler(vort_profiler);
-  printf("- Vort Calculation: %4.2f Flops/Cycle, %10ld cycles in %d runs. Arithmetic intensity: %4.2f\n", vort_stats.performance, vort_stats.cycles, vort_stats.runs, vort_stats.arithmetic_intensity);
-  #endif
+  printf("- Vort Calculation: %4.2f Flops/Cycle, %10ld cycles in %d runs. "
+         "Arithmetic intensity: %4.2f\n",
+         vort_stats.performance, vort_stats.cycles, vort_stats.runs,
+         vort_stats.arithmetic_intensity);
+#endif
 
   printf("\n");
 
@@ -374,20 +389,17 @@ inline int run() {
   return 0;
 }
 
-
-
-
-int main(int argc, char const *argv[])
-{
+int main(int argc, char const *argv[]) {
 
   unsigned long long start_cycle, end_cycle;
   time_t start_sec, end_sec;
-  asm volatile ("RDTSC" : "=A" (start_cycle));
+  asm volatile("RDTSC" : "=A"(start_cycle));
   time(&start_sec);
   run();
-  asm volatile ("RDTSC" : "=A" (end_cycle));
+  asm volatile("RDTSC" : "=A"(end_cycle));
   time(&end_sec);
-  printf("Cycles taken: %llu (%ld seconds)\n", end_cycle - start_cycle, end_sec - start_sec);
+  printf("Cycles taken: %llu (%ld seconds)\n", end_cycle - start_cycle,
+         end_sec - start_sec);
 
   return 0;
 }
