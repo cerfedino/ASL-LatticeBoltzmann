@@ -57,8 +57,8 @@ void save_npy_2d_double(double *array, int x, int y, std::string filename) {
 void save_npy_2d_int(int *array, int x, int y, std::string filename) {
   // convert array to vector
   // this is needed because npy::write_npy expects a vector and cant deal with
-  // pointers to arrays somehow NOTE THIS FUNCTION SHOULD LIKELY NOT BE USED
-  // AS INT STORING SOMEHOW DOESNT WORK AND SAVES INCORRECTLY THE DATA
+  // pointers to arrays somehow NOTE THIS FUNCTION SHOULD LIKELY NOT BE USED AS
+  // INT STORING SOMEHOW DOESNT WORK AND SAVES INCORRECTLY THE DATA
 
   std::vector<int> vec;
   for (int i = 0; i < x; i++) {

@@ -1,3 +1,8 @@
+// description = "....."
+// flops = Ny*Nx*NL(1 div + 1 add + 1 add + 1 mult)+ Ny*Nx( 2 add + 5 mult + 1
+// cos + 1 div )+Ny*Nx*NL*(1 add)+Ny*Nx*NL*(2 adds)+ Ny*Nx*(2 pow + 2 subs + 2
+// divs+ 1 add)+ Nt*(Ny*Nx*NL(3 adds + 2 mults) + Ny*Nx*(2 divs))+NL*Ny*Nx*(9
+// mults + 2 div  + 3 pows + 6 adds)+Ny*Nx*NL (2 add + 1 mult )+Ny*Nx*(3 adds)
 #include <math.h>
 #include <profile.h>
 #include <stdio.h>
@@ -31,8 +36,8 @@
 
 using namespace std;
 
-#define Nx 400          // resolution in x
-#define Ny 100          // resolution in y
+int Nx = 400;           // resolution in x
+int Ny = 100;           // resolution in y
 #define rho0 0.01       // reciprocal average density
 #define tau -1.66666667 // reciprocal collision timescale (1/0.6)
 #define Nt 5000         // number of timesteps
@@ -66,11 +71,10 @@ inline int run() {
   // Lattice Boltzmann Simulation in 2D
   debug_print("Starting\n");
 
-  // double *BIG_CHUNGUS = (double *)
-  // malloc((2*(Ny*Nx*NL)+6*(Ny*Nx)+(1941*NL)) * sizeof(double) +
-  // 2*(Ny*Nx)*sizeof(int)); debug_printf("Allocating %lu bytes for
-  // BIG_CHUNGUS\n", (2*(Ny*Nx*NL)+5*(Ny*Nx)+(1941*NL)) * sizeof(double) +
-  // 2*(Ny*Nx)*sizeof(int)); if (BIG_CHUNGUS == NULL) {
+  // double *BIG_CHUNGUS = (double *) malloc((2*(Ny*Nx*NL)+6*(Ny*Nx)+(1941*NL))
+  // * sizeof(double) + 2*(Ny*Nx)*sizeof(int)); debug_printf("Allocating %lu
+  // bytes for BIG_CHUNGUS\n", (2*(Ny*Nx*NL)+5*(Ny*Nx)+(1941*NL)) *
+  // sizeof(double) + 2*(Ny*Nx)*sizeof(int)); if (BIG_CHUNGUS == NULL) {
   //   printf("Memory allocation failed for BIG_CHUNGUS\n");
   //   return 1;
   // }
@@ -83,7 +87,6 @@ inline int run() {
   double *ux = (double *)malloc(Ny * Nx * sizeof(double));
   double *uy = (double *)malloc(Ny * Nx * sizeof(double));
   double *temp = (double *)malloc(Ny * Nx * sizeof(double));
-  double *bndryF = (double *)malloc(1941 * NL * sizeof(double));
   int *x_coords = (int *)malloc(Ny * Nx * sizeof(int));
   int *y_coords = (int *)malloc(Ny * Nx * sizeof(int));
 
@@ -92,6 +95,7 @@ inline int run() {
   srand(42); // some seed
 
   // Initialize F
+  // flops = Ny*Nx*NL(1 div + 1 add + 1 add + 1 mult)
   for (int i = 0; i < Ny; i++) {
     for (int j = 0; j < Nx; j++) {
       for (int k = 0; k < NL; k++) {
@@ -104,18 +108,20 @@ inline int run() {
   meshgrid(x_coords, y_coords);
 
   // F[:,:,3] += 2 * (1+0.2*np.cos(2*np.pi*X/Nx*4))
+  // flops = Ny*Nx( 2 add + 5 mult + 1 cos + 1 div )
   for (int i = 0; i < Ny; i++) {
     for (int j = 0; j < Nx; j++) {
-      // in python we access [3] but here we do on [1] what this dictates
-      // is the direction we go maybe something else too, but my brain is
-      // more fried than a kfc chicken AHAHAHAHAHAHAH HILARIOUS KARLO LOL
-      // IM LITERALLY DYING OF LAUGHTER
+      // in python we access [3] but here we do on [1] what this dictates is the
+      // direction we go maybe something else too, but my brain is more fried
+      // than a kfc chicken AHAHAHAHAHAHAH HILARIOUS KARLO LOL IM LITERALLY
+      // DYING OF LAUGHTER
       F[i * (Nx * NL) + j * NL + 1] +=
           2.0 * (1.0 + 0.2 * cos(2.0 * M_PI * (double)x_coords[i * Nx + j] /
                                  (double)Nx * 4.0));
     }
   }
 
+  // flops = Ny*Nx*NL*(1 add)
   int res = 0;
   for (int i = 0; i < Ny; i++) {
     for (int j = 0; j < Nx; j++) {
@@ -128,6 +134,7 @@ inline int run() {
   }
 
   // 	for i in idxs:		F[:,:,i] *= rho0 / rho
+  // flops = Ny*Nx*NL*(2 adds)
   for (int j = 0; j < Ny; j++) {
     for (int k = 0; k < Nx; k++) {
       for (int i = 0; i < NL; i++) {
@@ -137,6 +144,7 @@ inline int run() {
   }
 
   // cylinder = (X - Nx/4)**2 + (Y - Ny/2)**2 < (Ny/4)**2
+  // flops = Ny*Nx*(2 pow + 2 subs + 2 divs+ 1 add)
   for (int i = 0; i < Ny; i++) {
     for (int j = 0; j < Nx; j++) {
       cylinder[i * Nx + j] =
@@ -146,6 +154,20 @@ inline int run() {
     }
   }
 
+  int bndryF_size = 0;
+
+  // loop trough cylinder and count the number of 1s
+  // flops = 0 just reding the values
+  for (int i = 0; i < Ny; i++) {
+    for (int j = 0; j < Nx; j++) {
+      if (cylinder[i * Nx + j] == 1) {
+        bndryF_size++;
+      }
+    }
+  }
+
+  double *bndryF = (double *)malloc(bndryF_size * NL * sizeof(double));
+
   // Currently assuming that every read/write is a miss
   profiler *rho_profiler = init_profiler(5 * Ny * Nx * NL + 2 * Ny * Nx,
                                          8 * 5 * Ny * Nx * NL + 3 * Ny * Nx),
@@ -154,6 +176,8 @@ inline int run() {
            *f_profiler = init_profiler(3 * Nx * Ny * NL, 8 * 3 * Nx * Ny * NL),
            *vort_profiler = init_profiler(2 * Nx * Ny, 8 * 6 * Nx * Ny);
 
+  // flops = Nt*(Ny*Nx*NL(3 adds + 2 mults) + Ny*Nx*(2 divs))+NL*Ny*Nx*(9 mults
+  // + 2 div  + 3 pows + 6 adds)+Ny*Nx*NL (2 add + 1 mult )+Ny*Nx*(3 adds)
 #ifdef PROFILE
   const int PROFILE_RUNS = 5;
   const int PROFILE_DIGITS = floor(log10(PROFILE_RUNS)) + 1;
@@ -167,6 +191,7 @@ inline int run() {
       debug_printf("\r%d", i);
 
       // # Drift
+      // flops = 0
       for (int j = 0; j < NL; j++) {
 
         // Roll
@@ -191,6 +216,7 @@ inline int run() {
       // TODO to support dynamic sized we could evaluate the size of the
       // array and then allocate memory for now its hardcoded :pikashrug:
       // TODO: FIX
+      // flops = 0
       int index_bndryF = 0;
       for (int j = 0; j < Ny; j++) {
         for (int k = 0; k < Nx; k++) {
@@ -205,7 +231,8 @@ inline int run() {
 
       // 0,1,2,3,4,5,6,7,8  INDEXES
       // reorder columns bndryF = bndryF[:,[0,5,6,7,8,1,2,3,4]]
-      for (int j = 0; j < 1941; j++) {
+      // flops = 0
+      for (int j = 0; j < bndryF_size; j++) {
         // we love pointers dont we?
         double temp = bndryF[j * NL + 1];
         bndryF[j * NL + 1] = bndryF[j * NL + 5];
@@ -225,6 +252,7 @@ inline int run() {
       }
 
       // rho = np.sum(F,2)
+      // flops = Ny*Nx*NL(3 adds + 2 mults) + Ny*Nx*(2 divs)
       start_run(rho_profiler);
       for (int j = 0; j < Ny; j++) {
         for (int k = 0; k < Nx; k++) {
@@ -246,6 +274,7 @@ inline int run() {
       // set to zero
       memset(Feq, 0, Ny * Nx * NL * sizeof(double));
 
+      // flops = NL*Ny*Nx*(9 mults + 2 div  + 3 pows + 6 adds)
       start_run(feq_profiler);
       for (int k = 0; k < NL; k++) {
         for (int j = 0; j < Ny; j++) {
@@ -275,6 +304,7 @@ inline int run() {
       end_run(feq_profiler);
 
       // F += -(1.0/tau) * (F - Feq)
+      // flops = Ny*Nx*NL (2 add + 1 mult )
       start_run(f_profiler);
       for (int j = 0; j < Ny; j++) {
         for (int k = 0; k < Nx; k++) {
@@ -289,6 +319,7 @@ inline int run() {
 
       // Apply boundary
       // F[cylinder,:] = bndryF
+      // flops = 0
       int index_bndryF2 = 0;
       for (int j = 0; j < Ny; j++) {
         for (int k = 0; k < Nx; k++) {
@@ -302,6 +333,7 @@ inline int run() {
       }
 
       // set ux and uy to zero where cylinder is 1
+      // flops = 0
       for (int j = 0; j < Ny; j++) {
         for (int k = 0; k < Nx; k++) {
           if (cylinder[j * Nx + k] == 1) {
@@ -315,6 +347,8 @@ inline int run() {
       // (np.roll(uy, -1, axis=1) - np.roll(uy, 1, axis=1))
       // vorticity[cylinder] = np.nan vorticity = np.ma.array(vorticity,
       // mask=cylinder)
+
+      // flops = Ny*Nx*(3 adds)
       start_run(vort_profiler);
       for (int j = 0; j < Ny; j++) {
         for (int k = 0; k < Nx; k++) {
@@ -390,6 +424,13 @@ inline int run() {
 }
 
 int main(int argc, char const *argv[]) {
+  if (argc == 3) {
+    Nx = atoi(argv[1]);
+    Ny = atoi(argv[2]);
+  } else if (argc != 1) {
+    printf("Usage: %s [Nx Ny]\n", argv[0]);
+    return 1;
+  }
 
   unsigned long long start_cycle, end_cycle;
   time_t start_sec, end_sec;

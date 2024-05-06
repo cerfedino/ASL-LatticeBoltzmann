@@ -1,162 +1,43 @@
+//state = "e1f2aaeb666bb7a4f20d7f6484873127ef13e02a"
+//description = "all allocated memory is now contiguous"
+//flops = ???
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 
-#include "include/npy.hpp"
 #include <cmath>
 #include <exception>
 #include <stdexcept>
-#include <string>
 #include <vector>
-
-using namespace std;
+#include <string>
+   
+#include "include/npy.hpp"
+#include "include/utils.h"
 
 #ifdef DEBUG
 #define debug_printf(fmt, ...) fprintf(stdout, fmt, __VA_ARGS__)
 #define debug_print(fmt) fprintf(stdout, fmt)
 
-/// @brief This function prepares the output main output folder and creates a
-/// new folder with the current date and time
-/// @return
-string prepare_output() {
-  if (system("ls | grep output") != 0) {
-    debug_print("Creating main output folder\n");
-    system("mkdir output");
-
-    if (system("ls | grep output") != 0) {
-      debug_print("Could not create output folder\n");
-    }
-  }
-
-  // create new folder of format YYYY_MM_DD_HH_MM_SS
-  time_t now = time(0);
-  tm *ltm = localtime(&now);
-
-  // its this ugly because i cant be bothered to do const char shenanigans
-  char folder_name[100];
-  sprintf(folder_name, "output/%02d_%02d_%02d_%02d_%02d_%02d",
-          1900 + ltm->tm_year, 1 + ltm->tm_mon, ltm->tm_mday, ltm->tm_hour,
-          ltm->tm_min, ltm->tm_sec);
-
-  char command[100];
-  sprintf(command, "mkdir output/%02d_%02d_%02d_%02d_%02d_%02d",
-          1900 + ltm->tm_year, 1 + ltm->tm_mon, ltm->tm_mday, ltm->tm_hour,
-          ltm->tm_min, ltm->tm_sec);
-
-  system((const char *)command);
-
-  if (system(folder_name) != 0) {
-    debug_printf("Could not create output folder with name %s\n", folder_name);
-    /*throw runtime_error("Could not create output folder with name " +
-                        string(folder_name));*/
-  }
-
-  return string(folder_name);
-}
-
-void latest_outout(string folder) {
-  // check if output/latest folder exists in the current folder
-  // if it does exist delete it
-  if (system("ls | grep output/00_latest") > 0) {
-    debug_print("Deleting latest output folder\n");
-    system("rm -r output/00_latest");
-  }
-
-  // copy over the latest output folder to output/latest
-  char command[100];
-  sprintf(command, "cp -r %s output/00_latest", folder.c_str());
-  system((const char *)command);
-}
-
-void save_npy_3d_double(double ***array, int x, int y, int z, string filename) {
-
-  // convert array to vector
-  // this is needed because npy::write_npy expects a vector and cant deal with
-  // pointers to arrays somehow
-
-  vector<double> vec;
-
-  for (int i = 0; i < x; i++) {
-    for (int j = 0; j < y; j++) {
-      for (int k = 0; k < z; k++) {
-        vec.push_back(array[i][j][k]);
-      }
-    }
-  }
-
-  npy::npy_data<double> d;
-  d.data = vec;
-  d.shape = {(unsigned long)x, (unsigned long)y, (unsigned long)z};
-  d.fortran_order = false; // optional
-
-  const std::string path{filename};
-  npy::write_npy(path, d);
-}
-
-void save_npy_2d_double(double **array, int x, int y, string filename) {
-
-  // convert array to vector
-  // this is needed because npy::write_npy expects a vector and cant deal with
-  // pointers to arrays somehow
-
-  vector<double> vec;
-
-  for (int i = 0; i < x; i++) {
-    for (int j = 0; j < y; j++) {
-      vec.push_back(array[i][j]);
-    }
-  }
-
-  npy::npy_data<double> d;
-  d.data = vec;
-  d.shape = {(unsigned long)x, (unsigned long)y};
-  d.fortran_order = false; // optional
-
-  const std::string path{filename};
-  npy::write_npy(path, d);
-}
-
-void save_npy_2d_int(int **array, int x, int y, string filename) {
-
-  // convert array to vector
-  // this is needed because npy::write_npy expects a vector and cant deal with
-  // pointers to arrays somehow NOTE THIS FUNCTION SHOULD LIKELY NOT BE USED AS
-  // INT STORING SOMEHOW DOESNT WORK AND SAVES INCORRECTLY THE DATA
-
-  vector<int> vec;
-  for (int i = 0; i < x; i++) {
-    for (int j = 0; j < y; j++) {
-      vec.push_back(array[i][j]);
-    }
-  }
-
-  npy::npy_data<int> d;
-  d.data = vec;
-  d.shape = {(unsigned long)x, (unsigned long)y};
-  d.fortran_order = false; // optional
-
-  const std::string path{filename};
-  npy::write_npy(path, d);
-}
-
 #else
 // If DEBUG is not defined we expand macros to whitespace
-#define debug_printf(fmt, ...) ;
-#define debug_print(fmt) ;
-#define save_npy_3d_double(array, x, y, z, filename) ;
-#define save_npy_2d_double(array, x, y, filename) ;
-#define save_npy_2d_int(array, x, y, filename) ;
-#define prepare_output() ""
-#define latest_outout(folder) ;
+#define debug_printf(fmt, ...);
+#define debug_print(fmt);
+#define save_npy_3d_double(array, x, y, z, filename);
+#define save_npy_2d_double(array, x, y, filename); 
+#define save_npy_2d_int(array, x, y, filename); 
+#define make_output_folder() ""
+#define make_latest_output(folder);
 #endif
 
-int Nx = 400;            // resolution in x
-int Ny = 100;            // resolution in y
-const double rho0 = 100; // average density
-const double tau = 0.6;  // collision timescale
-const int Nt = 500;      // number of timesteps
-// const int Nt = 30;   // number of timesteps
+using namespace std;
+
+
+const int Nx = 400;    // resolution in x
+const int Ny = 100;    // resolution in y
+const double rho0 = 100;  // average density
+const double tau = 0.6;   // collision timescale
+const int Nt = 300;   // number of timesteps
 
 // Lattice speeds / weights
 const int NL = 9;
@@ -164,7 +45,7 @@ const double idx[9] = {0, 1, 2, 3, 4, 5, 6, 7, 8};
 const double cxs[9] = {0.0, 0.0, 1.0, 1.0, 1.0, 0.0, -1.0, -1.0, -1.0};
 const double cys[9] = {0.0, 1.0, 1.0, 0.0, -1.0, -1.0, -1.0, 0.0, 1.0};
 const double weights[9] = {4.0 / 9, 1.0 / 9,  1.0 / 36, 1.0 / 9, 1.0 / 36,
-                           1.0 / 9, 1.0 / 36, 1.0 / 9,  1.0 / 36}; // sums to 1
+                     1.0 / 9, 1.0 / 36, 1.0 / 9,  1.0 / 36};  // sums to 1
 
 void meshgrid(int **x_coords, int **y_coords) {
   for (int i = 0; i < Ny; ++i) {
@@ -184,13 +65,15 @@ void meshgrid(double **x_coords, double **y_coords) {
   }
 }
 
+
+
 // TODO if fancy make generic functions for double, float, int and so on
-double ***malloc_3d(int x, int y, int z) {
-  double ***array = (double ***)malloc(x * sizeof(double **));
-  for (int i = 0; i < x; ++i) {
-    array[i] = (double **)malloc(y * sizeof(double *));
-    for (int j = 0; j < y; ++j) {
-      array[i][j] = (double *)malloc(z * sizeof(double));
+double ***malloc_3d(int height, int width, int depth) {
+  double ***array = (double ***)malloc(height * sizeof(double **));
+  for (int i = 0; i < height; ++i) {
+    array[i] = (double **)malloc(width * sizeof(double *));
+    for (int j = 0; j < width; ++j) {
+      array[i][j] = (double *)malloc(depth * sizeof(double));
     }
   }
   return array;
@@ -213,33 +96,11 @@ double **malloc_2d_double(int x, int y) {
   return array;
 }
 
-void free_3d(double ***array, int height, int width) {
-  for (int i = 0; i < height; ++i) {
-    for (int j = 0; j < width; ++j) {
-      free(array[i][j]);
-    }
-    free(array[i]);
-  }
-  free(array);
-}
 
-void free_2d(int **array, int x) {
-  for (int i = 0; i < x; ++i) {
-    free(array[i]);
-  }
-  free(array);
-}
 
-void free_2d(double **array, int x) {
-  for (int i = 0; i < x; ++i) {
-    free(array[i]);
-  }
-  free(array);
-}
-
-// orig [1 2 3 4 5]
-// roll [4 5 1 2 3]
-//  if called on np.roll(array, 2)
+//orig [1 2 3 4 5]
+//roll [4 5 1 2 3]
+// if called on np.roll(array, 2)
 void roll1D(double *array, int size, int shift) {
   double *temp = (double *)malloc(size * sizeof(double));
 
@@ -254,6 +115,7 @@ void roll1D(double *array, int size, int shift) {
   free(temp);
 }
 
+
 /*orig
  [[1 2 3]
  [4 5 6]
@@ -265,7 +127,7 @@ roll
  if called on np.roll(array, 1, axis=0)
  */
 // similar to roll1D
-void roll2D(double **array, int height, int width, int shift, int axis) {
+void roll2D(double **array, int height, int width, int shift, int axis){
   double **temp = malloc_2d_double(height, width);
 
   // matrix is array[Y][X]
@@ -273,7 +135,7 @@ void roll2D(double **array, int height, int width, int shift, int axis) {
   // axis = 0 -> roll along x
   // axis = 1 -> roll along y
 
-  if (axis == 0) {
+  if(axis == 0){
     for (int i = 0; i < height; i++) {
       for (int j = 0; j < width; j++) {
         temp[i][(j + shift + width) % width] = array[i][j];
@@ -286,6 +148,7 @@ void roll2D(double **array, int height, int width, int shift, int axis) {
       }
     }
   }
+     
 
   for (int i = 0; i < height; i++) {
     for (int j = 0; j < width; j++) {
@@ -293,13 +156,14 @@ void roll2D(double **array, int height, int width, int shift, int axis) {
     }
   }
 
-  free_2d(temp, height);
+  free(temp);
 }
+
 
 // TODO CHECK TYPES IF ALL CORRECT
 // TODO arrays need to be initialized likely with 0 values
-int run() {
-  string folder_name = prepare_output(); // TODO delete empty folders
+int main() {
+  string folder_name = make_output_folder(); // TODO delete empty folders
 
   debug_printf("Output folder: %s\n", folder_name.c_str());
 
@@ -310,13 +174,13 @@ int run() {
   double ***F = malloc_3d(Ny, Nx, NL);
   debug_print("Initializing\n");
 
-  srand(42); // some seed
+  srand(42);  // some seed
 
   // Initialize F
   for (int i = 0; i < Ny; i++) {
     for (int j = 0; j < Nx; j++) {
       for (int k = 0; k < NL; k++) {
-        double rand_val = ((double)rand() / (RAND_MAX)) + 1;
+        double rand_val = ((double) rand() / (RAND_MAX)) + 1;
         F[i][j][k] = 1 + 0.01 * rand_val;
       }
     }
@@ -330,17 +194,16 @@ int run() {
   // F[:,:,3] += 2 * (1+0.2*np.cos(2*np.pi*X/Nx*4))
   for (int i = 0; i < Ny; i++) {
     for (int j = 0; j < Nx; j++) {
-      // in python we access [3] but here we do on [1] what this dictates is the
-      // direction we go maybe something else too, but my brain is more fried
-      // than a kfc chicken
-      F[i][j][1] += 2.0 * (1.0 + 0.2 * cos(2.0 * M_PI * (double)x_coords[i][j] /
-                                           (double)Nx * 4.0));
+      // in python we access [3] but here we do on [1] what this dictates is the direction we go
+      // maybe something else too, but my brain is more fried than a kfc chicken
+      // AHAHAHAHAHAHAH HILARIOUS KARLO LOL IM LITERALLY DYING OF LAUGHTER
+      F[i][j][1] += 2.0 * (1.0 + 0.2 * cos(2.0 * M_PI * (double)x_coords[i][j] / (double)Nx * 4.0));
     }
   }
 
   // rho = np.sum(F, axis=2)
   double **rho = malloc_2d_double(Ny, Nx);
-
+  
   // reset rho
   for (int j = 0; j < Ny; j++) {
     for (int k = 0; k < Nx; k++) {
@@ -377,29 +240,21 @@ int run() {
   // cylinder = (X - Nx/4)**2 + (Y - Ny/2)**2 < (Ny/4)**2
   for (int i = 0; i < Ny; i++) {
     for (int j = 0; j < Nx; j++) {
-      if ((pow((double)x_coords[i][j] - (double)Nx / 4, 2) +
-           pow((double)y_coords[i][j] - (double)Ny / 2, 2)) < pow(Ny / 4, 2)) {
+      if ((pow((double)x_coords[i][j] - (double)Nx / 4, 2) + pow((double)y_coords[i][j] - (double)Ny / 2, 2)) <
+          pow(Ny / 4, 2)) {
         cylinder[i][j] = 1;
       } else {
         cylinder[i][j] = 0;
       }
     }
   }
-
-  int bndry_size = 0;
-  for (int i = 0; i < Ny; i++) {
-    for (int j = 0; j < Nx; j++) {
-      if (cylinder[i][j] == 1) {
-        bndry_size++;
-      }
-    }
-  }
+  
 
   // Simulation loop
   for (int i = 0; i < Nt; i++) {
-    debug_printf("\r%d", i);
+    debug_printf("Timestep %05d\n", i);
 
-    // # Drift
+    //# Drift
     for (int j = 0; j < NL; j++) {
 
       double **temp = malloc_2d_double(Ny, Nx);
@@ -418,10 +273,10 @@ int run() {
         }
       }
 
-      free_2d(temp, Ny);
+      free(temp);
 
       temp = malloc_2d_double(Ny, Nx);
-
+      
       for (int k = 0; k < Ny; k++) {
         for (int l = 0; l < Nx; l++) {
           temp[k][l] = F[k][l][j];
@@ -436,14 +291,16 @@ int run() {
         }
       }
 
-      free_2d(temp, Ny);
+      free(temp);
+      
     }
+
 
     // bndryF = F[cylinder,:]
     // its 2d of size 1941x9 but no idea how this is calculated ??????
-    // TODO to support dynamic sized we could evaluate the size of the array and
-    // then allocate memory for now its hardcoded :pikashrug:
-    double **bndryF = malloc_2d_double(bndry_size, NL);
+    // TODO to support dynamic sized we could evaluate the size of the array and then allocate memory
+    // for now its hardcoded :pikashrug:
+    double **bndryF = malloc_2d_double(1941, NL);
     int index_bndryF = 0;
     for (int j = 0; j < Ny; j++) {
       for (int k = 0; k < Nx; k++) {
@@ -456,25 +313,25 @@ int run() {
       }
     }
 
-    // 0,1,2,3,4,5,6,7,8  INDEXES
+                                        // 0,1,2,3,4,5,6,7,8  INDEXES
     // reorder columns bndryF = bndryF[:,[0,5,6,7,8,1,2,3,4]]
-    for (int j = 0; j < bndry_size; j++) {
-      // we love pointers dont we?
-      double temp = bndryF[j][1];
-      bndryF[j][1] = bndryF[j][5];
-      bndryF[j][5] = temp;
+    for (int j = 0; j < 1941; j++) {
+        // we love pointers dont we?
+        double temp = bndryF[j][1];
+        bndryF[j][1] = bndryF[j][5];
+        bndryF[j][5] = temp;
 
-      temp = bndryF[j][2];
-      bndryF[j][2] = bndryF[j][6];
-      bndryF[j][6] = temp;
+        temp = bndryF[j][2];
+        bndryF[j][2] = bndryF[j][6];
+        bndryF[j][6] = temp;
 
-      temp = bndryF[j][3];
-      bndryF[j][3] = bndryF[j][7];
-      bndryF[j][7] = temp;
+        temp = bndryF[j][3];
+        bndryF[j][3] = bndryF[j][7];
+        bndryF[j][7] = temp;
 
-      temp = bndryF[j][4];
-      bndryF[j][4] = bndryF[j][8];
-      bndryF[j][8] = temp;
+        temp = bndryF[j][4];
+        bndryF[j][4] = bndryF[j][8];
+        bndryF[j][8] = temp;
     }
 
     // rho = np.sum(F,2)
@@ -486,6 +343,7 @@ int run() {
         }
       }
     }
+
 
     // ux = np.sum(F * cxs, 2) / rho
     double **ux = malloc_2d_double(Ny, Nx);
@@ -551,6 +409,7 @@ int run() {
       }
     }
 
+
     // Apply boundary
     // F[cylinder,:] = bndryF
     int index_bndryF2 = 0;
@@ -576,9 +435,8 @@ int run() {
     }
 
     // vorticity = (np.roll(ux, -1, axis=0) - np.roll(ux, 1, axis=0)) -
-    // (np.roll(uy, -1, axis=1) - np.roll(uy, 1, axis=1))
-    // vorticity[cylinder] = np.nan vorticity = np.ma.array(vorticity,
-    // mask=cylinder)
+    // (np.roll(uy, -1, axis=1) - np.roll(uy, 1, axis=1)) vorticity[cylinder]
+    // = np.nan vorticity = np.ma.array(vorticity, mask=cylinder)
     double **vorticity = malloc_2d_double(Ny, Nx);
     for (int j = 0; j < Ny; j++) {
       for (int k = 0; k < Nx; k++) {
@@ -592,49 +450,18 @@ int run() {
         vorticity[j][k] = ux_roll - uy_roll;
 
         if (cylinder[j][k] == 1) {
-          vorticity[j][k] = 0;
+          vorticity[j][k] = 0; 
         }
       }
     }
 
-#ifdef DEBUG
     char vortex_filename[100];
     sprintf(vortex_filename, "%s/vorticity_%05d.npy", folder_name.c_str(), i);
     // TODO for benchmarking only save vorticity from the last step
     save_npy_2d_double(vorticity, Ny, Nx, vortex_filename);
-#endif
-
-    free_2d(ux, Ny);
-    free_2d(uy, Ny);
-    free_2d(vorticity, Ny);
-
-    free_3d(Feq, Ny, Nx);
-    free_2d(bndryF, bndry_size);
-  }
-  debug_print("\n");
-  latest_outout(folder_name);
-
-  return 0;
-}
-
-int main(int argc, char const *argv[]) {
-  if (argc == 3) {
-    Nx = atoi(argv[1]);
-    Ny = atoi(argv[2]);
-  } else if (argc != 1) {
-    printf("Usage: %s [Nx Ny]\n", argv[0]);
-    return 1;
   }
 
-  unsigned long long start_cycle, end_cycle;
-  time_t start_sec, end_sec;
-  asm volatile("RDTSC" : "=A"(start_cycle));
-  time(&start_sec);
-  run();
-  asm volatile("RDTSC" : "=A"(end_cycle));
-  time(&end_sec);
-  printf("Cycles taken: %llu (%ld seconds)\n", end_cycle - start_cycle,
-         end_sec - start_sec);
+  make_latest_output(folder_name);
 
   return 0;
 }
