@@ -151,8 +151,8 @@ void save_npy_2d_int(int **array, int x, int y, string filename) {
 #define latest_outout(folder) ;
 #endif
 
-const int Nx = 400;      // resolution in x
-const int Ny = 100;      // resolution in y
+int Nx = 400;      // resolution in x
+int Ny = 100;      // resolution in y
 const double rho0 = 100; // average density
 const double tau = 0.6;  // collision timescale
 const int Nt = 500;      // number of timesteps
@@ -386,6 +386,15 @@ int run() {
     }
   }
 
+  int bndry_size = 0;
+  for (int i = 0; i < Ny; i++) {
+    for (int j = 0; j < Nx; j++) {
+      if (cylinder[i][j] == 1) {
+        bndry_size++;
+      }
+    }
+  }
+
   // Simulation loop
   for (int i = 0; i < Nt; i++) {
     debug_printf("\r%d", i);
@@ -434,7 +443,7 @@ int run() {
     // its 2d of size 1941x9 but no idea how this is calculated ??????
     // TODO to support dynamic sized we could evaluate the size of the array and
     // then allocate memory for now its hardcoded :pikashrug:
-    double **bndryF = malloc_2d_double(1941, NL);
+    double **bndryF = malloc_2d_double(bndry_size, NL);
     int index_bndryF = 0;
     for (int j = 0; j < Ny; j++) {
       for (int k = 0; k < Nx; k++) {
@@ -449,7 +458,7 @@ int run() {
 
     // 0,1,2,3,4,5,6,7,8  INDEXES
     // reorder columns bndryF = bndryF[:,[0,5,6,7,8,1,2,3,4]]
-    for (int j = 0; j < 1941; j++) {
+    for (int j = 0; j < bndry_size; j++) {
       // we love pointers dont we?
       double temp = bndryF[j][1];
       bndryF[j][1] = bndryF[j][5];
@@ -599,7 +608,7 @@ int run() {
     free_2d(vorticity, Ny);
 
     free_3d(Feq, Ny, Nx);
-    free_2d(bndryF, 1941);
+    free_2d(bndryF, bndry_size);
   }
   debug_print("\n");
   latest_outout(folder_name);
@@ -608,6 +617,16 @@ int run() {
 }
 
 int main(int argc, char const *argv[]) {
+  if (argc == 3) {
+    Nx = atoi(argv[1]);
+    Ny = atoi(argv[2]);
+  }
+  else if (argc == 1) {
+    // do nothing we take the default values
+  } else {
+    printf("Usage: %s [Nx Ny]\n", argv[0]);
+    return 1;
+  }
 
   unsigned long long start_cycle, end_cycle;
   time_t start_sec, end_sec;

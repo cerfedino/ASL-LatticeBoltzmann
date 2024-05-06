@@ -85,7 +85,6 @@ inline int run() {
   double *ux = (double *)malloc(Ny * Nx * sizeof(double));
   double *uy = (double *)malloc(Ny * Nx * sizeof(double));
   double *temp = (double *)malloc(Ny * Nx * sizeof(double));
-  double *bndryF = (double *)malloc(1941 * NL * sizeof(double));
   int *x_coords = (int *)malloc(Ny * Nx * sizeof(int));
   int *y_coords = (int *)malloc(Ny * Nx * sizeof(int));
 
@@ -153,6 +152,20 @@ inline int run() {
     }
   }
 
+  int bndryF_size = 0;
+
+  // loop trough cylinder and count the number of 1s
+  // flops = 0 just reding the values
+  for (int i = 0; i < Ny; i++) {
+    for (int j = 0; j < Nx; j++) {
+      if (cylinder[i * Nx + j] == 1) {
+        bndryF_size++;
+      }
+    }
+  }
+
+  double *bndryF = (double *)malloc(bndryF_size * NL * sizeof(double));
+
   // Simulation loop
   // flops = Nt*(Ny*Nx*NL(3 adds + 2 mults) + Ny*Nx*(2 divs))+NL*Ny*Nx*(9 mults
   // + 2 div  + 3 pows + 6 adds)+Ny*Nx*NL (2 add + 1 mult )+Ny*Nx*(3 adds)
@@ -201,7 +214,7 @@ inline int run() {
     // 0,1,2,3,4,5,6,7,8  INDEXES
     // reorder columns bndryF = bndryF[:,[0,5,6,7,8,1,2,3,4]]
     // flops = 0
-    for (int j = 0; j < 1941; j++) {
+    for (int j = 0; j < bndryF_size; j++) {
       // we love pointers dont we?
       double temp = bndryF[j * NL + 1];
       bndryF[j * NL + 1] = bndryF[j * NL + 5];
@@ -353,7 +366,18 @@ inline int run() {
 }
 
 int main(int argc, char const *argv[]) {
-  std::cin >> Nx >> Ny;
+  if (argc == 3) {
+    Nx = atoi(argv[1]);
+    Ny = atoi(argv[2]);
+  }
+  else if (argc == 1) {
+    // do nothing we take the default values
+  } else {
+    printf("Usage: %s [Nx Ny]\n", argv[0]);
+    return 1;
+  }
+
+  //std::cin >> Nx >> Ny;
 
   unsigned long long start_cycle, end_cycle;
   time_t start_sec, end_sec;
