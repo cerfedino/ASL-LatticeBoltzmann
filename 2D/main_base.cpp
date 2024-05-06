@@ -151,8 +151,8 @@ void save_npy_2d_int(int **array, int x, int y, string filename) {
 #define latest_outout(folder) ;
 #endif
 
-int Nx = 400;      // resolution in x
-int Ny = 100;      // resolution in y
+int Nx = 400;            // resolution in x
+int Ny = 100;            // resolution in y
 const double rho0 = 100; // average density
 const double tau = 0.6;  // collision timescale
 const int Nt = 500;      // number of timesteps
@@ -399,7 +399,7 @@ int run() {
   for (int i = 0; i < Nt; i++) {
     debug_printf("\r%d", i);
 
-    //# Drift
+    // # Drift
     for (int j = 0; j < NL; j++) {
 
       double **temp = malloc_2d_double(Ny, Nx);
@@ -576,8 +576,9 @@ int run() {
     }
 
     // vorticity = (np.roll(ux, -1, axis=0) - np.roll(ux, 1, axis=0)) -
-    // (np.roll(uy, -1, axis=1) - np.roll(uy, 1, axis=1)) vorticity[cylinder]
-    // = np.nan vorticity = np.ma.array(vorticity, mask=cylinder)
+    // (np.roll(uy, -1, axis=1) - np.roll(uy, 1, axis=1))
+    // vorticity[cylinder] = np.nan vorticity = np.ma.array(vorticity,
+    // mask=cylinder)
     double **vorticity = malloc_2d_double(Ny, Nx);
     for (int j = 0; j < Ny; j++) {
       for (int k = 0; k < Nx; k++) {
@@ -620,8 +621,7 @@ int main(int argc, char const *argv[]) {
   if (argc == 3) {
     Nx = atoi(argv[1]);
     Ny = atoi(argv[2]);
-  }
-  else if (argc != 1) {
+  } else if (argc != 1) {
     printf("Usage: %s [Nx Ny]\n", argv[0]);
     return 1;
   }
