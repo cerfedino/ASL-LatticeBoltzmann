@@ -29,8 +29,6 @@ def main(Nx, Ny):
         os.mkdir("output/reference")
 
     # Simulation parameters
-    #Nx                     = 400    # resolution x-dir
-    #Ny                     = 100    # resolution y-dir
     rho0                   = 100    # average density
     tau                    = 0.6    # collision timescale
     Nt                     = 30   # number of timesteps

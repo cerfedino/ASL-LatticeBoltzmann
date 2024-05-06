@@ -370,14 +370,10 @@ int main(int argc, char const *argv[]) {
     Nx = atoi(argv[1]);
     Ny = atoi(argv[2]);
   }
-  else if (argc == 1) {
-    // do nothing we take the default values
-  } else {
+    else if (argc != 1) {
     printf("Usage: %s [Nx Ny]\n", argv[0]);
     return 1;
   }
-
-  //std::cin >> Nx >> Ny;
 
   unsigned long long start_cycle, end_cycle;
   time_t start_sec, end_sec;
