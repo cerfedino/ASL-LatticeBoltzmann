@@ -264,9 +264,10 @@ inline int run() {
             res2 += F[j * (Nx * NL) + k * NL + l] * cxs[l];
             res3 += F[j * (Nx * NL) + k * NL + l] * cys[l];
           }
+          double inv = 1 / res1;
           rho[j * Nx + k] = res1;
-          ux[j * Nx + k] = res2 / res1;
-          uy[j * Nx + k] = res3 / res1;
+          ux[j * Nx + k] = res2 * inv;
+          uy[j * Nx + k] = res3 * inv;
         }
       }
       end_run(rho_profiler);
