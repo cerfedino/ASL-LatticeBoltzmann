@@ -12,7 +12,7 @@ all: build test leaks benchmark
 clean:
 	find . \( -iname '*.o' -o -iname 'timestamp_*.txt' \) -print -delete;
 
-build: ./main_base.o ./main_base_debug.o ./main_optimized.o ./main_optimized_debug.o 
+build: ./main_base.o ./main_base_debug.o ./main_optimized.o ./main_optimized_debug.o ./main_optimized_profile.o
 ./main_optimized.o: main.cpp ./include/utils.c ./include/utils.h ./include/profile.c
 	g++ $(CFLAGS) $(OPTIM_FLAGS) main.cpp ./include/utils.c ./include/profile.c -o ./main_optimized.o
 ./main_optimized_debug.o: main.cpp ./include/utils.c ./include/utils.h ./include/profile.c
@@ -34,7 +34,7 @@ output/reference/timestamp_$(SHORT_RUN_PARAMS_ESCAPED).txt: reference-python/lat
 	python3 reference-python/latticeboltzmann_prints.py $(SHORT_RUN_PARAMS); echo "ciao mamma" > output/reference/timestamp_$(SHORT_RUN_PARAMS_ESCAPED).txt; 
 
 leaks: ./main_optimized_debug.o
-	valgrind --leak-check=full ./main_optimized_debug.o $(SHORT_RUN_PARAMS)
+	mkdir -p output; valgrind --leak-check=full ./main_optimized_debug.o $(SHORT_RUN_PARAMS)
 benchmark: ./main_optimized.o ./main_base.o
 	./main_optimized.o $(LONG_RUN_PARAMS); ./main_base.o $(LONG_RUN_PARAMS)
 profile: ./main_optimized_profile.o

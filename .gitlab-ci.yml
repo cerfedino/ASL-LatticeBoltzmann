@@ -1,9 +1,66 @@
-build-job:
+image: gcc
+
+stages:
+  - build
+  - tests
+  - benchmark
+  - profile
+
+build:
   stage: build
   script:
-    - make build
+    - cd 2D && make build
+  artifacts:
+    paths:
+      - '2D/main_optimized.o'
+      - '2D/main_optimized_debug.o'
+      - '2D/main_optimized_profile.o'
+      - '2D/main_base.o'
+      - '2D/main_base_debug.o'
 
-test-job:
-  stage: test
+compare:
+  stage: tests
+  dependencies:
+    - build
   script:
+    - cd 2D
+    - apt update && apt install -y python3 python3-pip python3.11-venv 
+    - python3 -m venv venv && source venv/bin/activate
+    - pip install -r requirements.txt
     - make test
+  only:
+    - merge_requests
+    - main
+    - branches
+
+leaks:
+  stage: tests
+  dependencies:
+    - build
+  script:
+    - cd 2D && apt update && apt install -y valgrind
+    - make leaks
+  only:
+    - merge_requests
+    - main
+    - branches
+
+benchmark:
+  stage: benchmark
+  dependencies:
+    - build
+  script:
+    - cd 2D && make benchmark
+  only:
+    - merge_requests
+    - main
+
+profile:
+  stage: profile
+  dependencies:
+    - build
+  script:
+    - cd 2D && make profile
+  only:
+    - merge_requests
+    - main
