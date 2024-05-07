@@ -24,6 +24,7 @@ build: ./main_base.o ./main_base_debug.o ./main_optimized.o ./main_optimized_deb
 ./main_base_debug.o: main_base.cpp ./include/utils.c ./include/utils.h ./include/profile.c
 	g++ $(CFLAGS) -DDEBUG main_base.cpp ./include/utils.c ./include/profile.c -o ./main_base_debug.o
 
+# Sometimes we use "timestamp" files as a way for Make to keep track of the last time a target was built
 run_debug: output/timestamp_debug_$(SHORT_RUN_PARAMS_ESCAPED).txt
 output/timestamp_debug_$(SHORT_RUN_PARAMS_ESCAPED).txt: ./main_optimized_debug.o
 	mkdir -p output/; ./main_optimized_debug.o $(SHORT_RUN_PARAMS); echo "ciao mamma" > output/timestamp_debug_$(SHORT_RUN_PARAMS_ESCAPED).txt
