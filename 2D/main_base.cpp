@@ -594,7 +594,7 @@ int run() {
     char vortex_filename[100];
     sprintf(vortex_filename, "%s/vorticity_%05d.npy", folder_name.c_str(), i);
     // TODO for benchmarking only save vorticity from the last step
-    save_npy_2d_double(vorticity, Nx, Ny, vortex_filename);
+    save_npy_2d_double(vorticity, Ny, Nx, vortex_filename);
 #endif
 
     free_2d(ux, Ny);
