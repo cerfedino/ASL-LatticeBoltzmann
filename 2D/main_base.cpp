@@ -12,6 +12,23 @@
 
 using namespace std;
 
+
+int Nx = 400;            // resolution in x
+int Ny = 100;            // resolution in y
+const double rho0 = 100; // average density
+const double tau = 0.6;  // collision timescale
+int Nt = 500;      // number of timesteps
+// const int Nt = 30;   // number of timesteps
+
+// Lattice speeds / weights
+const int NL = 9;
+const double idx[9] = {0, 1, 2, 3, 4, 5, 6, 7, 8};
+const double cxs[9] = {0.0, 0.0, 1.0, 1.0, 1.0, 0.0, -1.0, -1.0, -1.0};
+const double cys[9] = {0.0, 1.0, 1.0, 0.0, -1.0, -1.0, -1.0, 0.0, 1.0};
+const double weights[9] = {4.0 / 9, 1.0 / 9,  1.0 / 36, 1.0 / 9, 1.0 / 36,
+                           1.0 / 9, 1.0 / 36, 1.0 / 9,  1.0 / 36}; // sums to 1
+
+
 #ifdef DEBUG
 #define debug_printf(fmt, ...) fprintf(stdout, fmt, __VA_ARGS__)
 #define debug_print(fmt) fprintf(stdout, fmt)
@@ -20,52 +37,39 @@ using namespace std;
 /// new folder with the current date and time
 /// @return
 string prepare_output() {
-  if (system("ls | grep output") != 0) {
-    debug_print("Creating main output folder\n");
-    system("mkdir output");
-
-    if (system("ls | grep output") != 0) {
-      debug_print("Could not create output folder\n");
-    }
-  }
-
   // create new folder of format YYYY_MM_DD_HH_MM_SS
   time_t now = time(0);
   tm *ltm = localtime(&now);
 
   // its this ugly because i cant be bothered to do const char shenanigans
   char folder_name[100];
-  sprintf(folder_name, "output/%02d_%02d_%02d_%02d_%02d_%02d",
+  sprintf(folder_name, "output/%02d_%02d_%02d_%02d_%02d_%02d_%d_%d_%d",
           1900 + ltm->tm_year, 1 + ltm->tm_mon, ltm->tm_mday, ltm->tm_hour,
-          ltm->tm_min, ltm->tm_sec);
+          ltm->tm_min, ltm->tm_sec, Nx,Ny,Nt);
 
-  char command[100];
-  sprintf(command, "mkdir output/%02d_%02d_%02d_%02d_%02d_%02d",
-          1900 + ltm->tm_year, 1 + ltm->tm_mon, ltm->tm_mday, ltm->tm_hour,
-          ltm->tm_min, ltm->tm_sec);
-
-  system((const char *)command);
-
-  if (system(folder_name) != 0) {
+  if (mkdir(folder_name, 0755) == -1) {
     debug_printf("Could not create output folder with name %s\n", folder_name);
     /*throw runtime_error("Could not create output folder with name " +
                         string(folder_name));*/
   }
 
-  return string(folder_name);
+  return std::string(folder_name);
 }
 
 void latest_outout(string folder) {
+  char folder_name[220];
+  sprintf(folder_name, "output/00_latest_%d_%d_%d", Nx,Ny,Nt);
   // check if output/latest folder exists in the current folder
   // if it does exist delete it
-  if (system("ls | grep output/00_latest") > 0) {
-    debug_print("Deleting latest output folder\n");
-    system("rm -r output/00_latest");
+  if (access(folder_name, F_OK) == 0) {
+    char delete_command[227];
+    sprintf(delete_command, "rm -rf %s", folder_name);
+    system((const char *)delete_command);
   }
 
   // copy over the latest output folder to output/latest
-  char command[100];
-  sprintf(command, "cp -r %s output/00_latest", folder.c_str());
+  char command[230];
+  sprintf(command, "cp -r %s %s", folder.c_str(), folder_name);
   system((const char *)command);
 }
 
@@ -151,20 +155,6 @@ void save_npy_2d_int(int **array, int x, int y, string filename) {
 #define latest_outout(folder) ;
 #endif
 
-int Nx = 400;            // resolution in x
-int Ny = 100;            // resolution in y
-const double rho0 = 100; // average density
-const double tau = 0.6;  // collision timescale
-const int Nt = 500;      // number of timesteps
-// const int Nt = 30;   // number of timesteps
-
-// Lattice speeds / weights
-const int NL = 9;
-const double idx[9] = {0, 1, 2, 3, 4, 5, 6, 7, 8};
-const double cxs[9] = {0.0, 0.0, 1.0, 1.0, 1.0, 0.0, -1.0, -1.0, -1.0};
-const double cys[9] = {0.0, 1.0, 1.0, 0.0, -1.0, -1.0, -1.0, 0.0, 1.0};
-const double weights[9] = {4.0 / 9, 1.0 / 9,  1.0 / 36, 1.0 / 9, 1.0 / 36,
-                           1.0 / 9, 1.0 / 36, 1.0 / 9,  1.0 / 36}; // sums to 1
 
 void meshgrid(int **x_coords, int **y_coords) {
   for (int i = 0; i < Ny; ++i) {
@@ -601,7 +591,7 @@ int run() {
     char vortex_filename[100];
     sprintf(vortex_filename, "%s/vorticity_%05d.npy", folder_name.c_str(), i);
     // TODO for benchmarking only save vorticity from the last step
-    save_npy_2d_double(vorticity, Ny, Nx, vortex_filename);
+    save_npy_2d_double(vorticity, Nx, Ny, vortex_filename);
 #endif
 
     free_2d(ux, Ny);
@@ -612,17 +602,20 @@ int run() {
     free_2d(bndryF, bndry_size);
   }
   debug_print("\n");
+  #ifdef DEBUG
   latest_outout(folder_name);
+  #endif
 
   return 0;
 }
 
 int main(int argc, char const *argv[]) {
-  if (argc == 3) {
+  if (argc == 4) {
     Nx = atoi(argv[1]);
     Ny = atoi(argv[2]);
+    Nt = atoi(argv[3]);
   } else if (argc != 1) {
-    printf("Usage: %s [Nx Ny]\n", argv[0]);
+    printf("Usage: %s [Nx Ny Nt]\n", argv[0]);
     return 1;
   }
 

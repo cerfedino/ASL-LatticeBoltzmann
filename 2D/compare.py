@@ -2,7 +2,18 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 import matplotlib   
+import sys
 
+if len(sys.argv) < 4:
+    print("Usage: python compare.py <Nx> <Ny> <Nt>")
+    exit(1)
+
+Nx = int(sys.argv[1])
+Ny = int(sys.argv[2])
+Nt = int(sys.argv[3])
+
+# output_folder = output_folders[0]
+output_folder = f"output/00_latest_{Nx}_{Ny}_{Nt}"
 
 TOLERANCE = 0.01
 
@@ -56,8 +67,6 @@ output_refernce_folders = [x[0] for x in os.walk("output/reference")][1:]
 # get folders in output that start with 2024
 # output_folders = [x[0] for x in os.walk("output/")][1:]
 
-# output_folder = output_folders[0]
-output_folder = "output/00_latest"
 
 print(f"Selected folder: {output_folder}")
 
@@ -83,10 +92,9 @@ print(f"Selected folder: {output_folder}")
 # # compare npy file cylinder_start.npy
 # is_equal(output_folder, "cylinder_start")
 
-N = 30
 
 error = False
-for i in range(N):
+for i in range(Nt):
     # is_equal(output_folder, f"F_before_drift_{i}")
     # is_equal(output_folder, f"F_after_drift_{i}")
 
@@ -101,7 +109,7 @@ for i in range(N):
 
     error = is_equal(output_folder, f"vorticity_{i:05}") or error 
 
-print(f"[-] Checked the first {N} timesteps")    
+print(f"[-] Checked the first {Nt} timesteps")    
 if error:
     print(f"{bcolors.FAIL}[X] The implementation does not follow the baseline{bcolors.ENDC}")
     exit(1)

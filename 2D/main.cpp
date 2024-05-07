@@ -4,7 +4,6 @@
 // divs+ 1 add)+ Nt*(Ny*Nx*NL(3 adds + 2 mults) + Ny*Nx*(2 divs))+NL*Ny*Nx*(9
 // mults + 2 div  + 3 pows + 6 adds)+Ny*Nx*NL (2 add + 1 mult )+Ny*Nx*(3 adds)
 #include <math.h>
-#include <profile.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -38,9 +37,9 @@ using namespace std;
 
 int Nx = 400;           // resolution in x
 int Ny = 100;           // resolution in y
+int Nt = 5000;         // number of timesteps
 #define rho0 0.01       // reciprocal average density
 #define tau -1.66666667 // reciprocal collision timescale (1/0.6)
-#define Nt 5000         // number of timesteps
 
 // #define Nt 30  // number of timesteps
 
@@ -419,17 +418,20 @@ inline int run() {
   free(cylinder);
   free(temp);
   // free(BIG_CHUNGUS);
+  #ifdef DEBUG 
   make_latest_output(folder_name);
+  #endif
 
   return 0;
 }
 
 int main(int argc, char const *argv[]) {
-  if (argc == 3) {
+  if (argc == 4) {
     Nx = atoi(argv[1]);
     Ny = atoi(argv[2]);
+    Nt = atoi(argv[3]);
   } else if (argc != 1) {
-    printf("Usage: %s [Nx Ny]\n", argv[0]);
+    printf("Usage: %s [Nx Ny Nt]\n", argv[0]);
     return 1;
   }
 
