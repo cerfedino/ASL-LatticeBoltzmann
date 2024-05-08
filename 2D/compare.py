@@ -4,7 +4,7 @@ import os
 import matplotlib   
 import sys
 
-if len(sys.argv) < 4:
+if len(sys.argv) != 4:
     print("Usage: python compare.py <Nx> <Ny> <Nt>")
     exit(1)
 

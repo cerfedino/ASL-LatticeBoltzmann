@@ -5,7 +5,7 @@ SHORT_RUN_PARAMS = 400 200 100
 
 LONG_RUN_PARAMS_ESCAPED = $(shell echo $(LONG_RUN_PARAMS) | tr ' ' '_')
 SHORT_RUN_PARAMS_ESCAPED = $(shell echo $(SHORT_RUN_PARAMS) | tr ' ' '_')
-# SHORT_RUN_PARAMS_ESCAPED = 400_100_50
+
 .PHONY: all clean build run_debug test leaks benchmark
 
 all: build test leaks benchmark
