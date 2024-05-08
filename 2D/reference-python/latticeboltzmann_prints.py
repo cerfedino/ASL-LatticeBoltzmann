@@ -17,7 +17,7 @@ for an isothermal fluid
 
 
 
-def main(Nx, Ny):
+def main(Nx, Ny, Nt):
     """ Lattice Boltzmann Simulation """
     
     # if folder exists delete it so we start fresh
@@ -31,7 +31,6 @@ def main(Nx, Ny):
     # Simulation parameters
     rho0                   = 100    # average density
     tau                    = 0.6    # collision timescale
-    Nt                     = 30   # number of timesteps
     plotRealTime = True # switch on for plotting as the simulation goes along
     
     # Lattice speeds / weights
@@ -204,13 +203,14 @@ def main(Nx, Ny):
 
 if __name__== "__main__":
     import sys
-    if len(sys.argv) == 3:
+    if len(sys.argv) == 4:
         Nx = int(sys.argv[1])
         Ny = int(sys.argv[2])
-        main(Nx, Ny)
+        Nt = int(sys.argv[3])
+        main(Nx, Ny, Nt)
     elif len(sys.argv) == 1:
-        main(400, 100)
+        main(400, 100, 5000)
     else:
-        print("Usage: latticeboltzmann.py Nx Ny")
+        print("Usage: latticeboltzmann.py Nx Ny Nt")
         sys.exit(1)
 
