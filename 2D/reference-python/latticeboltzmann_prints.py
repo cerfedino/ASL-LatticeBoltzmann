@@ -4,6 +4,7 @@ import numpy as np
 from inspect import currentframe
 
 import os
+import shutil
 
 """
 Create Your Own Lattice Boltzmann Simulation (With Python)
@@ -16,19 +17,20 @@ for an isothermal fluid
 
 
 
-def main():
+def main(Nx, Ny, Nt):
     """ Lattice Boltzmann Simulation """
+    
+    # if folder exists delete it so we start fresh
+    if os.path.exists("output/reference"):
+        shutil.rmtree("output/reference")
     
     # create output/reference folder
     if not os.path.exists("output/reference"):
         os.mkdir("output/reference")
 
     # Simulation parameters
-    Nx                     = 400    # resolution x-dir
-    Ny                     = 100    # resolution y-dir
     rho0                   = 100    # average density
     tau                    = 0.6    # collision timescale
-    Nt                     = 30   # number of timesteps
     plotRealTime = True # switch on for plotting as the simulation goes along
     
     # Lattice speeds / weights
@@ -178,6 +180,7 @@ def main():
 
         vorticity = np.ma.array(vorticity, mask=cylinder)
 
+        plt.title(f"iteration: {it}")
 
         plt.imshow(vorticity, cmap='bwr')
         plt.imshow(~cylinder, cmap='gray', alpha=0.3)
@@ -199,5 +202,15 @@ def main():
 
 
 if __name__== "__main__":
-  main()
+    import sys
+    if len(sys.argv) == 4:
+        Nx = int(sys.argv[1])
+        Ny = int(sys.argv[2])
+        Nt = int(sys.argv[3])
+        main(Nx, Ny, Nt)
+    elif len(sys.argv) == 1:
+        main(400, 100, 5000)
+    else:
+        print("Usage: latticeboltzmann.py Nx Ny Nt")
+        sys.exit(1)
 
