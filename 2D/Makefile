@@ -1,11 +1,11 @@
 CFLAGS = -g
 OPTIM_FLAGS = -Ofast
-LONG_RUN_PARAMS = 400 200 5000
-SHORT_RUN_PARAMS = 400 200 100
+LONG_RUN_PARAMS  = 400 200 5000
+SHORT_RUN_PARAMS = 400 200 300
 
 PREVIOUS_VERSIONS = previous_versions/v1/main_optimized.cpp 
 
-PAST_VERSIONS_OBJ = $(foreach file,$(PREVIOUS_VERSIONS),$(file:.cpp=.old.o))
+PAST_VERSIONS_OBJ = $(foreach file,$(PREVIOUS_VERSIONS),$(file:.cpp=.o))
 LONG_RUN_PARAMS_ESCAPED = $(shell echo $(LONG_RUN_PARAMS) | tr ' ' '_')
 SHORT_RUN_PARAMS_ESCAPED = $(shell echo $(SHORT_RUN_PARAMS) | tr ' ' '_')
 
@@ -13,7 +13,7 @@ SHORT_RUN_PARAMS_ESCAPED = $(shell echo $(SHORT_RUN_PARAMS) | tr ' ' '_')
 
 all: build test leaks benchmark
 clean:
-	find . \( -iname '*.o' -o -iname 'timestamp_*.txt' \) -print -delete;
+	find . \( -iname '*.o' -o -iname 'timestamp_*.txt' \) -print -delete; rm -r artifacts/*
 
 build: ./main_base.o ./main_base_debug.o ./main_optimized.o ./main_optimized_debug.o ./main_optimized_profile.o
 ./main_optimized.o: main.cpp ./include/utils.c ./include/utils.h ./include/profile.c
@@ -28,7 +28,7 @@ build: ./main_base.o ./main_base_debug.o ./main_optimized.o ./main_optimized_deb
 	g++ $(CFLAGS) -DDEBUG main_base.cpp ./include/utils.c ./include/profile.c -o ./main_base_debug.o
 
 # Recipe for building old versions
-%.old.o: %.cpp ./include/utils.c ./include/utils.h ./include/profile.c
+%.o: %.cpp ./include/utils.c ./include/utils.h ./include/profile.c
 	g++ $(CFLAGS) $(OPTIM_FLAGS) -DPROFILE $< -o $@ ./include/utils.c ./include/utils.h ./include/profile.c
 # Sometimes we use "timestamp" files as a way for Make to keep track of the last time a target was built
 run_debug: output/timestamp_debug_$(SHORT_RUN_PARAMS_ESCAPED).txt
@@ -46,6 +46,6 @@ leaks: ./main_optimized_debug.o
 
 
 benchmark: ./main_optimized.o $(PAST_VERSIONS_OBJ)
-	mkdir -p artifacts/; python3 newbenchmark.py
+	mkdir -p artifacts/; python3 benchmark.py
 profile: ./main_optimized_profile.o
 	./main_optimized_profile.o $(LONG_RUN_PARAMS)

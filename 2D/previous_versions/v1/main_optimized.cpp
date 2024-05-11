@@ -143,7 +143,7 @@ inline int run() {
   }
 
   // cylinder = (X - Nx/4)**2 + (Y - Ny/2)**2 < (Ny/4)**2
-  // flops = Ny*Nx*(2 pow + 2 subs + 2 divs+ 1 add)
+  // flops = Ny*Nx*(3 pow + 2 subs + 2 divs+ 1 add)
   for (int i = 0; i < Ny; i++) {
     for (int j = 0; j < Nx; j++) {
       cylinder[i * Nx + j] =
@@ -251,7 +251,7 @@ inline int run() {
       }
 
       // rho = np.sum(F,2)
-      // flops = Ny*Nx*NL(3 adds + 2 mults) + Ny*Nx*(2 divs)
+      // flops = Ny*Nx*NL(3 adds + 2 mults) + Ny*Nx*(1 div + 2 mults)
       start_run(rho_profiler);
       for (int j = 0; j < Ny; j++) {
         for (int k = 0; k < Nx; k++) {

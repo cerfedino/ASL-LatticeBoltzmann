@@ -4,27 +4,28 @@ import re
 import numpy as np
 from dotenv import load_dotenv
 import matplotlib.pyplot as plt
+from sympy import symbols, evalf, sympify
 
 
-PROJECT_ROOT = "../"
-PREVIOUS_VERSIONS_PATH = f"./previous_versions/"
-OUTPUT_FOLDER = f"./artifacts"
+PREVIOUS_VERSIONS_PATH = f"{os.path.dirname(__file__)}/previous_versions/"
+OUTPUT_FOLDER = f"{os.path.dirname(__file__)}/artifacts/"
 
+Nx, Ny, Nt, NL = symbols('Nx Ny Nt NL')
 
-
-# Read MEM_BW and PEAK_FLOPS from environment variables, otherwise from .env file, otherwise display error message
+PARAMS= {Nx: 400, Ny: 200, NL: 9, Nt:100}
+# Read MEM_BW and PEAK_SCALAR from environment variables, otherwise from .env file, otherwise display error message
 try:
     print("Reading environment variables")
-    MEM_BW = os.environ["MEM_BW"]
-    PEAK_FLOPS = os.environ["PEAK_FLOPS"]
-    SIMD_LEN_BITS = os.environ["SIMD_LEN_BITS"]
+    MEM_BW = int(os.environ["MEM_BW"])
+    PEAK_SCALAR = float(os.environ["PEAK_SCALAR"])
+    SIMD_LEN_BITS = int(os.environ["SIMD_LEN_BITS"])
 except KeyError:
     print("Environment variables not found, reading from .env file")
     # make sure keys are there AND they hgave avalue set
     try:
         load_dotenv()
         MEM_BW = int(os.getenv("MEM_BW"))
-        PEAK_FLOPS = float(os.getenv("PEAK_FLOPS"))
+        PEAK_SCALAR = float(os.getenv("PEAK_SCALAR"))
         SIMD_LEN_BITS = int(os.getenv("SIMD_LEN_BITS"))
     except FileNotFoundError:
         print("Error: Environment variables not found and .env file not found")
@@ -34,21 +35,18 @@ except KeyError:
         exit(1)
 
 print("MEM_BW: ", MEM_BW)
-print("PEAK_FLOPS: ", PEAK_FLOPS)
+print("PEAK_SCALAR: ", PEAK_SCALAR)
 print("SIMD_LEN_BITS: ", SIMD_LEN_BITS)
-    
+PEAK_simd = PEAK_SCALAR * (SIMD_LEN_BITS/64)
 
 
-def make_roofline_plot(PEAK_SCALAR, MEM_BW, SIMD_LEN):
+def make_roofline_plot(PEAK_SCALAR, MEM_BW, SIMD_LEN_BITS):
     XMIN = 0.03125
     XMAX = 2**4
     
     PLT_FACECOLOR="#E4E4E4"
     PLT_BOUND_COLOR="#55575C"
     
-    DOUBLE = 64
-
-    PEAK_simd = PEAK_SCALAR * (SIMD_LEN/DOUBLE)
     
     fig = plt.figure(figsize=(20, 12), facecolor="white")
     plt.gca().set_facecolor(PLT_FACECOLOR)
@@ -88,12 +86,17 @@ def make_roofline_plot(PEAK_SCALAR, MEM_BW, SIMD_LEN):
     
     return plt
 
+def plot_roofline(plt, label, perf, intensity, simd=False):
+    plt.plot(intensity, perf, 'ro', label=label)
+    plt.text(intensity, perf, f"{label}\n ({perf:.2f} iops/cycle)", fontsize=12, va='top', ha='center', color='red')
+    return plt
 
-def run_executable_and_get_output(executable_path, *args):
-    print(f"Running {executable_path} {' '.join(map(str, args))}")
+
+
+def run_executable_and_get_output(executable_path, args):
+    print(f"Running {executable_path} {' '.join(args)}")
     result = subprocess.run([executable_path] + list(args), stdout=subprocess.PIPE, text=True)
     return result.stdout
-
 
 
 def main():
@@ -108,28 +111,51 @@ def main():
     
     
     # Init empty roofline plot
-    plt = make_roofline_plot(PEAK_FLOPS, MEM_BW, SIMD_LEN_BITS)
-    plt.savefig(f"{OUTPUT_FOLDER}/roofline_plot.out.pdf")
-    plt.show()
+    plt = make_roofline_plot(PEAK_SCALAR, MEM_BW, SIMD_LEN_BITS)
     
     for path in previous_versions:
         print("=========")
-        env = {}
-        with open(path + "/.env") as file:
-            for line in file:
-                key, value = line.strip().split("=")
-                env[key] = value
-                
-        print("\nVERSION: ", env["VERSION"])
-        print("Path: ", path)
-        print("TITLE: ", env["TITLE"])
-        print("DESCRIPTION: ", env["DESC"])
-        print("COMMIT: ", env["COMMIT"])
+        
+        load_dotenv(dotenv_path=path+"/.env")
+        VERSION = os.environ["VERSION"]
+        PATH = path
+        TITLE = os.environ["TITLE"]
+        DESC = os.environ["DESC"]
+        COMMIT = os.environ["COMMIT"]
+        WORK = os.environ["WORK"]
+        DATA_MOVEMENT = os.environ["DATA_MOV"]
+
+        print("\nVERSION: ", VERSION)
+        print("Path: ", PATH)
+        print("TITLE: ", TITLE)
+        print("DESCRIPTION: ", DESC)
+        print("COMMIT: ", COMMIT)
+        print("WORK: ", WORK)
+        print("DATA_MOV: ", DATA_MOVEMENT)
+        
+        # Execute executable file in subprocess and read stdout
+        output = run_executable_and_get_output(f"{path}/main_optimized.o", [f"{PARAMS[Nx]}", f"{PARAMS[Ny]}", f"{PARAMS[Nt]}"])
+        
+        print(output)
+        runs = int(re.search(r"Run (\d+)/\d+ done\nProfiling results:", output).group(1))
+        cycles = int(re.search(r"Cycles taken: (\d+)", output).group(1))
+        print(f"Total Number of Cycles: {int(cycles/runs)}")
+        
+        WORK_eval = int(sympify(WORK).subs(PARAMS).evalf())
+        DATA_eval = int(sympify(DATA_MOVEMENT).subs(PARAMS).evalf())
+        INTENSITY = WORK_eval / DATA_eval
+        PERFORMANCE = WORK_eval / int(cycles/runs)
         
         print("")
-        # Execute executable file in subprocess and read stdout
-        output = run_executable_and_get_output(f"{path}/main_optimized.old.o", '400', '200', '100')
-        flops_per_cycle = np.sum([float(f) for f in re.findall(r"(\d+\.\d+) Flops/Cycle", output)])
-        print("Recorded total flops/cycle : ", flops_per_cycle)
+        print("Work: ", WORK, "= " + str(WORK_eval))
+        print("Data Movement: ", DATA_MOVEMENT, "= " + str(DATA_eval))
+        print("Operational Intensity: ", INTENSITY)
+        print("Performance: ", PERFORMANCE)
+        
+        
+        plt = plot_roofline(plt, TITLE, PERFORMANCE, INTENSITY, simd=True)
+        plt.savefig(f"{OUTPUT_FOLDER}/roofline_plot.out.pdf")
+        plt.show()
+
         
 main()
