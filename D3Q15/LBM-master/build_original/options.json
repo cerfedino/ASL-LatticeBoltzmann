@@ -1,0 +1,11 @@
+{
+    "grid_size": "[100,200,300]",
+    "save_every": 5,
+    "c_s": 0.577350269,
+    "velocity_set": "D3Q15",
+    "nu": 0.16666666666,
+    "tau": 1,
+    "gamma_dot": 0.01,
+    "boundary_conditions": "periodic",
+    "n_steps": 1000
+}
