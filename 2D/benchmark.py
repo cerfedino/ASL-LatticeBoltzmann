@@ -3,7 +3,7 @@ import subprocess
 import re
 import math
 import numpy as np
-from dotenv import load_dotenv
+from dotenv import load_dotenv, dotenv_values
 import matplotlib.pyplot as plt
 from sympy import symbols, evalf, sympify
 
@@ -63,7 +63,7 @@ def make_roofline_plot(PEAK_SCALAR, MEM_BW, SIMD_LEN_BITS):
     # Compute bound
     y_comp_scalar = [PEAK_SCALAR for i in x]
     plt.plot(x, y_comp_scalar, color=PLT_BOUND_COLOR, linestyle='--', linewidth=1.4)
-    plt.text(0.04,y_comp_scalar[0], f"Peak $\pi$ scalar ({y_comp_scalar[0]} iops/cycle)", fontweight="bold", fontsize=12, va='bottom', ha='left', color=PLT_BOUND_COLOR) 
+    plt.text(0.04,y_comp_scalar[0], f"Peak $\\pi$ scalar ({y_comp_scalar[0]} iops/cycle)", fontweight="bold", fontsize=12, va='bottom', ha='left', color=PLT_BOUND_COLOR) 
 
     ax = plt.gca()
     memory_coords = memory_line.get_data()
@@ -76,7 +76,7 @@ def make_roofline_plot(PEAK_SCALAR, MEM_BW, SIMD_LEN_BITS):
     # Compute bound
     y_comp_simd = [PEAK_simd for i in x]
     plt.plot(x, y_comp_simd, color=PLT_BOUND_COLOR, linestyle='--', linewidth=1.4)
-    plt.text(0.04,y_comp_simd[0], f"Peak $\pi$ SIMD ({y_comp_simd[0]} iops/cycle)", fontweight="bold", fontsize=12, va='bottom', ha='left', color=PLT_BOUND_COLOR)
+    plt.text(0.04,y_comp_simd[0], f"Peak $\\pi$ SIMD ({y_comp_simd[0]} iops/cycle)", fontweight="bold", fontsize=12, va='bottom', ha='left', color=PLT_BOUND_COLOR)
 
     plt.gca().yaxis.grid(True, which='major', color='w', linestyle='-', linewidth=1.5)
     plt.xlabel("Operational Intensity I(n) [iops/byte]", fontsize=14, rotation=0, labelpad=5, ha='center')
@@ -90,7 +90,7 @@ def make_roofline_plot(PEAK_SCALAR, MEM_BW, SIMD_LEN_BITS):
 
 def plot_roofline(plt, label, perf, intensity, simd=False):
     plt.plot(intensity, perf, 'ro', label=label)
-    plt.text(intensity, perf * 0.85, f"{label}\n ({perf:.2f} iops/cycle)", fontsize=12, va='top', ha='center', color='red')
+    plt.text(intensity * 1.15, perf, f"{label} ({perf:.2f} iops/cycle)", fontsize=12, ha='left', color='red')
     return plt
 
 
@@ -123,14 +123,14 @@ def main():
     for path in previous_versions:
         print("=========")
         
-        load_dotenv(dotenv_path=path+"/.env")
-        VERSION = os.environ["VERSION"]
+        conf = dotenv_values(path+"/.env")
+        VERSION = conf["VERSION"]
         PATH = path
-        TITLE = os.environ["TITLE"]
-        DESC = os.environ["DESC"]
-        COMMIT = os.environ["COMMIT"]
-        WORK = os.environ["WORK"]
-        DATA_MOVEMENT = os.environ["DATA_MOV"]
+        TITLE = conf["TITLE"]
+        DESC = conf["DESC"]
+        COMMIT = conf["COMMIT"]
+        WORK = conf["WORK"]
+        DATA_MOVEMENT = conf["DATA_MOV"]
 
         print("\nVERSION: ", VERSION)
         print("Path: ", PATH)
@@ -141,7 +141,7 @@ def main():
         print("DATA_MOV: ", DATA_MOVEMENT)
         
         # Execute executable file in subprocess and read stdout
-        output = run_executable_and_get_output(f"{path}/main_optimized.o", [f"{PARAMS[Nx]}", f"{PARAMS[Ny]}", f"{PARAMS[Nt]}"])
+        output = run_executable_and_get_output(f"{path}/main.o", [f"{PARAMS[Nx]}", f"{PARAMS[Ny]}", f"{PARAMS[Nt]}"])
         
         runs = int(re.search(r"Run (\d+)/\d+ done\nProfiling results:", output).group(1))
         cycles_rho  = int(re.search(r".*Rho\s*Calculation: .* (\d+) cycles.*", output).group(1))
