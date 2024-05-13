@@ -10,6 +10,7 @@
 
 #include <cmath>
 #include <exception>
+#include <immintrin.h>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -35,9 +36,9 @@
 
 using namespace std;
 
-int Nx = 400;           // resolution in x
-int Ny = 100;           // resolution in y
-int Nt = 5000;         // number of timesteps
+int Nx = 416;           // resolution in x
+int Ny = 96;            // resolution in y
+int Nt = 5000;          // number of timesteps
 #define rho0 0.01       // reciprocal average density
 #define tau -1.66666667 // reciprocal collision timescale (1/0.6)
 
@@ -48,8 +49,7 @@ int Nt = 5000;         // number of timesteps
 const double idx[9] = {0, 1, 2, 3, 4, 5, 6, 7, 8};
 const double cxs[9] = {0.0, 0.0, 1.0, 1.0, 1.0, 0.0, -1.0, -1.0, -1.0};
 const double cys[9] = {0.0, 1.0, 1.0, 0.0, -1.0, -1.0, -1.0, 0.0, 1.0};
-const double weights[9] = {4.0 / 9, 1.0 / 9,  1.0 / 36, 1.0 / 9, 1.0 / 36,
-                           1.0 / 9, 1.0 / 36, 1.0 / 9,  1.0 / 36}; // sums to 1
+const double weights[9] = {4.0 / 9, 1.0 / 9, 1.0 / 36, 1.0 / 9, 1.0 / 36, 1.0 / 9, 1.0 / 36, 1.0 / 9, 1.0 / 36}; // sums to 1
 
 void meshgrid(int *x_coords, int *y_coords) {
   for (int i = 0; i < Ny; ++i) {
@@ -78,16 +78,16 @@ inline int run() {
   //   return 1;
   // }
 
-  double *Feq = (double *)malloc(Ny * Nx * NL * sizeof(double));
-  double *F = (double *)malloc(Ny * Nx * NL * sizeof(double));
-  double *vorticity = (double *)malloc(Ny * Nx * sizeof(double));
-  double *rho = (double *)calloc(Ny * Nx, sizeof(double));
-  double *cylinder = (double *)malloc(Ny * Nx * sizeof(double));
-  double *ux = (double *)malloc(Ny * Nx * sizeof(double));
-  double *uy = (double *)malloc(Ny * Nx * sizeof(double));
-  double *temp = (double *)malloc(Ny * Nx * sizeof(double));
-  int *x_coords = (int *)malloc(Ny * Nx * sizeof(int));
-  int *y_coords = (int *)malloc(Ny * Nx * sizeof(int));
+  double *Feq = (double *)aligned_alloc(32, Ny * Nx * NL * sizeof(double));
+  double *F = (double *)aligned_alloc(32, Ny * Nx * NL * sizeof(double));
+  double *vorticity = (double *)aligned_alloc(32, Ny * Nx * sizeof(double));
+  double *rho = (double *)aligned_alloc(32, Ny * Nx * sizeof(double));
+  double *cylinder = (double *)aligned_alloc(32, Ny * Nx * sizeof(double));
+  double *ux = (double *)aligned_alloc(32, Ny * Nx * sizeof(double));
+  double *uy = (double *)aligned_alloc(32, Ny * Nx * sizeof(double));
+  double *temp = (double *)aligned_alloc(32, Ny * Nx * sizeof(double));
+  int *x_coords = (int *)aligned_alloc(32, Ny * Nx * sizeof(int));
+  int *y_coords = (int *)aligned_alloc(32, Ny * Nx * sizeof(int));
 
   debug_print("Initializing\n");
 
@@ -114,9 +114,7 @@ inline int run() {
       // direction we go maybe something else too, but my brain is more fried
       // than a kfc chicken AHAHAHAHAHAHAH HILARIOUS KARLO LOL IM LITERALLY
       // DYING OF LAUGHTER
-      F[i * (Nx * NL) + j * NL + 1] +=
-          2.0 * (1.0 + 0.2 * cos(2.0 * M_PI * (double)x_coords[i * Nx + j] /
-                                 (double)Nx * 4.0));
+      F[i * (Nx * NL) + j * NL + 1] += 2.0 * (1.0 + 0.2 * cos(2.0 * M_PI * (double)x_coords[i * Nx + j] / (double)Nx * 4.0));
     }
   }
 
@@ -146,10 +144,7 @@ inline int run() {
   // flops = Ny*Nx*(2 pow + 2 subs + 2 divs+ 1 add)
   for (int i = 0; i < Ny; i++) {
     for (int j = 0; j < Nx; j++) {
-      cylinder[i * Nx + j] =
-          (pow((double)x_coords[i * Nx + j] - (double)Nx / 4, 2) +
-           pow((double)y_coords[i * Nx + j] - (double)Ny / 2, 2)) <
-          pow(Ny / 4, 2);
+      cylinder[i * Nx + j] = (pow((double)x_coords[i * Nx + j] - (double)Nx / 4, 2) + pow((double)y_coords[i * Nx + j] - (double)Ny / 2, 2)) < pow(Ny / 4, 2);
     }
   }
 
@@ -165,14 +160,10 @@ inline int run() {
     }
   }
 
-  double *bndryF = (double *)malloc(bndryF_size * NL * sizeof(double));
+  double *bndryF = (double *)aligned_alloc(32, bndryF_size * NL * sizeof(double));
 
   // Currently assuming that every read/write is a miss
-  profiler *rho_profiler = init_profiler(5 * Ny * Nx * NL + 2 * Ny * Nx,
-                                         8 * 5 * Ny * Nx * NL + 3 * Ny * Nx),
-           *feq_profiler =
-               init_profiler(19 * Nx * Ny * NL, 8 * 13 * Nx * Ny * NL),
-           *f_profiler = init_profiler(3 * Nx * Ny * NL, 8 * 3 * Nx * Ny * NL),
+  profiler *rho_profiler = init_profiler(5 * Ny * Nx * NL + 2 * Ny * Nx, 8 * 5 * Ny * Nx * NL + 3 * Ny * Nx), *feq_profiler = init_profiler(19 * Nx * Ny * NL, 8 * 13 * Nx * Ny * NL), *f_profiler = init_profiler(3 * Nx * Ny * NL, 8 * 3 * Nx * Ny * NL),
            *vort_profiler = init_profiler(2 * Nx * Ny, 8 * 6 * Nx * Ny);
 
   // flops = Nt*(Ny*Nx*NL(3 adds + 2 mults) + Ny*Nx*(2 divs))+NL*Ny*Nx*(9 mults
@@ -182,8 +173,7 @@ inline int run() {
   const int PROFILE_DIGITS = floor(log10(PROFILE_RUNS)) + 1;
   printf("\rRun %-*d/%d done", PROFILE_DIGITS, 0, PROFILE_RUNS);
   fflush(stdout);
-  for (int profile_counter = 0; profile_counter < PROFILE_RUNS;
-       profile_counter++) {
+  for (int profile_counter = 0; profile_counter < PROFILE_RUNS; profile_counter++) {
 #endif
     // Simulation loop
     for (int i = 0; i < Nt; i++) {
@@ -198,8 +188,7 @@ inline int run() {
         int shiftY = cxs[j];
         for (int k = 0; k < Ny; k++) {
           for (int l = 0; l < Nx; l++) {
-            temp[((k + shiftY + Ny) % Ny) * Nx + ((l + shiftX + Nx) % Nx)] =
-                F[k * (Nx * NL) + l * NL + j];
+            temp[((k + shiftY + Ny) % Ny) * Nx + ((l + shiftX + Nx) % Nx)] = F[k * (Nx * NL) + l * NL + j];
           }
         }
 
@@ -275,29 +264,58 @@ inline int run() {
       memset(Feq, 0, Ny * Nx * NL * sizeof(double));
 
       // flops = NL*Ny*Nx*(9 mults + 2 div  + 3 pows + 6 adds)
+      __m256d const_vec_1 = _mm256_set1_pd(1);
+      __m256d const_vec_3 = _mm256_set1_pd(3);
+      __m256d const_vec_4_5 = _mm256_set1_pd(4.5);
+      __m256d const_vec_1_5 = _mm256_set1_pd(1.5);
       start_run(feq_profiler);
       for (int k = 0; k < NL; k++) {
+        __m256d x_vec = _mm256_set1_pd(cxs[k]);
+        __m256d y_vec = _mm256_set1_pd(cys[k]);
+        __m256d weights_vec = _mm256_set1_pd(weights[k]);
         for (int j = 0; j < Ny; j++) {
-          for (int l = 0; l < Nx; l++) {
+          int l;
+          for (l = 0; l < Nx - 3; l += 4) {
+            __m256d rho_vec = _mm256_load_pd(&rho[j * Nx + l]); // rho[j * Nx + l]
 
+            __m256d ux_vec = _mm256_load_pd(&ux[j * Nx + l]);             // ux[j * Nx + l]
+            __m256d uy_vec = _mm256_load_pd(&uy[j * Nx + l]);             // uy[j * Nx + l]
+            __m256d ux_mul_vec = _mm256_mul_pd(x_vec, ux_vec);            // cxs[k] * ux[j * Nx + l]
+            __m256d uy_mul_vec = _mm256_mul_pd(y_vec, uy_vec);            // cys[k] * uy[j * Nx + l]
+            __m256d uxuy_add_vec = _mm256_add_pd(ux_mul_vec, uy_mul_vec); // cxs[k] * ux[j * Nx + l] + cys[k] * uy[j * Nx + l]
+
+            __m256d first_vec = _mm256_mul_pd(uxuy_add_vec, const_vec_3); // 3 * (cxs[k] * ux[j * Nx + l] + cys[k] * uy[j * Nx + l])
+
+            __m256d uxuypow_vec = _mm256_mul_pd(uxuy_add_vec, uxuy_add_vec); // pow(cxs[k] * ux[j * Nx + l] + cys[k] * uy[j * Nx + l], 2)
+            __m256d second_vec = _mm256_mul_pd(uxuypow_vec, const_vec_4_5);  // 9 * pow(cxs[k] * ux[j * Nx + l] + cys[k] * uy[j * Nx + l], 2) / 2
+
+            __m256d uxpow_vec = _mm256_mul_pd(ux_vec, ux_vec);                // pow(ux[j * Nx + l], 2)
+            __m256d uypow_vec = _mm256_mul_pd(uy_vec, uy_vec);                // pow(uy[j * Nx + l], 2)
+            __m256d uxuypowadd_vec = _mm256_add_pd(uxpow_vec, uypow_vec);     // pow(ux[j * Nx + l], 2) + pow(uy[j * Nx + l], 2)
+            __m256d third_vec = _mm256_mul_pd(uxuypowadd_vec, const_vec_1_5); // 3 * (pow(ux[j * Nx + l], 2) + pow(uy[j * Nx + l], 2)) / 2
+
+            __m256d first_sum = _mm256_add_pd(const_vec_1, first_vec); // 1 + first
+            __m256d second_sum = _mm256_sub_pd(second_vec, third_vec); // second - third
+            __m256d first_mul = _mm256_mul_pd(rho_vec, weights_vec);   // rho_val * weight_val
+            __m256d third_sum = _mm256_add_pd(first_sum, second_sum);  // 1 + first + second - third
+            __m256d second_mul = _mm256_mul_pd(first_mul, third_sum);  // rho_val * weight_val * (1 + first + second - third)
+
+            _mm256_store_pd(&Feq[j * (Nx * NL) + k * Nx + l], second_mul);
+          }
+          for (; l < Nx; l++) {
             double rho_val = rho[j * Nx + l];
             double weight_val = weights[k];
 
             // 3*(cx*ux+cy*uy)
-            double first =
-                3 * (cxs[k] * ux[j * Nx + l] + cys[k] * uy[j * Nx + l]);
+            double first = 3 * (cxs[k] * ux[j * Nx + l] + cys[k] * uy[j * Nx + l]);
 
             // 9*(cx*ux+cy*uy)**2/2
-            double second =
-                9 * pow(cxs[k] * ux[j * Nx + l] + cys[k] * uy[j * Nx + l], 2) /
-                2;
+            double second = 9 * pow(cxs[k] * ux[j * Nx + l] + cys[k] * uy[j * Nx + l], 2) / 2;
 
             // 3*(ux**2+uy**2)/2
-            double third =
-                3 * (pow(ux[j * Nx + l], 2) + pow(uy[j * Nx + l], 2)) / 2;
+            double third = 3 * (pow(ux[j * Nx + l], 2) + pow(uy[j * Nx + l], 2)) / 2;
 
-            Feq[j * (Nx * NL) + l * NL + k] =
-                rho_val * weight_val * (1 + first + second - third);
+            Feq[j * (Nx * NL) + k * Nx + l] = rho_val * weight_val * (1 + first + second - third);
           }
         }
       }
@@ -309,9 +327,7 @@ inline int run() {
       for (int j = 0; j < Ny; j++) {
         for (int k = 0; k < Nx; k++) {
           for (int l = 0; l < NL; l++) {
-            F[j * (Nx * NL) + k * NL + l] +=
-                tau * (F[j * (Nx * NL) + k * NL + l] -
-                       Feq[j * (Nx * NL) + k * NL + l]);
+            F[j * (Nx * NL) + k * NL + l] += tau * (F[j * (Nx * NL) + k * NL + l] - Feq[j * (Nx * NL) + l * Nx + k]);
           }
         }
       }
@@ -352,8 +368,7 @@ inline int run() {
       for (int j = 0; j < Ny; j++) {
         // Calculate k = 0 boundary
         double ux_roll = ux[j * Nx + Nx - 1] - ux[j * Nx + 1];
-        double uy_roll =
-            uy[((j - 1 + Ny) % Ny) * Nx] - uy[((j + 1 + Ny) % Ny) * Nx];
+        double uy_roll = uy[((j - 1 + Ny) % Ny) * Nx] - uy[((j + 1 + Ny) % Ny) * Nx];
         vorticity[j * Nx] = cylinder[j * Nx] == 1 ? 0 : ux_roll - uy_roll;
 
         // Calculate k = [1, Nx - 2]
@@ -362,19 +377,15 @@ inline int run() {
           double ux_roll = ux[j * Nx + k - 1] - ux[j * Nx + k + 1];
 
           // (np.roll(uy, -1, axis=1) - np.roll(uy, 1, axis=1))
-          double uy_roll =
-              uy[((j - 1 + Ny) % Ny) * Nx + k] - uy[((j + 1) % Ny) * Nx + k];
+          double uy_roll = uy[((j - 1 + Ny) % Ny) * Nx + k] - uy[((j + 1) % Ny) * Nx + k];
 
-          vorticity[j * Nx + k] =
-              cylinder[j * Nx + k] == 1 ? 0 : ux_roll - uy_roll;
+          vorticity[j * Nx + k] = cylinder[j * Nx + k] == 1 ? 0 : ux_roll - uy_roll;
         }
 
         // Calculate k = Nx - 1 boundary
         ux_roll = ux[j * Nx + Nx - 2] - ux[j * Nx];
-        uy_roll = uy[((j - 1 + Ny) % Ny) * Nx + Nx - 1] -
-                  uy[((j + 1) % Ny) * Nx + Nx - 1];
-        vorticity[j * Nx + Nx - 1] =
-            cylinder[j * Nx + Nx - 1] == 1 ? 0 : ux_roll - uy_roll;
+        uy_roll = uy[((j - 1 + Ny) % Ny) * Nx + Nx - 1] - uy[((j + 1) % Ny) * Nx + Nx - 1];
+        vorticity[j * Nx + Nx - 1] = cylinder[j * Nx + Nx - 1] == 1 ? 0 : ux_roll - uy_roll;
       }
       end_run(vort_profiler);
 
@@ -386,8 +397,7 @@ inline int run() {
 #endif
     }
 #ifdef PROFILE
-    printf("\rRun %-*d/%d done", PROFILE_DIGITS, profile_counter + 1,
-           PROFILE_RUNS);
+    printf("\rRun %-*d/%d done", PROFILE_DIGITS, profile_counter + 1, PROFILE_RUNS);
     fflush(stdout);
   }
 #endif
@@ -396,23 +406,19 @@ inline int run() {
   profiler_stats rho_stats = finish_profiler(rho_profiler);
   printf("- Rho  Calculation: %4.2f Flops/Cycle, %10ld cycles in %d runs. "
          "Arithmetic intensity: %4.2f\n",
-         rho_stats.performance, rho_stats.cycles, rho_stats.runs,
-         rho_stats.arithmetic_intensity);
+         rho_stats.performance, rho_stats.cycles, rho_stats.runs, rho_stats.arithmetic_intensity);
   profiler_stats feq_stats = finish_profiler(feq_profiler);
   printf("- FEQ  Calculation: %4.2f Flops/Cycle, %10ld cycles in %d runs. "
          "Arithmetic intensity: %4.2f\n",
-         feq_stats.performance, feq_stats.cycles, feq_stats.runs,
-         feq_stats.arithmetic_intensity);
+         feq_stats.performance, feq_stats.cycles, feq_stats.runs, feq_stats.arithmetic_intensity);
   profiler_stats f_stats = finish_profiler(f_profiler);
   printf("- F    Calculation: %4.2f Flops/Cycle, %10ld cycles in %d runs. "
          "Arithmetic intensity: %4.2f\n",
-         f_stats.performance, f_stats.cycles, f_stats.runs,
-         f_stats.arithmetic_intensity);
+         f_stats.performance, f_stats.cycles, f_stats.runs, f_stats.arithmetic_intensity);
   profiler_stats vort_stats = finish_profiler(vort_profiler);
   printf("- Vort Calculation: %4.2f Flops/Cycle, %10ld cycles in %d runs. "
          "Arithmetic intensity: %4.2f\n",
-         vort_stats.performance, vort_stats.cycles, vort_stats.runs,
-         vort_stats.arithmetic_intensity);
+         vort_stats.performance, vort_stats.cycles, vort_stats.runs, vort_stats.arithmetic_intensity);
 #endif
 
   printf("\n");
@@ -428,10 +434,10 @@ inline int run() {
   free(rho);
   free(cylinder);
   free(temp);
-  // free(BIG_CHUNGUS);
-  #ifdef DEBUG 
+// free(BIG_CHUNGUS);
+#ifdef DEBUG
   make_latest_output(folder_name);
-  #endif
+#endif
 
   return 0;
 }
@@ -453,8 +459,7 @@ int main(int argc, char const *argv[]) {
   run();
   asm volatile("RDTSC" : "=A"(end_cycle));
   time(&end_sec);
-  printf("Cycles taken: %llu (%ld seconds)\n", end_cycle - start_cycle,
-         end_sec - start_sec);
+  printf("Cycles taken: %llu (%ld seconds)\n", end_cycle - start_cycle, end_sec - start_sec);
 
   return 0;
 }
