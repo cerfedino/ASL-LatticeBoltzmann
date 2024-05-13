@@ -24,7 +24,7 @@ int Nt = 500;      // number of timesteps
 // const int Nt = 30;   // number of timesteps
 
 // Lattice speeds / weights
-#define NL 9;
+#define NL 9
 const double idx[9] = {0, 1, 2, 3, 4, 5, 6, 7, 8};
 const double cxs[9] = {0.0, 0.0, 1.0, 1.0, 1.0, 0.0, -1.0, -1.0, -1.0};
 const double cys[9] = {0.0, 1.0, 1.0, 0.0, -1.0, -1.0, -1.0, 0.0, 1.0};
