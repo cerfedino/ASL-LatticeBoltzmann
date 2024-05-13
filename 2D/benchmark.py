@@ -40,17 +40,17 @@ print("PEAK_SCALAR: ", PEAK_SCALAR)
 print("SIMD_LEN_BITS: ", SIMD_LEN_BITS)
 PEAK_simd = PEAK_SCALAR * (SIMD_LEN_BITS/64)
 
-asdfsadf = 0
+fig_index = 0
 def make_roofline_plot(PEAK_SCALAR, MEM_BW, SIMD_LEN_BITS):
-    global asdfsadf
+    global fig_index
     XMIN = 1E-5
     XMAX = 2**4
     
     PLT_FACECOLOR="#E4E4E4"
     PLT_BOUND_COLOR="#55575C"
     
-    fig = plt.figure(asdfsadf, figsize=(20, 12), facecolor="white")
-    asdfsadf+=1
+    fig = plt.figure(fig_index, figsize=(20, 12), facecolor="white")
+    fig_index+=1
     plt.gca().set_facecolor(PLT_FACECOLOR)
     
     plt.xscale("log", base=2)
