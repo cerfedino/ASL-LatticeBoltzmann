@@ -3,9 +3,7 @@ OPTIM_FLAGS = -Ofast
 LONG_RUN_PARAMS  = 400 200 5000
 SHORT_RUN_PARAMS = 400 200 300
 
-PREVIOUS_VERSIONS = previous_versions/v1/main_optimized.cpp 
-
-PAST_VERSIONS_OBJ = $(foreach file,$(PREVIOUS_VERSIONS),$(file:.cpp=.o))
+PAST_VERSIONS_OBJ = $(foreach file,$(wildcard previous_versions/*/main.cpp),$(file:.cpp=.o))
 LONG_RUN_PARAMS_ESCAPED = $(shell echo $(LONG_RUN_PARAMS) | tr ' ' '_')
 SHORT_RUN_PARAMS_ESCAPED = $(shell echo $(SHORT_RUN_PARAMS) | tr ' ' '_')
 
