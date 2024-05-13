@@ -40,16 +40,17 @@ print("PEAK_SCALAR: ", PEAK_SCALAR)
 print("SIMD_LEN_BITS: ", SIMD_LEN_BITS)
 PEAK_simd = PEAK_SCALAR * (SIMD_LEN_BITS/64)
 
-
+asdfsadf = 0
 def make_roofline_plot(PEAK_SCALAR, MEM_BW, SIMD_LEN_BITS):
+    global asdfsadf
     XMIN = 1E-5
     XMAX = 2**4
     
     PLT_FACECOLOR="#E4E4E4"
     PLT_BOUND_COLOR="#55575C"
     
-    
-    fig = plt.figure(figsize=(20, 12), facecolor="white")
+    fig = plt.figure(asdfsadf, figsize=(20, 12), facecolor="white")
+    asdfsadf+=1
     plt.gca().set_facecolor(PLT_FACECOLOR)
     
     plt.xscale("log", base=2)
@@ -86,11 +87,11 @@ def make_roofline_plot(PEAK_SCALAR, MEM_BW, SIMD_LEN_BITS):
     plt.xlim(np.min(x), XMAX)
     
     
-    return plt
+    return fig
 
 def plot_roofline(plt, label, perf, intensity, simd=False):
-    plt.plot(intensity, perf, 'ro', label=label)
-    plt.text(intensity * 1.15, perf, f"{label} ({perf:.2f} iops/cycle)", fontsize=12, ha='left', color='red')
+    plt.gca().plot(intensity, perf, 'ro', label=label)
+    plt.gca().text(intensity * 1.15, perf, f"{label} ({perf:.2f} iops/cycle)", fontsize=12, ha='left', color='red')
     return plt
 
 
@@ -115,10 +116,19 @@ def main():
         exit(0)
     
     # Init empty roofline plot
-    plt = make_roofline_plot(PEAK_SCALAR, MEM_BW, SIMD_LEN_BITS)
+    plt_all = make_roofline_plot(PEAK_SCALAR, MEM_BW, SIMD_LEN_BITS)
 
+    plt_rho  = make_roofline_plot(PEAK_SCALAR, MEM_BW, SIMD_LEN_BITS); plt_rho.suptitle("Rho")
+    plt_feq  = make_roofline_plot(PEAK_SCALAR, MEM_BW, SIMD_LEN_BITS); plt_feq.suptitle("FEQ")
+    plt_f    = make_roofline_plot(PEAK_SCALAR, MEM_BW, SIMD_LEN_BITS); plt_f.suptitle("F")
+    plt_vort = make_roofline_plot(PEAK_SCALAR, MEM_BW, SIMD_LEN_BITS); plt_vort.suptitle("Vort")
 
     min_performance = math.inf
+
+    min_performance_rho  = math.inf
+    min_performance_feq  = math.inf
+    min_performance_f    = math.inf
+    min_performance_vort = math.inf
     
     for path in previous_versions:
         print("=========")
@@ -144,6 +154,16 @@ def main():
         output = run_executable_and_get_output(f"{path}/main.o", [f"{PARAMS[Nx]}", f"{PARAMS[Ny]}", f"{PARAMS[Nt]}"])
         
         runs = int(re.search(r"Run (\d+)/\d+ done\nProfiling results:", output).group(1))
+
+        stats_rho  = re.search(r".*Rho\s*Calculation: ([\d|\\.]*) Flops/Cycle.*Arithmetic intensity: ([\d|\\.]*)", output).groups()
+        performance_rho, intensity_rho = float(stats_rho[0]), float(stats_rho[1])
+        stats_feq  = re.search(r".*FEQ\s*Calculation: ([\d|\\.]*) Flops/Cycle.*Arithmetic intensity: ([\d|\\.]*)", output).groups()
+        performance_feq, intensity_feq = float(stats_feq[0]), float(stats_feq[1])
+        stats_f    = re.search(r".*F\s*Calculation: ([\d|\\.]*) Flops/Cycle.*Arithmetic intensity: ([\d|\\.]*)", output).groups()
+        performance_f, intensity_f = float(stats_f[0]), float(stats_f[1])
+        stats_vort = re.search(r".*Vort\s*Calculation: ([\d|\\.]*) Flops/Cycle.*Arithmetic intensity: ([\d|\\.]*)", output).groups()
+        performance_vort, intensity_vort = float(stats_vort[0]), float(stats_vort[1])
+
         cycles_rho  = int(re.search(r".*Rho\s*Calculation: .* (\d+) cycles.*", output).group(1))
         cycles_feq  = int(re.search(r".*FEQ\s*Calculation: .* (\d+) cycles.*", output).group(1))
         cycles_f    = int(re.search(r".*F\s*Calculation: .* (\d+) cycles.*", output).group(1))
@@ -163,6 +183,11 @@ def main():
         PERFORMANCE = WORK_eval / int(cycles/runs)
 
         min_performance = min(min_performance, PERFORMANCE)
+
+        min_performance_rho  = min(min_performance_rho , performance_rho )
+        min_performance_feq  = min(min_performance_feq , performance_feq )
+        min_performance_f    = min(min_performance_f   , performance_f   )
+        min_performance_vort = min(min_performance_vort, performance_vort)
         
         print()
         print("Work: ", WORK, "= " + str(WORK_eval))
@@ -170,12 +195,27 @@ def main():
         print("Operational Intensity: ", INTENSITY)
         print("Performance: ", PERFORMANCE)
         
-        plt = plot_roofline(plt, TITLE, PERFORMANCE, INTENSITY, simd=True)
+        plt_all = plot_roofline(plt_all, TITLE, PERFORMANCE, INTENSITY, simd=True)
+
+        plt_rho  = plot_roofline(plt_rho , TITLE, performance_rho , intensity_rho , simd=True)
+        plt_feq  = plot_roofline(plt_feq , TITLE, performance_feq , intensity_feq , simd=True)
+        plt_f    = plot_roofline(plt_f   , TITLE, performance_f   , intensity_f   , simd=True)
+        plt_vort = plot_roofline(plt_vort, TITLE, performance_vort, intensity_vort, simd=True)
 
 
-    plt.ylim(min(min_performance, PEAK_SCALAR)/2.5, 2.5 * PEAK_simd)
+    plt_all.gca().set_ylim(min(min_performance, PEAK_SCALAR)/2.5, 2.5 * PEAK_simd)
 
-    plt.savefig(f"{OUTPUT_FOLDER}/roofline_plot.out.pdf")
+    plt_rho.gca().set_ylim(min(min_performance_rho, PEAK_SCALAR)/2.5, 2.5 * PEAK_simd)
+    plt_feq.gca().set_ylim(min(min_performance_feq, PEAK_SCALAR)/2.5, 2.5 * PEAK_simd)
+    plt_f.gca().set_ylim(min(min_performance_f, PEAK_SCALAR)/2.5, 2.5 * PEAK_simd)
+    plt_vort.gca().set_ylim(min(min_performance_vort, PEAK_SCALAR)/2.5, 2.5 * PEAK_simd)
+
+    plt_all.savefig(f"{OUTPUT_FOLDER}/roofline_plot.out.pdf")
+    plt_rho.savefig(f"{OUTPUT_FOLDER}/roofline_plot_rho.out.pdf")
+    plt_feq.savefig(f"{OUTPUT_FOLDER}/roofline_plot_feq.out.pdf")
+    plt_f.savefig(f"{OUTPUT_FOLDER}/roofline_plot_f.out.pdf")
+    plt_vort.savefig(f"{OUTPUT_FOLDER}/roofline_plot_vort.out.pdf")
+
     plt.show()
 
         
