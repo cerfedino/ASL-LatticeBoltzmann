@@ -230,9 +230,10 @@ def main():
     bottom = np.zeros(len(version_labels))
     for col in normalized_df.columns:
         p = bar_fig.gca().bar(version_labels, normalized_df[col], 0.5, label=col, bottom=bottom)
-        bar_fig.gca().bar_label(p, fmt=col, label_type='center')
+        bar_fig.gca().bar_label(p, fmt=col.upper(), label_type='center', size='x-large')
         bottom += normalized_df[col]
-    bar_fig.gca().legend(loc="upper right")
+    bar_fig.gca().legend(loc="upper right", fontsize='large')
+    bar_fig.gca().tick_params(labelsize='x-large')
 
     plt_all.savefig(f"{OUTPUT_FOLDER}/roofline_plot.out.pdf")
     plt_rho.savefig(f"{OUTPUT_FOLDER}/roofline_plot_rho.out.pdf")
