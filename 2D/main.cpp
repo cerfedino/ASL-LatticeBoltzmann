@@ -329,12 +329,17 @@ inline int run() {
       for (int j = 0; j < Ny; j++) {
         for (int l = 0; l < NL; l++) {
           int k;
-          for (k = 0; k < Nx; k += 4) {
+          for (k = 0; k < Nx; k += 8) {
             __m256d feq_vec = _mm256_load_pd(Feq + j * (Nx * NL) + l * Nx + k);
             __m256d f_vec = _mm256_load_pd(F + j * (Nx * NL) + l * Nx + k);
+            __m256d feq1_vec = _mm256_load_pd(Feq + j * (Nx * NL) + l * Nx + k + 4);
+            __m256d f1_vec = _mm256_load_pd(F + j * (Nx * NL) + l * Nx + k + 4);
 
             __m256d res_vec = _mm256_fmsub_pd(const_vec_tau, f_vec, feq_vec);
             _mm256_store_pd(F + j * (Nx * NL) + l * Nx + k, res_vec);
+
+            __m256d res_vec1 = _mm256_fmsub_pd(const_vec_tau, f1_vec, feq1_vec);
+            _mm256_store_pd(F + j * (Nx * NL) + l * Nx + k + 4, res_vec1);
           }
           for (; k < Nx; k++) {
             F[j * (Nx * NL) + l * Nx + k] = tau_plus_1 * F[j * (Nx * NL) + l * Nx + k] - Feq[j * (Nx * NL) + l * Nx + k];
