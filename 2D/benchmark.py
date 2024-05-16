@@ -3,6 +3,7 @@ import subprocess
 import re
 import math
 import numpy as np
+import pandas as pd
 from dotenv import load_dotenv, dotenv_values
 import matplotlib.pyplot as plt
 from sympy import symbols, evalf, sympify
@@ -129,6 +130,14 @@ def main():
     min_performance_feq  = math.inf
     min_performance_f    = math.inf
     min_performance_vort = math.inf
+
+    version_labels = []
+    loop_cycles = {
+        "rho": [],
+        "feq": [],
+        "f": [],
+        "vort": [],
+    }
     
     for path in previous_versions:
         print("=========")
@@ -141,6 +150,8 @@ def main():
         COMMIT = conf["COMMIT"]
         WORK = conf["WORK"]
         DATA_MOVEMENT = conf["DATA_MOV"]
+
+        version_labels.append(TITLE)
 
         print("\nVERSION: ", VERSION)
         print("Path: ", PATH)
@@ -169,6 +180,8 @@ def main():
         cycles_f    = int(re.search(r".*F\s*Calculation: .* (\d+) cycles.*", output).group(1))
         cycles_vort = int(re.search(r".*Vort\s*Calculation: .* (\d+) cycles.*", output).group(1))
         cycles = cycles_rho + cycles_feq + cycles_f + cycles_vort
+
+        loop_cycles["rho"].append(cycles_rho); loop_cycles["feq"].append(cycles_feq); loop_cycles["f"].append(cycles_f); loop_cycles["vort"].append(cycles_vort)
 
         print()
         print(f"Rho  cycles: {cycles_rho }")
@@ -209,6 +222,18 @@ def main():
     plt_feq.gca().set_ylim(min(min_performance_feq, PEAK_SCALAR)/2.5, 2.5 * PEAK_simd)
     plt_f.gca().set_ylim(min(min_performance_f, PEAK_SCALAR)/2.5, 2.5 * PEAK_simd)
     plt_vort.gca().set_ylim(min(min_performance_vort, PEAK_SCALAR)/2.5, 2.5 * PEAK_simd)
+
+    bar_fig = plt.figure("bar", figsize=(20, 12), facecolor="white")
+    df = pd.DataFrame.from_dict(loop_cycles, columns=version_labels, orient='index')
+    normalized_df = df/df.sum()
+    normalized_df = normalized_df.transpose()
+    bottom = np.zeros(len(version_labels))
+    for col in normalized_df.columns:
+        p = bar_fig.gca().bar(version_labels, normalized_df[col], 0.5, label=col, bottom=bottom)
+        bar_fig.gca().bar_label(p, fmt=col.upper(), label_type='center', size='x-large')
+        bottom += normalized_df[col]
+    bar_fig.gca().legend(loc="upper right", fontsize='large')
+    bar_fig.gca().tick_params(labelsize='x-large')
 
     plt_all.savefig(f"{OUTPUT_FOLDER}/roofline_plot.out.pdf")
     plt_rho.savefig(f"{OUTPUT_FOLDER}/roofline_plot_rho.out.pdf")
