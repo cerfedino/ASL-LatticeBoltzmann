@@ -99,7 +99,7 @@ inline int run() {
     for (int j = 0; j < Nx; j++) {
       for (int k = 0; k < NL; k++) {
         double rand_val = ((double)rand() / (RAND_MAX)) + 1;
-        F[i * (Nx * NL) + j * NL + k] = 1 + 0.01 * rand_val;
+        F[i * (Nx * NL) + k * Nx + j] = 1 + 0.01 * rand_val;
       }
     }
   }
@@ -114,7 +114,7 @@ inline int run() {
       // direction we go maybe something else too, but my brain is more fried
       // than a kfc chicken AHAHAHAHAHAHAH HILARIOUS KARLO LOL IM LITERALLY
       // DYING OF LAUGHTER
-      F[i * (Nx * NL) + j * NL + 1] += 2.0 * (1.0 + 0.2 * cos(2.0 * M_PI * (double)x_coords[i * Nx + j] / (double)Nx * 4.0));
+      F[i * (Nx * NL) + Nx + j] += 2.0 * (1.0 + 0.2 * cos(2.0 * M_PI * (double)x_coords[i * Nx + j] / (double)Nx * 4.0));
     }
   }
 
@@ -124,7 +124,7 @@ inline int run() {
     for (int j = 0; j < Nx; j++) {
       res = 0;
       for (int k = 0; k < NL; k++) {
-        res += F[i * (Nx * NL) + j * NL + k];
+        res += F[i * (Nx * NL) + k * Nx + j];
       }
       rho[i * Nx + j] = res;
     }
@@ -135,7 +135,7 @@ inline int run() {
   for (int j = 0; j < Ny; j++) {
     for (int k = 0; k < Nx; k++) {
       for (int i = 0; i < NL; i++) {
-        F[j * (Nx * NL) + k * NL + i] *= rho0 * rho[j * Nx + k];
+        F[j * (Nx * NL) + i * Nx + k] *= rho0 * rho[j * Nx + k];
       }
     }
   }
@@ -188,13 +188,13 @@ inline int run() {
         int shiftY = cxs[j];
         for (int k = 0; k < Ny; k++) {
           for (int l = 0; l < Nx; l++) {
-            temp[((k + shiftY + Ny) % Ny) * Nx + ((l + shiftX + Nx) % Nx)] = F[k * (Nx * NL) + l * NL + j];
+            temp[((k + shiftY + Ny) % Ny) * Nx + ((l + shiftX + Nx) % Nx)] = F[k * (Nx * NL) + j * Nx + l];
           }
         }
 
         for (int k = 0; k < Ny; k++) {
           for (int l = 0; l < Nx; l++) {
-            F[k * (Nx * NL) + l * NL + j] = temp[k * Nx + l];
+            F[k * (Nx * NL) + j * Nx + l] = temp[k * Nx + l];
           }
         }
       }
@@ -210,7 +210,7 @@ inline int run() {
         for (int k = 0; k < Nx; k++) {
           if (cylinder[j * Nx + k] == 1) {
             for (int l = 0; l < NL; l++) {
-              bndryF[index_bndryF * NL + l] = F[j * (Nx * NL) + k * NL + l];
+              bndryF[index_bndryF * NL + l] = F[j * (Nx * NL) + l * Nx + k];
             }
             index_bndryF++;
           }
@@ -248,9 +248,9 @@ inline int run() {
           double res2 = 0;
           double res3 = 0;
           for (int l = 0; l < NL; l++) {
-            res1 += F[j * (Nx * NL) + k * NL + l];
-            res2 += F[j * (Nx * NL) + k * NL + l] * cxs[l];
-            res3 += F[j * (Nx * NL) + k * NL + l] * cys[l];
+            res1 += F[j * (Nx * NL) + l * Nx + k];
+            res2 += F[j * (Nx * NL) + l * Nx + k] * cxs[l];
+            res3 += F[j * (Nx * NL) + l * Nx + k] * cys[l];
           }
           double inv = 1 / res1;
           rho[j * Nx + k] = res1;
@@ -327,7 +327,7 @@ inline int run() {
       for (int j = 0; j < Ny; j++) {
         for (int k = 0; k < Nx; k++) {
           for (int l = 0; l < NL; l++) {
-            F[j * (Nx * NL) + k * NL + l] += tau * (F[j * (Nx * NL) + k * NL + l] - Feq[j * (Nx * NL) + l * Nx + k]);
+            F[j * (Nx * NL) + i * Nx + k] += tau * (F[j * (Nx * NL) + l * Nx + k] - Feq[j * (Nx * NL) + l * Nx + k]);
           }
         }
       }
@@ -341,7 +341,7 @@ inline int run() {
         for (int k = 0; k < Nx; k++) {
           if (cylinder[j * Nx + k] == 1) {
             for (int l = 0; l < NL; l++) {
-              F[j * (Nx * NL) + k * NL + l] = bndryF[index_bndryF2 * NL + l];
+              F[j * (Nx * NL) + l * Nx + k] = bndryF[index_bndryF2 * NL + l];
             }
             index_bndryF2++;
           }
