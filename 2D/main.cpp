@@ -323,11 +323,20 @@ inline int run() {
       end_run(feq_profiler);
 
       // F += -(1.0/tau) * (F - Feq)
-      // flops = Ny*Nx*NL (2 add + 1 mult )
+      // flops = Ny*Nx*NL (1 add + 1 mult )
+      __m256d const_vec_tau = _mm256_set1_pd(tau_plus_1);
       start_run(f_profiler);
       for (int j = 0; j < Ny; j++) {
-        for (int k = 0; k < Nx; k++) {
-          for (int l = 0; l < NL; l++) {
+        for (int l = 0; l < NL; l++) {
+          int k;
+          for (k = 0; k < Nx; k += 4) {
+            __m256d feq_vec = _mm256_load_pd(Feq + j * (Nx * NL) + l * Nx + k);
+            __m256d f_vec = _mm256_load_pd(F + j * (Nx * NL) + l * Nx + k);
+
+            __m256d res_vec = _mm256_fmsub_pd(const_vec_tau, f_vec, feq_vec);
+            _mm256_store_pd(F + j * (Nx * NL) + l * Nx + k, res_vec);
+          }
+          for (; k < Nx; k++) {
             F[j * (Nx * NL) + l * Nx + k] = tau_plus_1 * F[j * (Nx * NL) + l * Nx + k] - Feq[j * (Nx * NL) + l * Nx + k];
           }
         }
