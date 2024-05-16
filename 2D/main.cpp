@@ -41,6 +41,7 @@ int Ny = 96;            // resolution in y
 int Nt = 5000;          // number of timesteps
 #define rho0 0.01       // reciprocal average density
 #define tau -1.66666667 // reciprocal collision timescale (1/0.6)
+#define tau_plus_1 tau + 1
 
 // #define Nt 30  // number of timesteps
 
@@ -49,7 +50,7 @@ int Nt = 5000;          // number of timesteps
 const double idx[9] = {0, 1, 2, 3, 4, 5, 6, 7, 8};
 const double cxs[9] = {0.0, 0.0, 1.0, 1.0, 1.0, 0.0, -1.0, -1.0, -1.0};
 const double cys[9] = {0.0, 1.0, 1.0, 0.0, -1.0, -1.0, -1.0, 0.0, 1.0};
-const double weights[9] = {4.0 / 9, 1.0 / 9, 1.0 / 36, 1.0 / 9, 1.0 / 36, 1.0 / 9, 1.0 / 36, 1.0 / 9, 1.0 / 36}; // sums to 1
+const double weights[9] = {tau * 4.0 / 9, tau * 1.0 / 9, tau * 1.0 / 36, tau * 1.0 / 9, tau * 1.0 / 36, tau * 1.0 / 9, tau * 1.0 / 36, tau * 1.0 / 9, tau * 1.0 / 36}; // sums to tau * 1
 
 void meshgrid(int *x_coords, int *y_coords) {
   for (int i = 0; i < Ny; ++i) {
@@ -163,7 +164,7 @@ inline int run() {
   double *bndryF = (double *)aligned_alloc(32, bndryF_size * NL * sizeof(double));
 
   // Currently assuming that every read/write is a miss
-  profiler *rho_profiler = init_profiler(5 * Ny * Nx * NL + 2 * Ny * Nx, 8 * 5 * Ny * Nx * NL + 3 * Ny * Nx), *feq_profiler = init_profiler(19 * Nx * Ny * NL, 8 * 13 * Nx * Ny * NL), *f_profiler = init_profiler(3 * Nx * Ny * NL, 8 * 3 * Nx * Ny * NL),
+  profiler *rho_profiler = init_profiler(5 * Ny * Nx * NL + 2 * Ny * Nx, 8 * 5 * Ny * Nx * NL + 3 * Ny * Nx), *feq_profiler = init_profiler(19 * Nx * Ny * NL, 8 * 13 * Nx * Ny * NL), *f_profiler = init_profiler(2 * Nx * Ny * NL, 8 * 3 * Nx * Ny * NL),
            *vort_profiler = init_profiler(2 * Nx * Ny, 8 * 6 * Nx * Ny);
 
   // flops = Nt*(Ny*Nx*NL(3 adds + 2 mults) + Ny*Nx*(2 divs))+NL*Ny*Nx*(9 mults
@@ -327,7 +328,7 @@ inline int run() {
       for (int j = 0; j < Ny; j++) {
         for (int k = 0; k < Nx; k++) {
           for (int l = 0; l < NL; l++) {
-            F[j * (Nx * NL) + i * Nx + k] += tau * (F[j * (Nx * NL) + l * Nx + k] - Feq[j * (Nx * NL) + l * Nx + k]);
+            F[j * (Nx * NL) + l * Nx + k] = tau_plus_1 * F[j * (Nx * NL) + l * Nx + k] - Feq[j * (Nx * NL) + l * Nx + k];
           }
         }
       }
