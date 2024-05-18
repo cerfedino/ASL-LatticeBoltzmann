@@ -115,6 +115,8 @@ def main():
     if len(previous_versions) == 0:
         print("No previous versions found, stopping...")
         exit(0)
+        
+    previous_versions.sort()
     
     # Init empty roofline plot
     plt_all = make_roofline_plot(PEAK_SCALAR, MEM_BW, SIMD_LEN_BITS)
@@ -151,7 +153,7 @@ def main():
         WORK = conf["WORK"]
         DATA_MOVEMENT = conf["DATA_MOV"]
 
-        version_labels.append(TITLE)
+        version_labels.append(f"{TITLE}\n{DESC}")
 
         print("\nVERSION: ", VERSION)
         print("Path: ", PATH)
@@ -240,6 +242,7 @@ def main():
     plt_feq.savefig(f"{OUTPUT_FOLDER}/roofline_plot_feq.out.pdf")
     plt_f.savefig(f"{OUTPUT_FOLDER}/roofline_plot_f.out.pdf")
     plt_vort.savefig(f"{OUTPUT_FOLDER}/roofline_plot_vort.out.pdf")
+    bar_fig.savefig(f"{OUTPUT_FOLDER}/bar_plot.out.pdf")
 
     plt.show()
 
