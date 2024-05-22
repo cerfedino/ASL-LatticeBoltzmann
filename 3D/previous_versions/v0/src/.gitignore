@@ -39,3 +39,5 @@ headers/CMakeFiles
 build
 cmake-build-debug
 .idea
+
+Makefile
