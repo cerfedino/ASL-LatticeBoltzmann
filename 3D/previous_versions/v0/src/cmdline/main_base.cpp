@@ -22,17 +22,13 @@ inline bool file_exists (const std::string& name) {
 }
 
 int main(int argc, char** argv) {
-  if(!file_exists("options.json")) {
-    std::cout << "Please ensure that options.json exists. If not, it can be obtained from root directory of GitHub repo." << '\n';
-    return -1;
-  }
-	std::cout << "Do you want to clean the previous run? (1 - Yes, 0 - No): ";
-	int choice;
-	std::cin >> choice;
-	if(choice == 1) {
-		system("rm -rf output");
-		system("mkdir output");
-	}
+    if(!file_exists("options.json")) {
+        std::cout << "Please ensure that options.json exists." << '\n';
+        return -1;
+    }
+    
+    system("rm -rf output");
+    system("mkdir output");
 
 	std::ifstream t("options.json");
 	std::string str((std::istreambuf_iterator<char>(t)),
@@ -126,6 +122,10 @@ int main(int argc, char** argv) {
             //solver->output_velocity();
         }
 	}
+    
+    std::ofstream ofs("output/timestamp.txt");
+    ofs.close();
+
 	std::cout << std::endl;
 	delete solver;
 	return 0;

@@ -30,7 +30,8 @@
 *.exe
 *.out
 *.app
-main_cmdline
+main.o
+cmake_install.cmake
 main_gui
 CMakeFiles
 CMakeCache.txt
