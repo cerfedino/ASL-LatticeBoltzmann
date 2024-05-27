@@ -7,7 +7,6 @@ variables:
 stages:
   - tests
   - benchmark
-  - profile
 
 
 
@@ -50,10 +49,10 @@ benchmark:
     - merge_requests
     - main
 
-profile:
-  stage: profile
-  script:
-    - cd 2D && make profile
-  only:
-    - merge_requests
-    - main
+# profile:
+#   stage: profile
+#   script:
+#     - cd 2D && make profile
+#   only:
+#     - merge_requests
+#     - main
