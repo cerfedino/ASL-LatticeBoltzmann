@@ -51,5 +51,5 @@ leaks: ./src/main_optimized_debug_$(RUN_PARAMS_ESCAPED).o
 
 benchmark: $(PAST_VERSIONS_OBJ)
 	mkdir -p artifacts/; python3 benchmark.py $(RUN_PARAMS);
-profile: ./src/main_optimized_profile._$(RUN_PARAMS_ESCAPED).o
+profile: ./src/main_optimized_profile_$(RUN_PARAMS_ESCAPED).o
 	./src/main_optimized_profile_$(RUN_PARAMS_ESCAPED).o $(RUN_PARAMS)
