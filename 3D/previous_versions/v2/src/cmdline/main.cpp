@@ -17,6 +17,7 @@ using namespace std;
 
 // for now one can define OUTPUT, TIMING
 #define OUTPUT
+
 profiler *compute_density_momentum_profiler, *collision_profiler;
 
 int time_lbm = 0;
@@ -136,66 +137,24 @@ void set_velocity(int x_field, int y_field, int z_field, double u_x, double u_y,
 void set_density(int x_field, int y_field, int z_field, double density) { density_field[scalar_index(x_field, y_field, z_field)] = density; }
 
 void compute_density_momentum_moment() {
-	int scalar_index_curr = 0;
-	//we got some terrible memory accesses here... 
-	// we gotta do some blocking most probably
-	// oof
   for (int x = 0; x < NX; x++) {
     for (int y = 0; y < NY; y++) {
       for (int z = 0; z < NZ; z++) {
 
-        double new_density = 0, new_density_1 = 0, new_density_2 = 0, new_density_3 = 0, new_density_4 = 0, new_density_5 = 0;
-        //vector_3_double u, u1, u2, u3, u4, u5;
-		double x_1=0, x_2=0, x_3=0, x_4=0, x_5=0;
-		double y_1=0, y_2=0, y_3=0, y_4=0, y_5=0;
-		double z_1=0, z_2=0, z_3=0, z_4=0, z_5=0;
+        double new_density = 0;
+        vector_3_double u;
 
         for (int i = 0; i < direction_size; i++) {
-		  scalar_index_curr = scalar_index(x, y, z, i);
-          new_density_1 += particle_distributions[scalar_index_curr];
-          x_1 += particle_distributions[scalar_index_curr] * directions[i].x;
-          y_1 += particle_distributions[scalar_index_curr] * directions[i].y;
-          z_1 += particle_distributions[scalar_index_curr] * directions[i].z;
-		  scalar_index_curr+=NX * NY * NZ;
-		  i++;
-
-		  new_density_2 += particle_distributions[scalar_index_curr];
-          x_2 += particle_distributions[scalar_index_curr] * directions[i].x;
-          y_2 += particle_distributions[scalar_index_curr] * directions[i].y;
-          z_2 += particle_distributions[scalar_index_curr] * directions[i].z;
-		  scalar_index_curr+=NX * NY * NZ;
-		  i++;
-
-		  new_density_3 += particle_distributions[scalar_index_curr];
-          x_3 += particle_distributions[scalar_index_curr] * directions[i].x;
-          y_3 += particle_distributions[scalar_index_curr] * directions[i].y;
-          z_3 += particle_distributions[scalar_index_curr] * directions[i].z;
-		  scalar_index_curr+=NX * NY * NZ;
-		  i++;
-
-		  new_density_4 += particle_distributions[scalar_index_curr];
-          x_4 += particle_distributions[scalar_index_curr] * directions[i].x;
-          y_4 += particle_distributions[scalar_index_curr] * directions[i].y;
-          z_4 += particle_distributions[scalar_index_curr] * directions[i].z;
-		  scalar_index_curr+=NX * NY * NZ;
-		  i++;
-
-		  new_density_5 += particle_distributions[scalar_index_curr];
-          x_5 += particle_distributions[scalar_index_curr] * directions[i].x;
-          y_5 += particle_distributions[scalar_index_curr] * directions[i].y;
-          z_5 += particle_distributions[scalar_index_curr] * directions[i].z;
-		
-		}
-
-		new_density = new_density_1 + new_density_2 + new_density_3+new_density_4+new_density_5;
-		double x_sum = x_1+x_2+x_3+x_4+x_5;
-		double y_sum = y_1+y_2+y_3+y_4+y_5;
-		double z_sum = z_1+z_2+z_3+z_4+z_5;
+          new_density += particle_distributions[scalar_index(x, y, z, i)];
+          u.x += particle_distributions[scalar_index(x, y, z, i)] * directions[i].x;
+          u.y += particle_distributions[scalar_index(x, y, z, i)] * directions[i].y;
+          u.z += particle_distributions[scalar_index(x, y, z, i)] * directions[i].z;
+        }
 
         density_field[scalar_index(x, y, z)] = new_density;
-        velocity_field[scalar_index(x, y, z)].x = x_sum / new_density;
-        velocity_field[scalar_index(x, y, z)].y = y_sum / new_density;
-        velocity_field[scalar_index(x, y, z)].z = z_sum / new_density;
+        velocity_field[scalar_index(x, y, z)].x = u.x / new_density;
+        velocity_field[scalar_index(x, y, z)].y = u.y / new_density;
+        velocity_field[scalar_index(x, y, z)].z = u.z / new_density;
       }
     }
   }
