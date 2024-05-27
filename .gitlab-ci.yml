@@ -18,11 +18,11 @@ build:
     - cd 2D && make build
   artifacts:
     paths:
-      - '2D/main_optimized.o'
-      - '2D/main_optimized_debug.o'
-      - '2D/main_optimized_profile.o'
-      - '2D/main_base.o'
-      - '2D/main_base_debug.o'
+      - '2D/src/main_optimized.o'
+      - '2D/src/main_optimized_debug.o'
+      - '2D/src/main_optimized_profile.o'
+      - '2D/src/main_base.o'
+      - '2D/src/main_base_debug.o'
 
 compare:
   stage: tests

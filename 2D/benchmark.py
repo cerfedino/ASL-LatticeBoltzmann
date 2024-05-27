@@ -164,7 +164,7 @@ def main():
         print("DATA_MOV: ", DATA_MOVEMENT)
         
         # Execute executable file in subprocess and read stdout
-        output = run_executable_and_get_output(f"{path}/main.o", [f"{PARAMS[Nx]}", f"{PARAMS[Ny]}", f"{PARAMS[Nt]}"])
+        output = run_executable_and_get_output(f"{path}/main_optimized_profile.o", [f"{PARAMS[Nx]}", f"{PARAMS[Ny]}", f"{PARAMS[Nt]}"])
         
         runs = int(re.search(r"Run (\d+)/\d+ done\nProfiling results:", output).group(1))
 
