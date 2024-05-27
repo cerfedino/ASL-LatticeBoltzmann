@@ -4,9 +4,9 @@ OPTIM_FLAGS = -Ofast
 
 
 ifeq ($(firstword $(MAKECMDGOALS)),benchmark)
-    RUN_PARAMS = 400 200 5000
+    RUN_PARAMS = 400 200 3000
 else ifeq ($(firstword $(MAKECMDGOALS)),profile)
-    RUN_PARAMS = 400 200 5000
+    RUN_PARAMS = 400 200 3000
 else
 	# $(info 'USING DEFAULT RUN_PARAMS')
 	RUN_PARAMS = 400 200 300
@@ -49,7 +49,7 @@ leaks: ./src/main_optimized_debug_$(RUN_PARAMS_ESCAPED).o
 
 
 
-benchmark: ./src/main_optimized_$(RUN_PARAMS_ESCAPED).o $(PAST_VERSIONS_OBJ)
+benchmark: $(PAST_VERSIONS_OBJ)
 	mkdir -p artifacts/; python3 benchmark.py $(RUN_PARAMS);
 profile: ./src/main_optimized_profile._$(RUN_PARAMS_ESCAPED).o
 	./src/main_optimized_profile_$(RUN_PARAMS_ESCAPED).o $(RUN_PARAMS)
