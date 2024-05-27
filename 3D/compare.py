@@ -40,10 +40,7 @@ if len(reference_output_files) != len(output_files):
     print(f"{bcolors.FAIL}[X] The number of output files does not match the number of reference files{bcolors.ENDC}")
     exit(1)
 
-TOLERANCE = 0.001
-
-
-
+TOLERANCE = 0.0001
 
 def is_equal(name):
     output = ""
@@ -54,7 +51,7 @@ def is_equal(name):
 
     output+=f"\nComparing {output_file} with reference"
     ref_arr = np.genfromtxt(reference_file, delimiter=",", skip_header=1)
-    arr = np.genfromtxt(reference_file, delimiter=",", skip_header=1)
+    arr = np.genfromtxt(output_file, delimiter=",", skip_header=1)
 
     if ref_arr.shape == arr.shape:
         output+=f"\n\t[+] Matrix shape matches {ref_arr.shape}"
@@ -74,6 +71,7 @@ def is_equal(name):
 
     if not equal:
         print(output)
+    print(output)
     return equal
 
 error = False

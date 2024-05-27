@@ -1,4 +1,4 @@
-add_compile_options(-O3)
+add_compile_options()
 
 cmake_minimum_required (VERSION 3.1)
 set(CMAKE_CXX_COMPILER g++)
