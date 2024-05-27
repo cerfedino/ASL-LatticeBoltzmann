@@ -449,8 +449,12 @@ inline int run() {
   free(rho);
   free(cylinder);
   free(temp);
-// free(BIG_CHUNGUS);
+
 #ifdef DEBUG
+  char timestamp_filename[100];
+  sprintf(timestamp_filename, "%s/timestamp_%d_%d_%d.txt", folder_name.c_str(), Nx, Ny, Nt);
+  FILE *timestamp_file = fopen(timestamp_filename, "w");
+  fclose(timestamp_file);
   make_latest_output(folder_name);
 #endif
 

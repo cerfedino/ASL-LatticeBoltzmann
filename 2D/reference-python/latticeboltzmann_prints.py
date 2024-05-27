@@ -193,6 +193,9 @@ def main(Nx, Ny, Nt):
         plt.pause(0.001)
     print("")
     
+    with open(f"output/reference/timestamp_{Nx}_{Ny}_{Nt}.txt", "w") as f:
+        f.write("")
+    
     # Save figure
     #plt.savefig('latticeboltzmann.png',dpi=240)
     #plt.show()
