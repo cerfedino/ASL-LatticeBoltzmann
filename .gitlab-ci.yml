@@ -36,6 +36,7 @@ leaks:
 
 benchmark:
   stage: benchmark
+  timeout: 1h
   artifacts:
     paths:
       - 2D/artifacts/*
