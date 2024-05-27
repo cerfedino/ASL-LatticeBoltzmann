@@ -71,7 +71,6 @@ def is_equal(name):
 
     if not equal:
         print(output)
-    print(output)
     return equal
 
 error = False
@@ -80,7 +79,7 @@ for i, file in enumerate(reference_output_files):
     error = not is_equal(os.path.basename(file)) or error
 
 
-print(f"[-] Checked the first {len(reference_folder)} timesteps")    
+print(f"[-] Checked the first {len(reference_output_files)} timesteps")    
 if error:
     print(f"{bcolors.FAIL}[X] The implementation does not follow the baseline{bcolors.ENDC}")
     exit(1)
