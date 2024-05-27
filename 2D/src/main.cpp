@@ -17,7 +17,7 @@
 
 #include "include/npy.hpp"
 #include "include/profile.h"
-#include "include/utils.h"
+#include "include/utils.c"
 
 #ifdef DEBUG
 #define debug_printf(fmt, ...) fprintf(stdout, fmt, __VA_ARGS__)
@@ -36,9 +36,19 @@
 
 using namespace std;
 
-int Nx = 416;           // resolution in x
-int Ny = 96;            // resolution in y
-int Nt = 5000;          // number of timesteps
+
+
+#ifdef MNx
+#define Nx (MNx)
+#endif
+#ifdef MNy
+#define Ny (MNy)
+#endif
+#ifdef MNt
+#define Nt (MNt)
+#endif
+
+
 #define rho0 0.01       // reciprocal average density
 #define tau -1.66666667 // reciprocal collision timescale (1/0.6)
 #define tau_plus_1 tau + 1
@@ -462,15 +472,6 @@ inline int run() {
 }
 
 int main(int argc, char const *argv[]) {
-  if (argc == 4) {
-    Nx = atoi(argv[1]);
-    Ny = atoi(argv[2]);
-    Nt = atoi(argv[3]);
-  } else if (argc != 1) {
-    printf("Usage: %s [Nx Ny Nt]\n", argv[0]);
-    return 1;
-  }
-
   unsigned long long start_cycle, end_cycle;
   time_t start_sec, end_sec;
   asm volatile("RDTSC" : "=A"(start_cycle));

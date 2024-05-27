@@ -16,7 +16,7 @@
 
 #include "include/npy.hpp"
 #include "include/profile.h"
-#include "include/utils.h"
+#include "include/utils.c"
 
 #ifdef DEBUG
 #define debug_printf(fmt, ...) fprintf(stdout, fmt, __VA_ARGS__)
