@@ -31,12 +31,12 @@ build: ./main_base.o ./main_base_debug.o ./main_optimized.o ./main_optimized_deb
 # Sometimes we use "timestamp" files as a way for Make to keep track of the last time a target was built
 run_debug: output/timestamp_debug_$(SHORT_RUN_PARAMS_ESCAPED).txt
 output/timestamp_debug_$(SHORT_RUN_PARAMS_ESCAPED).txt: ./main_optimized_debug.o
-	mkdir -p output/; ./main_optimized_debug.o $(SHORT_RUN_PARAMS); echo "ciao mamma" > output/timestamp_debug_$(SHORT_RUN_PARAMS_ESCAPED).txt
+	mkdir -p output/; ./main_optimized_debug.o $(SHORT_RUN_PARAMS); touch output/timestamp_debug_$(SHORT_RUN_PARAMS_ESCAPED).txt
 
 test: run_debug output/reference/timestamp_$(SHORT_RUN_PARAMS_ESCAPED).txt
-	python3 compare.py $(SHORT_RUN_PARAMS)
+	python3 compare.py --baseline=./output/reference/ --output=output/00_latest_$(SHORT_RUN_PARAMS_ESCAPED)/
 output/reference/timestamp_$(SHORT_RUN_PARAMS_ESCAPED).txt: reference-python/latticeboltzmann_prints.py
-	python3 reference-python/latticeboltzmann_prints.py $(SHORT_RUN_PARAMS); echo "ciao mamma" > output/reference/timestamp_$(SHORT_RUN_PARAMS_ESCAPED).txt; 
+	python3 reference-python/latticeboltzmann_prints.py $(SHORT_RUN_PARAMS); touch output/reference/timestamp_$(SHORT_RUN_PARAMS_ESCAPED).txt; 
 
 leaks: ./main_optimized_debug.o
 	mkdir -p output; valgrind --leak-check=full ./main_optimized_debug.o $(SHORT_RUN_PARAMS)
