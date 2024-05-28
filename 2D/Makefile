@@ -4,9 +4,9 @@ OPTIM_FLAGS = -Ofast
 
 
 ifeq ($(firstword $(MAKECMDGOALS)),benchmark)
-    RUN_PARAMS = 400 200 3000
+    RUN_PARAMS = 400 200 2000
 else ifeq ($(firstword $(MAKECMDGOALS)),profile)
-    RUN_PARAMS = 400 200 3000
+    RUN_PARAMS = 400 200 2000
 else
 	# $(info 'USING DEFAULT RUN_PARAMS')
 	RUN_PARAMS = 400 200 300
