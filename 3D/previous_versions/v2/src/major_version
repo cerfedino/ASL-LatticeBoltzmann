@@ -1,3 +1,0 @@
-2
----
-Removed vector3 and LBM from the code, as well as using malloc.
