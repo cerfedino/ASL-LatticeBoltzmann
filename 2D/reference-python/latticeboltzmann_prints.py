@@ -48,12 +48,12 @@ def main(Nx, Ny, Nt):
     np.random.seed(42)
     F += 0.01#*np.random.randn(Ny,Nx,NL)
 
-    np.save("output/reference/F_start.npy", F)
+    # np.save("output/reference/F_start.npy", F)
 
     X, Y = np.meshgrid(range(Nx), range(Ny))
 
-    np.save("output/reference/X_start.npy", X)
-    np.save("output/reference/Y_start.npy", Y)
+    # np.save("output/reference/X_start.npy", X)
+    # np.save("output/reference/Y_start.npy", Y)
 
     # print(X)
     # print(Y)
@@ -63,11 +63,11 @@ def main(Nx, Ny, Nt):
     
     F[:,:,3] += 2 * (1+0.2*np.cos(2*np.pi*X/Nx*4))
 
-    np.save("output/reference/F_3_setup.npy", F)
+    # np.save("output/reference/F_3_setup.npy", F)
 
     rho = np.sum(F,2)
 
-    np.save("output/reference/rho_start.npy", rho)
+    # np.save("output/reference/rho_start.npy", rho)
 
     # print first row of rho    
     # print("Line: " + str(currentframe().f_lineno) + " rho: ", str(rho[0]))
@@ -77,7 +77,7 @@ def main(Nx, Ny, Nt):
     for i in idxs:
         F[:,:,i] *= rho0 / rho
 
-    np.save("output/reference/F_normalized_start.npy", F)
+    # np.save("output/reference/F_normalized_start.npy", F)
     
     # Cylinder boundary
     X, Y = np.meshgrid(range(Nx), range(Ny))
@@ -87,8 +87,8 @@ def main(Nx, Ny, Nt):
     
     cylinder = (X - Nx/4)**2 + (Y - Ny/2)**2 < (Ny/4)**2
 
-    np.save("output/reference/cylinder_start.npy", cylinder)
-    np.save("output/reference/cylinder.npy", cylinder)
+    # np.save("output/reference/cylinder_start.npy", cylinder)
+    # np.save("output/reference/cylinder.npy", cylinder)
 
     # print first 10 elements of X and Y
     # print("Line: " + str(currentframe().f_lineno) + " X: ", str(X[:10]))
@@ -192,6 +192,9 @@ def main(Nx, Ny, Nt):
         ax.set_aspect('equal')    
         plt.pause(0.001)
     print("")
+    
+    with open(f"output/reference/timestamp_{Nx}_{Ny}_{Nt}.txt", "w") as f:
+        f.write("")
     
     # Save figure
     #plt.savefig('latticeboltzmann.png',dpi=240)
