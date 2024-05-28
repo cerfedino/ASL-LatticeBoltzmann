@@ -17,7 +17,7 @@
 
 #include "include/npy.hpp"
 #include "include/profile.h"
-#include "include/utils.h"
+#include "include/utils.c"
 
 #ifdef DEBUG
 #define debug_printf(fmt, ...) fprintf(stdout, fmt, __VA_ARGS__)
@@ -36,9 +36,19 @@
 
 using namespace std;
 
-int Nx = 416;           // resolution in x
-int Ny = 96;            // resolution in y
-int Nt = 5000;          // number of timesteps
+
+
+#ifdef MNx
+#define Nx (MNx)
+#endif
+#ifdef MNy
+#define Ny (MNy)
+#endif
+#ifdef MNt
+#define Nt (MNt)
+#endif
+
+
 #define rho0 0.01       // reciprocal average density
 #define tau -1.66666667 // reciprocal collision timescale (1/0.6)
 #define tau_plus_1 tau + 1
@@ -163,7 +173,7 @@ inline int run() {
 
   double *bndryF = (double *)aligned_alloc(32, bndryF_size * NL * sizeof(double));
 
-  // Currently counting only compulsory misses
+    // Currently counting only compulsory misses
   profiler *rho_profiler = init_profiler(5 * Ny * Nx * NL + 2 * Ny * Nx, 8 * 5 * Ny * Nx * NL + 3 * Ny * Nx), *feq_profiler = init_profiler(19 * Nx * Ny * NL, 8 * 13 * Nx * Ny * NL), *f_profiler = init_profiler(2 * Nx * Ny * NL, 8 * 3 * Nx * Ny * NL),
            *vort_profiler = init_profiler(2 * Nx * Ny, 8 * 6 * Nx * Ny);
 
@@ -419,19 +429,19 @@ inline int run() {
 #ifdef PROFILE
   printf("\nProfiling results:\n");
   profiler_stats rho_stats = finish_profiler(rho_profiler);
-  printf("- Rho  Calculation: %4.2f Flops/Cycle, %10llu cycles in %d runs. "
+  printf("- Rho  Calculation: %4.2f Flops/Cycle, %10ld cycles in %d runs. "
          "Arithmetic intensity: %4.2f\n",
          rho_stats.performance, rho_stats.cycles, rho_stats.runs, rho_stats.arithmetic_intensity);
   profiler_stats feq_stats = finish_profiler(feq_profiler);
-  printf("- FEQ  Calculation: %4.2f Flops/Cycle, %10llu cycles in %d runs. "
+  printf("- FEQ  Calculation: %4.2f Flops/Cycle, %10ld cycles in %d runs. "
          "Arithmetic intensity: %4.2f\n",
          feq_stats.performance, feq_stats.cycles, feq_stats.runs, feq_stats.arithmetic_intensity);
   profiler_stats f_stats = finish_profiler(f_profiler);
-  printf("- F    Calculation: %4.2f Flops/Cycle, %10llu cycles in %d runs. "
+  printf("- F    Calculation: %4.2f Flops/Cycle, %10ld cycles in %d runs. "
          "Arithmetic intensity: %4.2f\n",
          f_stats.performance, f_stats.cycles, f_stats.runs, f_stats.arithmetic_intensity);
   profiler_stats vort_stats = finish_profiler(vort_profiler);
-  printf("- Vort Calculation: %4.2f Flops/Cycle, %10llu cycles in %d runs. "
+  printf("- Vort Calculation: %4.2f Flops/Cycle, %10ld cycles in %d runs. "
          "Arithmetic intensity: %4.2f\n",
          vort_stats.performance, vort_stats.cycles, vort_stats.runs, vort_stats.arithmetic_intensity);
 #endif
@@ -449,8 +459,12 @@ inline int run() {
   free(rho);
   free(cylinder);
   free(temp);
-// free(BIG_CHUNGUS);
+
 #ifdef DEBUG
+  char timestamp_filename[100];
+  sprintf(timestamp_filename, "%s/timestamp_%d_%d_%d.txt", folder_name.c_str(), Nx, Ny, Nt);
+  FILE *timestamp_file = fopen(timestamp_filename, "w");
+  fclose(timestamp_file);
   make_latest_output(folder_name);
 #endif
 
@@ -458,15 +472,6 @@ inline int run() {
 }
 
 int main(int argc, char const *argv[]) {
-  if (argc == 4) {
-    Nx = atoi(argv[1]);
-    Ny = atoi(argv[2]);
-    Nt = atoi(argv[3]);
-  } else if (argc != 1) {
-    printf("Usage: %s [Nx Ny Nt]\n", argv[0]);
-    return 1;
-  }
-
   unsigned long long start_cycle, end_cycle;
   time_t start_sec, end_sec;
   asm volatile("RDTSC" : "=A"(start_cycle));

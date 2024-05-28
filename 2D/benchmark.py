@@ -190,10 +190,10 @@ def main():
         
         # Execute executable file in subprocess and read stdout
         # If there is a specific executable for the current configuration, use it instead
-        if os.path.exists(f"{path}/main_optimized_profile_{MNx}_{MNy}_{MNt}.o"):
-            executable = f"{path}/main_optimized_profile_{MNx}_{MNy}_{MNt}.o"
+        if os.path.exists(f"{path}/src/main_optimized_profile_{MNx}_{MNy}_{MNt}.o"):
+            executable = f"{path}/src/main_optimized_profile_{MNx}_{MNy}_{MNt}.o"
         else:
-            executable = f"{path}/main_optimized_profile.o"
+            executable = f"{path}/src/main_optimized_profile.o"
             
         output = run_executable_and_get_output(executable, [f"{PARAMS[Nx]}", f"{PARAMS[Ny]}", f"{PARAMS[Nt]}"])
         
