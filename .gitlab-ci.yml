@@ -5,29 +5,13 @@ variables:
   SIMD_LEN_BITS: 256
   
 stages:
-  - build
   - tests
   - benchmark
-  - profile
 
 
-
-build:
-  stage: build
-  script:
-    - cd 2D && make build
-  artifacts:
-    paths:
-      - '2D/main_optimized.o'
-      - '2D/main_optimized_debug.o'
-      - '2D/main_optimized_profile.o'
-      - '2D/main_base.o'
-      - '2D/main_base_debug.o'
 
 compare:
   stage: tests
-  dependencies:
-    - build
   script:
     - cd 2D
     - sudo apt update && sudo apt install -y python3 python3-pip python3.10-venv 
@@ -41,8 +25,6 @@ compare:
 
 leaks:
   stage: tests
-  dependencies:
-    - build
   script:
     - cd 2D && sudo apt update && sudo apt install -y valgrind
     - make leaks
@@ -53,8 +35,7 @@ leaks:
 
 benchmark:
   stage: benchmark
-  dependencies:
-    - build
+  timeout: 1h
   artifacts:
     paths:
       - 2D/artifacts/*
@@ -68,12 +49,10 @@ benchmark:
     - merge_requests
     - main
 
-profile:
-  stage: profile
-  dependencies:
-    - build
-  script:
-    - cd 2D && make profile
-  only:
-    - merge_requests
-    - main
+# profile:
+#   stage: profile
+#   script:
+#     - cd 2D && make profile
+#   only:
+#     - merge_requests
+#     - main

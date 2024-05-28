@@ -6,18 +6,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#ifdef MNx
-#define NX (MNx)
-#endif
-#ifdef MNy
-#define NY (MNy)
-#endif
-#ifdef MNz
-#define NZ (MNz)
-#endif
-#ifdef MNt
-#define NT (MNt)
-#endif
+extern int NX, NY, NZ, NT;
 
 inline bool file_exists(const std::string &name) {
   struct stat buffer;

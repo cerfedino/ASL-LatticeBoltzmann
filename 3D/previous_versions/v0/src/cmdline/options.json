@@ -1,9 +1,0 @@
-{
-  "save_every": 20,
-  "c_s": 0.577350269,
-  "velocity_set": "D3Q15",
-  "nu": 0.16666666666,
-  "tau": 1,
-  "gamma_dot": 0.01,
-  "boundary_conditions": "lees_edwards"
-}
