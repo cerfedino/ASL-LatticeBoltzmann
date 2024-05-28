@@ -3,19 +3,8 @@ import numpy as np
 import os
 import matplotlib   
 import sys
+import argparse
 
-if len(sys.argv) != 4:
-    print("Usage: python compare.py <Nx> <Ny> <Nt>")
-    exit(1)
-
-Nx = int(sys.argv[1])
-Ny = int(sys.argv[2])
-Nt = int(sys.argv[3])
-
-# output_folder = output_folders[0]
-output_folder = f"output/00_latest_{Nx}_{Ny}_{Nt}"
-
-TOLERANCE = 0.01
 
 class bcolors:
     HEADER = '\033[95m'
@@ -29,20 +18,51 @@ class bcolors:
     UNDERLINE = '\033[4m'
 
 
-def is_equal(folder, name):
+
+def valid_directory(path):
+    if os.path.isdir(path):
+        return path
+    else:
+        raise argparse.ArgumentTypeError(f"The path '{path}' does not exist or is not a directory.")
+
+parser = argparse.ArgumentParser(description='Compare two result sets for the 3D Lattice Boltzmann equation.')
+parser.add_argument('--baseline', type=valid_directory, required=True, help='The folder containing the reference results')
+parser.add_argument('--output', type=valid_directory, required=True, help='The folder containing the output results')
+
+ARGS = parser.parse_args()
+
+reference_folder = ARGS.baseline
+output_folder = ARGS.output
+
+# List files ending with .csv in ref folder
+reference_output_files = [f for f in os.listdir(reference_folder) if f.endswith(".npy")]
+output_files = [f for f in os.listdir(output_folder) if f.endswith(".npy")]
+
+
+if len(reference_output_files) != len(output_files):
+    print(f"{bcolors.FAIL}[X] The number of output files does not match the number of reference files{bcolors.ENDC}")
+    exit(1)
+
+
+TOLERANCE = 0.01
+
+
+def is_equal(name):
     output = ""
-    error = False
+    equal = True
+    
+    reference_file = os.path.join(f"{reference_folder}/{name}")
+    output_file = os.path.join(f"{output_folder}/{name}")
 
-
-    output+=f"\nComparing {folder}/{name} with reference"
-    ref_arr = np.load("output/reference/" + name + ".npy")
-    arr = np.load(f"{folder}/{name}.npy")
+    output+=f"\nComparing {output_file} with reference"
+    ref_arr = np.load(reference_file)
+    arr = np.load(output_file)
 
     if ref_arr.shape == arr.shape:
         output+=f"\n\t[+] Matrix shape matches {ref_arr.shape}"
     else:
         output+=f"\n\t{bcolors.FAIL}[ERROR] Matrix shape does not match! {arr.shape} should be {ref_arr.shape}{bcolors.ENDC}"
-        error = True
+        equal = False
 
     if np.all(ref_arr == arr):
         output+=f"\n\t[+] Matrices are equal"
@@ -52,64 +72,20 @@ def is_equal(folder, name):
             output+=f"\n\t[+] Matrices are equal within tolerance {TOLERANCE}"
         else:
             output+=f"\n\t{bcolors.FAIL}[ERROR] Matrices are not equal within tolerance {TOLERANCE}{bcolors.ENDC}"
-            error = True
+            equal = False
 
-        ##print(f"Reference: {ref_arr[:5]}")
-        ##print(f"Output: {arr[:5]}")
-    if error:
+    if not equal:
         print(output)
-    return error
-
-
-# reference files in output/reference
-output_refernce_folders = [x[0] for x in os.walk("output/reference")][1:]
-
-# get folders in output that start with 2024
-# output_folders = [x[0] for x in os.walk("output/")][1:]
-
-
-print(f"Selected folder: {output_folder}")
-
-
-# compare npy file F_start.npy
-# is_equal(output_folder, "F_start")
-
-# # compare npy file X.npy
-# is_equal(output_folder, "X_start")
-
-# # compare npy file Y.npy
-# is_equal(output_folder, "X_start")
-
-# # compare npy file F_3_setup.npy
-# is_equal(output_folder, "F_3_setup")
-
-# # compare npy file rho_start.npy
-# is_equal(output_folder, "rho_start")
-
-# # compare npy file F_normalized_start.npy
-# is_equal(output_folder, "F_normalized_start")
-
-# # compare npy file cylinder_start.npy
-# is_equal(output_folder, "cylinder_start")
+    return equal
 
 
 error = False
-for i in range(Nt):
-    # is_equal(output_folder, f"F_before_drift_{i}")
-    # is_equal(output_folder, f"F_after_drift_{i}")
+for i, file in enumerate(reference_output_files):
+    print(f"[-] Checking file {i+1}/{len(reference_output_files)}\r", end="")
+    error = not is_equal(os.path.basename(file)) or error
 
-    # is_equal(output_folder, f"bndryF_start_{i}")
-    # is_equal(output_folder, f"bndryF_reordered_{i}")
 
-    # is_equal(output_folder, f"rho_loop_{i}")
-    # is_equal(output_folder, f"ux_loop_{i}")
-    # is_equal(output_folder, f"uy_loop_{i}")
-
-    # is_equal(output_folder, f"Feq_{i}")
-
-    error = is_equal(output_folder, f"vorticity_{i:05}") or error 
-
-print(f"[-] Checked the first {Nt} timesteps")    
+print(f"[-] Checked the first {len(reference_output_files)} timesteps")    
 if error:
     print(f"{bcolors.FAIL}[X] The implementation does not follow the baseline{bcolors.ENDC}")
     exit(1)

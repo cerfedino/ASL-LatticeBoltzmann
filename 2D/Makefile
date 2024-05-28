@@ -1,49 +1,56 @@
 CFLAGS = -g -march=native
 OPTIM_FLAGS = -Ofast
-LONG_RUN_PARAMS  = 400 200 5000
-SHORT_RUN_PARAMS = 400 200 300
 
-PAST_VERSIONS_OBJ = $(foreach file,$(wildcard previous_versions/*/main.cpp),$(file:.cpp=.o))
-LONG_RUN_PARAMS_ESCAPED = $(shell echo $(LONG_RUN_PARAMS) | tr ' ' '_')
-SHORT_RUN_PARAMS_ESCAPED = $(shell echo $(SHORT_RUN_PARAMS) | tr ' ' '_')
 
-.PHONY: all clean build run_debug test leaks benchmark
 
-all: build test leaks benchmark
+ifeq ($(firstword $(MAKECMDGOALS)),benchmark)
+    RUN_PARAMS = 400 200 2000
+else ifeq ($(firstword $(MAKECMDGOALS)),profile)
+    RUN_PARAMS = 400 200 2000
+else
+	# $(info 'USING DEFAULT RUN_PARAMS')
+	RUN_PARAMS = 400 200 300
+endif
+RUN_PARAMS_ESCAPED =  $(shell echo $(RUN_PARAMS) | tr ' ' '_')
+RUN_PARAMS_DEFINITIONS = -DMNx=$(word 1,$(RUN_PARAMS)) -DMNy=$(word 2,$(RUN_PARAMS)) -DMNt=$(word 3,$(RUN_PARAMS))
+
+
+
+
+PAST_VERSIONS_OBJ = $(foreach file,$(wildcard previous_versions/*/src/main.cpp),$(file:.cpp=_optimized_profile_$(RUN_PARAMS_ESCAPED).o))
+
+.PHONY: all clean test leaks benchmark profile
+
+
+all: test leaks benchmark profile
 clean:
-	find . \( -iname '*.o' -o -iname 'timestamp_*.txt' \) -print -delete; rm -r artifacts/*
+	find . \( -iname '*.o' -o -iname 'timestamp_*.txt' \) -print -delete; rm -r artifacts/* output/*
 
-build: ./main_base.o ./main_base_debug.o ./main_optimized.o ./main_optimized_debug.o ./main_optimized_profile.o
-./main_optimized.o: main.cpp ./include/utils.c ./include/utils.h ./include/profile.c
-	g++ $(CFLAGS) $(OPTIM_FLAGS) main.cpp ./include/utils.c ./include/profile.c -o ./main_optimized.o
-./main_optimized_debug.o: main.cpp ./include/utils.c ./include/utils.h ./include/profile.c
-	g++ $(CFLAGS) $(OPTIM_FLAGS) -DDEBUG main.cpp ./include/utils.c  ./include/profile.c -o ./main_optimized_debug.o
-./main_optimized_profile.o: main.cpp ./include/utils.c ./include/utils.h ./include/profile.c
-	g++ $(CFLAGS) $(OPTIM_FLAGS) -DPROFILE main.cpp ./include/utils.c  ./include/profile.c -o ./main_optimized_profile.o
-./main_base.o: main_base.cpp ./include/utils.c ./include/utils.h ./include/profile.c
-	g++ $(CFLAGS) main_base.cpp ./include/utils.c  ./include/profile.c -o ./main_base.o
-./main_base_debug.o: main_base.cpp ./include/utils.c ./include/utils.h ./include/profile.c
-	g++ $(CFLAGS) -DDEBUG main_base.cpp ./include/utils.c ./include/profile.c -o ./main_base_debug.o
-
-# Recipe for building old versions
-%.o: %.cpp ./include/utils.c ./include/utils.h ./include/profile.c
-	g++ $(CFLAGS) $(OPTIM_FLAGS) -DPROFILE $< -o $@ ./include/utils.c ./include/utils.h ./include/profile.c
-# Sometimes we use "timestamp" files as a way for Make to keep track of the last time a target was built
-run_debug: output/timestamp_debug_$(SHORT_RUN_PARAMS_ESCAPED).txt
-output/timestamp_debug_$(SHORT_RUN_PARAMS_ESCAPED).txt: ./main_optimized_debug.o
-	mkdir -p output/; ./main_optimized_debug.o $(SHORT_RUN_PARAMS); echo "ciao mamma" > output/timestamp_debug_$(SHORT_RUN_PARAMS_ESCAPED).txt
-
-test: run_debug output/reference/timestamp_$(SHORT_RUN_PARAMS_ESCAPED).txt
-	python3 compare.py $(SHORT_RUN_PARAMS)
-output/reference/timestamp_$(SHORT_RUN_PARAMS_ESCAPED).txt: reference-python/latticeboltzmann_prints.py
-	python3 reference-python/latticeboltzmann_prints.py $(SHORT_RUN_PARAMS); echo "ciao mamma" > output/reference/timestamp_$(SHORT_RUN_PARAMS_ESCAPED).txt; 
-
-leaks: ./main_optimized_debug.o
-	mkdir -p output; valgrind --leak-check=full ./main_optimized_debug.o $(SHORT_RUN_PARAMS)
+./previous_versions/v1/src/main_optimized_profile_$(RUN_PARAMS_ESCAPED).o: ./previous_versions/v1/src/main.cpp src/include/utils.c src/include/profile.c
+	g++ $(CFLAGS) -DPROFILE $< -o $@ src/include/profile.c
+%/main_optimized_$(RUN_PARAMS_ESCAPED).o: %/main.cpp src/include/utils.c src/include/profile.c
+	g++ $(CFLAGS) $(OPTIM_FLAGS) $(RUN_PARAMS_DEFINITIONS) $< -o $@ src/include/profile.c
+%/main_optimized_debug_$(RUN_PARAMS_ESCAPED).o: %/main.cpp src/include/utils.c src/include/profile.c
+	g++ $(CFLAGS) $(OPTIM_FLAGS) $(RUN_PARAMS_DEFINITIONS) -DDEBUG $< -o $@ src/include/profile.c
+%/main_optimized_profile_$(RUN_PARAMS_ESCAPED).o: %/main.cpp src/include/utils.c src/include/profile.c
+	g++ $(CFLAGS) $(OPTIM_FLAGS) $(RUN_PARAMS_DEFINITIONS) -DPROFILE $< -o $@ src/include/profile.c
 
 
 
-benchmark: ./main_optimized.o $(PAST_VERSIONS_OBJ)
-	mkdir -p artifacts/; python3 benchmark.py
-profile: ./main_optimized_profile.o
-	./main_optimized_profile.o $(LONG_RUN_PARAMS)
+output/00_latest_$(RUN_PARAMS_ESCAPED)/timestamp_$(RUN_PARAMS_ESCAPED).txt: ./src/main_optimized_debug_$(RUN_PARAMS_ESCAPED).o
+	mkdir -p output/; ./src/main_optimized_debug_$(RUN_PARAMS_ESCAPED).o $(RUN_PARAMS);
+
+test: output/00_latest_$(RUN_PARAMS_ESCAPED)/timestamp_$(RUN_PARAMS_ESCAPED).txt   output/reference/timestamp_$(RUN_PARAMS_ESCAPED).txt
+	python3 compare.py --baseline=./output/reference/ --output=./output/00_latest_$(RUN_PARAMS_ESCAPED)/
+output/reference/timestamp_$(RUN_PARAMS_ESCAPED).txt: ./reference-python/latticeboltzmann_prints.py
+	python3 reference-python/latticeboltzmann_prints.py $(RUN_PARAMS)
+
+leaks: ./src/main_optimized_debug_$(RUN_PARAMS_ESCAPED).o
+	mkdir -p output; valgrind --leak-check=full ./src/main_optimized_debug_$(RUN_PARAMS_ESCAPED).o $(RUN_PARAMS)
+
+
+
+benchmark: $(PAST_VERSIONS_OBJ)
+	mkdir -p artifacts/; python3 benchmark.py $(RUN_PARAMS);
+profile: ./src/main_optimized_profile_$(RUN_PARAMS_ESCAPED).o
+	./src/main_optimized_profile_$(RUN_PARAMS_ESCAPED).o $(RUN_PARAMS)

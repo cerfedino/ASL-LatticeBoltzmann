@@ -1,15 +1,25 @@
-#include "./utils.h"
 #include "./npy.hpp"
 #include <string>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <vector>
 
+
+#ifdef MNx
+#define Nx (MNx)
+#endif
+#ifdef MNy
+#define Ny (MNy)
+#endif
+#ifdef MNt
+#define Nt (MNt)
+#endif
+
+#ifdef DEBUG
+
+
 #define debug_printf(fmt, ...) fprintf(stdout, fmt, __VA_ARGS__)
 #define debug_print(fmt) fprintf(stdout, fmt)
-
-
-extern int Nx, Ny, Nt;
 
 void save_npy_3d_double(double *array, int x, int y, int z,
                         std::string filename) {
@@ -119,3 +129,7 @@ void make_latest_output(std::string folder) {
   sprintf(command, "cp -r %s %s", folder.c_str(), folder_name);
   system((const char *)command);
 }
+
+
+#else
+#endif

@@ -7,14 +7,25 @@ import pandas as pd
 from dotenv import load_dotenv, dotenv_values
 import matplotlib.pyplot as plt
 from sympy import symbols, evalf, sympify
+import sys
 
 
 PREVIOUS_VERSIONS_PATH = f"{os.path.dirname(__file__)}/previous_versions/"
 OUTPUT_FOLDER = f"{os.path.dirname(__file__)}/artifacts/"
 
+
+if len(sys.argv) != 4:
+    print("Usage: python3 benchmark.py <Nx> <Ny> <Nt>")
+    exit(1)
+
+MNx = int(sys.argv[1])
+MNy = int(sys.argv[2])
+MNt = int(sys.argv[3])
+
+
 Nx, Ny, Nt, NL = symbols('Nx Ny Nt NL')
 
-PARAMS= {Nx: 400, Ny: 200, NL: 9, Nt:100}
+PARAMS= {Nx: MNx, Ny: MNy, NL: 9, Nt: MNt}
 # Read MEM_BW and PEAK_SCALAR from environment variables, otherwise from .env file, otherwise display error message
 try:
     print("Reading environment variables")
@@ -178,8 +189,13 @@ def main():
         print("DATA_MOV: ", DATA_MOVEMENT)
         
         # Execute executable file in subprocess and read stdout
-
-        output = run_executable_and_get_output(f"{path}/main.o", [f"{PARAMS[Nx]}", f"{PARAMS[Ny]}", f"{PARAMS[Nt]}"])
+        # If there is a specific executable for the current configuration, use it instead
+        if os.path.exists(f"{path}/src/main_optimized_profile_{MNx}_{MNy}_{MNt}.o"):
+            executable = f"{path}/src/main_optimized_profile_{MNx}_{MNy}_{MNt}.o"
+        else:
+            executable = f"{path}/src/main_optimized_profile.o"
+            
+        output = run_executable_and_get_output(executable, [f"{PARAMS[Nx]}", f"{PARAMS[Ny]}", f"{PARAMS[Nt]}"])
         
         try:
             runs = int(re.search(r"Run (\d+)/\d+ done\nProfiling results:", output).group(1))
