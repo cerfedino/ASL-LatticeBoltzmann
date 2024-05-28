@@ -165,38 +165,44 @@ def main():
         print("DATA_MOV: ", DATA_MOVEMENT)
         
         # Execute executable file in subprocess and read stdout
+
         output = run_executable_and_get_output(f"{path}/main.o", [f"{PARAMS[Nx]}", f"{PARAMS[Ny]}", f"{PARAMS[Nt]}"])
         
-        runs = int(re.search(r"Run (\d+)/\d+ done\nProfiling results:", output).group(1))
+        try:
+            runs = int(re.search(r"Run (\d+)/\d+ done\nProfiling results:", output).group(1))
 
-        stats_rho  = re.search(r".*Rho\s*Calculation: ([\d|\\.]*) Flops/Cycle.*Arithmetic intensity: ([\d|\\.]*)", output).groups()
-        performance_rho, intensity_rho = float(stats_rho[0]), float(stats_rho[1])
-        stats_feq  = re.search(r".*FEQ\s*Calculation: ([\d|\\.]*) Flops/Cycle.*Arithmetic intensity: ([\d|\\.]*)", output).groups()
-        performance_feq, intensity_feq = float(stats_feq[0]), float(stats_feq[1])
-        stats_f    = re.search(r".*F\s*Calculation: ([\d|\\.]*) Flops/Cycle.*Arithmetic intensity: ([\d|\\.]*)", output).groups()
-        performance_f, intensity_f = float(stats_f[0]), float(stats_f[1])
-        stats_vort = re.search(r".*Vort\s*Calculation: ([\d|\\.]*) Flops/Cycle.*Arithmetic intensity: ([\d|\\.]*)", output).groups()
-        performance_vort, intensity_vort = float(stats_vort[0]), float(stats_vort[1])
+            stats_rho  = re.search(r".*Rho\s*Calculation: ([\d|\\.]*) Flops/Cycle.*Arithmetic intensity: ([\d|\\.]*)", output).groups()
+            performance_rho, intensity_rho = float(stats_rho[0]), float(stats_rho[1])
+            stats_feq  = re.search(r".*FEQ\s*Calculation: ([\d|\\.]*) Flops/Cycle.*Arithmetic intensity: ([\d|\\.]*)", output).groups()
+            performance_feq, intensity_feq = float(stats_feq[0]), float(stats_feq[1])
+            stats_f    = re.search(r".*F\s*Calculation: ([\d|\\.]*) Flops/Cycle.*Arithmetic intensity: ([\d|\\.]*)", output).groups()
+            performance_f, intensity_f = float(stats_f[0]), float(stats_f[1])
+            stats_vort = re.search(r".*Vort\s*Calculation: ([\d|\\.]*) Flops/Cycle.*Arithmetic intensity: ([\d|\\.]*)", output).groups()
+            performance_vort, intensity_vort = float(stats_vort[0]), float(stats_vort[1])
 
-        cycles_rho  = int(re.search(r".*Rho\s*Calculation: .* (\d+) cycles.*", output).group(1))
-        cycles_feq  = int(re.search(r".*FEQ\s*Calculation: .* (\d+) cycles.*", output).group(1))
-        cycles_f    = int(re.search(r".*F\s*Calculation: .* (\d+) cycles.*", output).group(1))
-        cycles_vort = int(re.search(r".*Vort\s*Calculation: .* (\d+) cycles.*", output).group(1))
-        cycles = cycles_rho + cycles_feq + cycles_f + cycles_vort
+            cycles_rho  = int(re.search(r".*Rho\s*Calculation: .* (\d+) cycles.*", output).group(1))
+            cycles_feq  = int(re.search(r".*FEQ\s*Calculation: .* (\d+) cycles.*", output).group(1))
+            cycles_f    = int(re.search(r".*F\s*Calculation: .* (\d+) cycles.*", output).group(1))
+            cycles_vort = int(re.search(r".*Vort\s*Calculation: .* (\d+) cycles.*", output).group(1))
+            cycles = cycles_rho + cycles_feq + cycles_f + cycles_vort
 
-        loop_cycles["rho"].append(cycles_rho); loop_cycles["feq"].append(cycles_feq); loop_cycles["f"].append(cycles_f); loop_cycles["vort"].append(cycles_vort)
+            loop_cycles["rho"].append(cycles_rho); loop_cycles["feq"].append(cycles_feq); loop_cycles["f"].append(cycles_f); loop_cycles["vort"].append(cycles_vort)
+        except AttributeError as e:
+            print("Couldn't match regex to output:\n")
+            print(output)
+            print("\n\nException: ", e)
 
         print()
         print(f"Rho  cycles: {cycles_rho }")
         print(f"FEQ  cycles: {cycles_feq }")
         print(f"F    cycles: {cycles_f   }")
         print(f"Vort cycles: {cycles_vort}")
-        print(f"Total Number of Cycles: {int(cycles/runs)}")
+        print(f"Total Number of Cycles: {cycles}")
         
         WORK_eval = int(sympify(WORK).subs(PARAMS).evalf())
         DATA_eval = int(sympify(DATA_MOVEMENT).subs(PARAMS).evalf())
         INTENSITY = WORK_eval / DATA_eval
-        PERFORMANCE = WORK_eval / int(cycles/runs)
+        PERFORMANCE = WORK_eval / cycles
 
         min_performance = min(min_performance, PERFORMANCE)
 
