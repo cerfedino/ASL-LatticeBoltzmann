@@ -1,5 +1,0 @@
-matplotlib
-numpy
-sympy
-python-dotenv
-pandas
