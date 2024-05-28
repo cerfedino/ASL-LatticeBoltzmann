@@ -121,11 +121,24 @@ def main():
     # Init empty roofline plot
     plt_all = make_roofline_plot(PEAK_SCALAR, MEM_BW, SIMD_LEN_BITS)
 
-    plt_rho  = make_roofline_plot(PEAK_SCALAR, MEM_BW, SIMD_LEN_BITS); plt_rho.suptitle("Rho")
-    # Since we only have ADDs and MULTs and no FMAs, peak scalar is just the two ports times two ops per cycle.
-    plt_feq  = make_roofline_plot(4, MEM_BW, SIMD_LEN_BITS); plt_feq.suptitle("FEQ")
-    plt_f    = make_roofline_plot(PEAK_SCALAR, MEM_BW, SIMD_LEN_BITS); plt_f.suptitle("F")
-    plt_vort = make_roofline_plot(PEAK_SCALAR, MEM_BW, SIMD_LEN_BITS); plt_vort.suptitle("Vort")
+    '''
+    Port 1 is the bottleneck. We have N divisions and 20N mults. N divisions are scheduled on Port 1, and the remaining 19N multiplications on both ports 0 and 1.
+    Thus, port 1 has to process N + 19N/2 = 10.5N ops. With a throughput of 2 ops/cycle, this results in a run time of 5.25N cycles.
+    Total flops are 48N flops.
+    Max performance is thus 48N/5.25N =~ 9.15 flops/cycle
+    '''
+    plt_rho  = make_roofline_plot(9.15, MEM_BW, SIMD_LEN_BITS); plt_rho.suptitle("Rho")
+    '''
+    Ports 0/1 are the bottlenecks for this calculation
+    These perform 4 ops per cycle together.
+    In total, they have to process 10*N ops, which thus take 10*N/4 cycles = 2.5*N cycles.
+    The calculation has a total of 15*N ops, meaning we have a max performance of 15/2.5 = 6 flops/cycle
+    '''
+    plt_feq  = make_roofline_plot(6, MEM_BW, SIMD_LEN_BITS); plt_feq.suptitle("FEQ")
+    # One FMA per cycle, thus we can only utilize the FMA ports, of which we have 2, which perform two ops per cycle
+    plt_f    = make_roofline_plot(8, MEM_BW, SIMD_LEN_BITS); plt_f.suptitle("F")
+    # Only has subtractions, so we can make use of the two ADD/SUB ports, which perform two ops per cycle
+    plt_vort = make_roofline_plot(4, MEM_BW, SIMD_LEN_BITS); plt_vort.suptitle("Vort")
 
     min_performance = math.inf
 
