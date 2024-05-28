@@ -76,7 +76,7 @@ def make_roofline_plot(PEAK_SCALAR, MEM_BW, SIMD_LEN_BITS):
 
     ### SIMD bounds
     # Compute bound
-    y_comp_simd = [PEAK_simd for i in x]
+    y_comp_simd = [PEAK_SCALAR * SIMD_LEN_BITS / 64 for i in x]
     plt.plot(x, y_comp_simd, color=PLT_BOUND_COLOR, linestyle='--', linewidth=1.4)
     plt.text(0.04,y_comp_simd[0], f"Peak $\\pi$ SIMD ({y_comp_simd[0]} iops/cycle)", fontweight="bold", fontsize=12, va='bottom', ha='left', color=PLT_BOUND_COLOR)
 
@@ -122,7 +122,8 @@ def main():
     plt_all = make_roofline_plot(PEAK_SCALAR, MEM_BW, SIMD_LEN_BITS)
 
     plt_rho  = make_roofline_plot(PEAK_SCALAR, MEM_BW, SIMD_LEN_BITS); plt_rho.suptitle("Rho")
-    plt_feq  = make_roofline_plot(PEAK_SCALAR, MEM_BW, SIMD_LEN_BITS); plt_feq.suptitle("FEQ")
+    # Since we only have ADDs and MULTs and no FMAs, peak scalar is just the two ports times two ops per cycle.
+    plt_feq  = make_roofline_plot(4, MEM_BW, SIMD_LEN_BITS); plt_feq.suptitle("FEQ")
     plt_f    = make_roofline_plot(PEAK_SCALAR, MEM_BW, SIMD_LEN_BITS); plt_f.suptitle("F")
     plt_vort = make_roofline_plot(PEAK_SCALAR, MEM_BW, SIMD_LEN_BITS); plt_vort.suptitle("Vort")
 
