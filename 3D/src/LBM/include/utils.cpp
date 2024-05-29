@@ -19,12 +19,8 @@
 #define NT (MNt)
 #endif
 
-inline bool file_exists(const std::string &name) {
-  struct stat buffer;
-  return (stat(name.c_str(), &buffer) == 0);
-}
-inline int scalar_index(int x, int y, int z) { return (z * NX * NY) + (y * NX) + x; }
-inline int scalar_index(int x, int y, int z, int w) { return (x + y * NX + z * NX * NY + w * NX * NY * NZ); }
+int scalar_index(int x, int y, int z) { return (z * NX * NY) + (y * NX) + x; }
+int scalar_index(int x, int y, int z, int w) { return (x + y * NX + z * NX * NY + w * NX * NY * NZ); }
 
 void output_array(double *array) {
   std::cout << "x,y,z value" << std::endl;
@@ -43,7 +39,7 @@ void output_velocity() {
   int z_index = 0;
   for (int x = 0; x < NX; x++) {
     for (int y = 0; y < NY; y++) {
-      std::cout << velocity_field[scalar_index(x, y, z_index)].x << " ";
+      std::cout << velocity_field[scalar_index(x, y, z_index)*3] << " ";
     }
     std::cout << std::endl;
   }
@@ -88,7 +84,7 @@ void output_lbm_data(std::string filename, bool header) {
   for (int x = 0; x < NX; x++) {
     for (int y = 0; y < NY; y++) {
       for (int z = 0; z < NZ; z++) {
-        output_stream << density_field[scalar_index(x, y, z)] << "," << velocity_field[scalar_index(x, y, z)].x << "," << velocity_field[scalar_index(x, y, z)].y << "," << velocity_field[scalar_index(x, y, z)].z << '\n';
+        output_stream << density_field[scalar_index(x, y, z)] << "," << velocity_field[scalar_index(x, y, z)*3] << "," << velocity_field[scalar_index(x, y, z)*3+1] << "," << velocity_field[scalar_index(x, y, z)*3+2] << '\n';
       }
     }
   }

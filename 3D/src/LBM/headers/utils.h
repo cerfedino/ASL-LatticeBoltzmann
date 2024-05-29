@@ -37,7 +37,7 @@ struct vector_3_double {
 inline double norm_square(vector_3_double d) { return (d.x * d.x + d.y * d.y + d.z * d.z); }
 
 extern double *density_field;
-extern vector_3_double *velocity_field;
+extern double *velocity_field;
 extern double *previous_particle_distributions;
 extern double *particle_distributions;
 extern int direction_size;
