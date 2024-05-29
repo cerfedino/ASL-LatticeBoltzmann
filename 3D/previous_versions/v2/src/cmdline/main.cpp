@@ -14,10 +14,10 @@
 using namespace std;
 
 // for now one can define OUTPUT, TIMING
-// #define OUTPUT
+//#define OUTPUT
 
-// #define TIMING
-profiler *compute_density_momentum_profiler, *collision_profiler, *stream_profiler;
+//#define TIMING
+profiler *compute_density_momentum_profiler, *collision_profiler;
 
 int time_lbm = 0;
 
@@ -72,24 +72,21 @@ void initialise() {
   }
 
   compute_density_momentum_profiler = init_profiler(NX * NY * NZ * direction_size * 7 + NX * NY * NZ * 3, 8 * NX * NY * NZ * direction_size * 7 + (NX * NY * NZ * 3 + 15) * 8);
-  collision_profiler = init_profiler((NX * NY * NZ * direction_size * 22), 8 * (4 * NX * NY * NZ + 15 + 15));
-  stream_profiler = init_profiler(NZ * 4, 2 * 8 * NZ * NX * NY * 15 + 2 * 8);
+  collision_profiler = init_profiler((NX * NY * NZ * direction_size * 29 + 2), 8 * (4 * NX * NY * NZ + 15 + 15));
 }
 
-double c_s_4 = 2 * c_s * c_s * c_s * c_s;
-double c_s_2 = c_s * c_s;
-double c_s_2_inv = 1 / c_s_2;
-double c_s_4_inv = 1 / c_s_4;
-double c_s_2_inv_2 = 1 / (2 * c_s_2);
-double c_s_2_inv_02 = c_s_2_inv * 0.2;
-
-// flops = 19
 double calculate_feq(int x, int y, int z, int i) {
-  int index = scalar_index(x, y, z);
-  double dot_product = velocity_field[index].x * (double)directions[i].x + velocity_field[index].y * (double)directions[i].y + velocity_field[index].z * (double)directions[i].z;
-  double norm_square = velocity_field[index].x * velocity_field[index].x + velocity_field[index].y * velocity_field[index].y + velocity_field[index].z * velocity_field[index].z;
+  double dot_product = (double)velocity_field[scalar_index(x, y, z)].x * (double)directions[i].x + (double)velocity_field[scalar_index(x, y, z)].y * (double)directions[i].y + (double)velocity_field[scalar_index(x, y, z)].z * (double)directions[i].z;
 
-  double feq = weights[i] * density_field[index] * (1.0 + dot_product * c_s_2_inv + dot_product * dot_product * c_s_4_inv - norm_square * c_s_2_inv_2);
+  double feq = weights[i] * density_field[scalar_index(x, y, z)] * (1.0 + dot_product / (c_s * c_s) + dot_product * dot_product / (2 * c_s * c_s * c_s * c_s) - norm_square(velocity_field[scalar_index(x, y, z)]) / (2 * c_s * c_s));
+  return feq;
+}
+
+double calculate_feq(int x, int y, int z, int i, double u_le_x) {
+  double dot_product = (velocity_field[scalar_index(x, y, z)].x + u_le_x) * directions[i].x + velocity_field[scalar_index(x, y, z)].y * directions[i].y + velocity_field[scalar_index(x, y, z)].z * directions[i].z;
+  double norm_square = (velocity_field[scalar_index(x, y, z)].x + u_le_x) * (velocity_field[scalar_index(x, y, z)].x + u_le_x) + velocity_field[scalar_index(x, y, z)].y * directions[i].y + velocity_field[scalar_index(x, y, z)].z * directions[i].z;
+  // Equation 3.4 with c_s^2 = 1/3
+  double feq = weights[i] * density_field[scalar_index(x, y, z)] * (1.0 + dot_product / (c_s * c_s) + dot_product * dot_product / (2 * c_s * c_s * c_s * c_s) - norm_square / (2 * c_s * c_s));
   return feq;
 }
 
@@ -147,6 +144,8 @@ void set_velocity(int x_field, int y_field, int z_field, double u_x, double u_y,
   velocity_field[scalar_index(x_field, y_field, z_field)].y = u_y;
   velocity_field[scalar_index(x_field, y_field, z_field)].z = u_z;
 }
+
+void set_density(int x_field, int y_field, int z_field, double density) { density_field[scalar_index(x_field, y_field, z_field)] = density; }
 
 void compute_density_momentum_moment() {
   int scalar_index_curr = 0;
@@ -218,31 +217,79 @@ void stream() {
     for (int y = 0; y < NY; y++) {
       for (int x = 0; x < NX; x++) {
         for (int i = 0; i < direction_size; i++) {
-          // flops = (between 0 and NZ)*4
-          // bytes = 2*8*NZ*NX*NY*15+2*8
-
-          // flops = 0
-          // bytes = 2*8
-          if (y == 0 && directions[i].y == 1) {
-            // Bottom Wall.
-            // Equation 5.27 from LBM Principles and Practice.
-            particle_distributions[scalar_index(x, y, z, i)] = previous_particle_distributions[scalar_index(x, y, z, reverse_indexes[i])];
-          }
-          // flops = 4
-          // bytes = 4*8
-          else if (y == NY - 1 && directions[i].y == -1) {
-            double u_max = 0.1;
-            particle_distributions[scalar_index(x, y, z, i)] = previous_particle_distributions[scalar_index(x, y, z, reverse_indexes[i])] + directions[i].x * weights[i] * c_s_2_inv_02;
-          }
-          // flops = 0
-          // bytes = 2*8
-          else {
-            int xmd = (NX + x - directions[i].x) % NX;
-            int ymd = y - directions[i].y;
-            int zmd = (NZ + z - directions[i].z) % NZ;
+          // Periodic boundary conditions taken from Taylor green in Chapter 13.
+          if (boundary_conditions == "periodic") {
+            // X position Minus the Direction (xmd) applies to y and z.
+            int xmd = (NX + x - (int)directions[i].x) % NX;
+            int ymd = (NY + y - (int)directions[i].y) % NY;
+            int zmd = (NZ + z - (int)directions[i].z) % NZ;
             particle_distributions[scalar_index(x, y, z, i)] = previous_particle_distributions[scalar_index(xmd, ymd, zmd, i)];
+            // Equation 3.10 with periodic boundary conditions.
+          } else if (boundary_conditions == "couette") {
+
+            // Using Bounce back approach for top & bottom walls..
+            if (y == 0 && directions[i].y == 1) {
+              // Bottom Wall.
+              // Equation 5.27 from LBM Principles and Practice.
+              particle_distributions[scalar_index(x, y, z, i)] = previous_particle_distributions[scalar_index(x, y, z, reverse_indexes[i])];
+            } else if (y == NY - 1 && directions[i].y == -1) {
+              // Top wall
+              // Equation 5.28 from LBM Principles and Practice.
+              // coefficients of Equation 5.28 calculated from footnote 17.
+              double u_max = 0.1;
+              particle_distributions[scalar_index(x, y, z, i)] = previous_particle_distributions[scalar_index(x, y, z, reverse_indexes[i])] + directions[i].x * 2 * weights[i] / (c_s * c_s) * u_max;
+              // particle_distributions[scalar_index(x,y,z,(4-1))]=previous_particle_distributions[scalar_index(x,y,z,(2-1))];
+              // particle_distributions[scalar_index(x,y,z,(7-1))]=previous_particle_distributions[scalar_index(x,y,z,(5-1))]-(1.0/6.0)*u_max;
+              // particle_distributions[scalar_index(x,y,z,(8-1))]=previous_particle_distributions[scalar_index(x,y,z,(6-1))]+(1.0/6.0)*u_max;
+            } else {
+              // Chapter 13 Taylor-Green periodicity from same book.
+              int xmd = (NX + x - directions[i].x) % NX;
+
+              // int ymd = (NY + y - (int)directions[i].y) % NY;
+              int ymd = y - directions[i].y;
+              int zmd = (NZ + z - directions[i].z) % NZ;
+              particle_distributions[scalar_index(x, y, z, i)] = previous_particle_distributions[scalar_index(xmd, ymd, zmd, i)];
+            }
+          } else if (boundary_conditions == "lees_edwards") {
+            double d_x = gamma_dot * (double)NY * (double)time_lbm;
+            int d_x_I = d_x;
+            double d_x_R = d_x - d_x_I;
+            d_x_I = d_x_I % NX;
+            double s_1 = d_x_R;
+            double s_2 = 1.0 - d_x_R;
+            // s_1=0;s_2=1;
+            int ymd = (NY + y - directions[i].y) % NY;
+            int zmd = (NZ + z - directions[i].z) % NZ;
+            if (y == 0 && directions[i].y == 1) {
+              // Bottom Wall.
+              // Equation (17) from Less-Edwards boundary conditions for lattice Boltzmann suspension simulations
+              // by Eric Lorenz and Alfons G. Hoekstra
+              int x_pos;
+              x_pos = (x + d_x_I + 2 * NX - directions[i].x) % NX;
+              int x_shifted;
+              x_shifted = (x + d_x_I + 2 * NX + 1 - directions[i].x) % NX;
+              double galilean_transformation_pos = previous_particle_distributions[scalar_index(x_pos, ymd, zmd, i)] + calculate_feq(x_pos, ymd, zmd, i, -1 * gamma_dot * (double)NY) - calculate_feq(x_pos, ymd, zmd, i, 0);
+              double galilean_transformation_shift = previous_particle_distributions[scalar_index(x_shifted, ymd, zmd, i)] + calculate_feq(x_shifted, ymd, zmd, i, -1 * gamma_dot * (double)NY) - calculate_feq(x_shifted, ymd, zmd, i, 0);
+              // Equation (18) from same paper.
+              particle_distributions[scalar_index(x, y, z, i)] = s_1 * galilean_transformation_shift + s_2 * galilean_transformation_pos;
+            } else if (y == NY - 1 && directions[i].y == -1) {
+              // Equation (17) from Less-Edwards boundary conditions for lattice Boltzmann suspension simulations
+              // by Eric Lorenz and Alfons G. Hoekstra
+              // Top Wall.
+              int x_pos;
+              x_pos = (x - d_x_I + 2 * NX - directions[i].x) % NX;
+              int x_shifted;
+              x_shifted = (x - d_x_I + 2 * NX - 1 - directions[i].x) % NX;
+              double galilean_transformation_pos = previous_particle_distributions[scalar_index(x_pos, ymd, zmd, i)] + calculate_feq(x_pos, ymd, zmd, i, 1 * gamma_dot * (double)NY) - calculate_feq(x_pos, ymd, zmd, i, 0);
+              double galilean_transformation_shift = previous_particle_distributions[scalar_index(x_shifted, ymd, zmd, i)] + calculate_feq(x_shifted, ymd, zmd, i, 1 * gamma_dot * (double)NY) - calculate_feq(x_shifted, ymd, zmd, i, 0);
+              // Equation (18) from same paper.
+              particle_distributions[scalar_index(x, y, z, i)] = s_1 * galilean_transformation_shift + s_2 * galilean_transformation_pos;
+            } else {
+              // Interior points. (Enforce periodicity along x axis);.
+              int xmd = (NX + x - directions[i].x) % NX;
+              particle_distributions[scalar_index(x, y, z, i)] = previous_particle_distributions[scalar_index(xmd, ymd, zmd, i)];
+            }
           }
-          else return;
         }
       }
     }
@@ -278,9 +325,7 @@ void perform_timestep() {
   collision();
   end_run(collision_profiler);
 
-  start_run(stream_profiler);
   stream();
-  end_run(stream_profiler);
 }
 
 int main(int argc, char const *argv[]) {
@@ -300,6 +345,7 @@ int main(int argc, char const *argv[]) {
   initialise();
 
   double viscosity = c_s * c_s * (tau - 0.5);
+  // std::cout<<viscosity<<std::endl;
 
 #ifdef OUTPUT
   output_lbm_data("output/0.csv", true);
@@ -362,10 +408,6 @@ int main(int argc, char const *argv[]) {
   printf("- Compute collision  Calculation: %4.2f Flops/Cycle, %10ld cycles in %d runs. "
          "Arithmetic intensity: %4.2f\n",
          collision_stats.performance, collision_stats.cycles, collision_stats.runs, collision_stats.arithmetic_intensity);
-  profiler_stats stream_stats = finish_profiler(stream_profiler);
-  printf("- Compute stream  Calculation: %4.2f Flops/Cycle, %10ld cycles in %d runs. "
-         "Arithmetic intensity: %4.2f\n",
-         stream_stats.performance, stream_stats.cycles, stream_stats.runs, stream_stats.arithmetic_intensity);
 #endif
   return 0;
 }
