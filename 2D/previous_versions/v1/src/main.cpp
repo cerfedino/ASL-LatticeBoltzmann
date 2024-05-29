@@ -168,7 +168,7 @@ inline int run() {
   // flops = Nt*(Ny*Nx*NL(3 adds + 2 mults) + Ny*Nx*(2 divs))+NL*Ny*Nx*(9 mults
   // + 2 div  + 3 pows + 6 adds)+Ny*Nx*NL (2 add + 1 mult )+Ny*Nx*(3 adds)
 #ifdef PROFILE
-  const int PROFILE_RUNS = 5;
+  const int PROFILE_RUNS = 1;
   const int PROFILE_DIGITS = floor(log10(PROFILE_RUNS)) + 1;
   printf("\rRun %-*d/%d done", PROFILE_DIGITS, 0, PROFILE_RUNS);
   fflush(stdout);
