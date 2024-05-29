@@ -163,8 +163,8 @@ inline int run() {
   double *bndryF = (double *)aligned_alloc(32, bndryF_size * NL * sizeof(double));
 
   // Currently assuming that every read/write is a miss
-  profiler *rho_profiler = init_profiler(5 * Ny * Nx * NL + 2 * Ny * Nx, 8 * 5 * Ny * Nx * NL + 3 * Ny * Nx), *feq_profiler = init_profiler(19 * Nx * Ny * NL, 8 * 13 * Nx * Ny * NL), *f_profiler = init_profiler(3 * Nx * Ny * NL, 8 * 3 * Nx * Ny * NL),
-           *vort_profiler = init_profiler(2 * Nx * Ny, 8 * 6 * Nx * Ny);
+  profiler *rho_profiler = init_profiler(5 * Ny * Nx * NL + 3 * Ny * Nx, 8 * 5 * Ny * Nx * NL + 3 * Ny * Nx), *feq_profiler = init_profiler(15 * Nx * Ny * NL, 8 * 13 * Nx * Ny * NL), *f_profiler = init_profiler(3 * Nx * Ny * NL, 8 * 3 * Nx * Ny * NL),
+           *vort_profiler = init_profiler(3 * Nx * Ny, 8 * 6 * Nx * Ny);
 
   // flops = Nt*(Ny*Nx*NL(3 adds + 2 mults) + Ny*Nx*(2 divs))+NL*Ny*Nx*(9 mults
   // + 2 div  + 3 pows + 6 adds)+Ny*Nx*NL (2 add + 1 mult )+Ny*Nx*(3 adds)
@@ -263,7 +263,7 @@ inline int run() {
       // set to zero
       memset(Feq, 0, Ny * Nx * NL * sizeof(double));
 
-      // flops = NL*Ny*Nx*(9 mults + 2 div  + 3 pows + 6 adds)
+      // flops = NL*Ny*Nx*(10 mults + 5 adds)
       __m256d const_vec_1 = _mm256_set1_pd(1);
       __m256d const_vec_3 = _mm256_set1_pd(3);
       __m256d const_vec_4_5 = _mm256_set1_pd(4.5);
