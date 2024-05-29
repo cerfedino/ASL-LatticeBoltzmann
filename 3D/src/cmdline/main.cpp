@@ -62,7 +62,7 @@ void initialise() {
   for (int z = 0; z < NZ; z++) {
     for (int y = 0; y < NY; y++) {
       for (int x = 0; x < NX; x++) {
-        
+
         for (int i = 0; i < direction_size; i++) {
           previous_particle_distributions[scalar_index(x, y, z, i)] = weights[i];
           particle_distributions[scalar_index(x, y, z, i)] = weights[i];
@@ -210,7 +210,6 @@ void compute_density_momentum_moment() {
         double x_14 = particle_distributions[scalar_index_curr];
         double y_14 = -particle_distributions[scalar_index_curr];
         double z_14 = -particle_distributions[scalar_index_curr];
-        scalar_index_curr += NX * NY * NZ;
 
         new_density =
             new_density_0 + new_density_1 + new_density_2 + new_density_3 + new_density_4 + new_density_5 + new_density_6 + new_density_7 + new_density_8 + new_density_9 + new_density_10 + new_density_11 + new_density_12 + new_density_13 + new_density_14;
@@ -218,11 +217,12 @@ void compute_density_momentum_moment() {
         double y_sum = y_3 + y_4 + y_7 + y_8 + y_9 + y_10 + y_11 + y_12 + y_13 + y_14;
         double z_sum = z_5 + z_6 + z_7 + z_8 + z_9 + z_10 + z_11 + z_12 + z_13 + z_14;
 
+        double dens_inv = 1/new_density;
         density_field[scalar_index(x, y, z)] = new_density;
-        velocity_field[scalar_index(x, y, z)].x = x_sum / new_density;
-        velocity_field[scalar_index(x, y, z)].y = y_sum / new_density;
-        velocity_field[scalar_index(x, y, z)].z = z_sum / new_density;
-      }
+        velocity_field[scalar_index(x, y, z)].x = x_sum * dens_inv;
+        velocity_field[scalar_index(x, y, z)].y = y_sum * dens_inv;
+        velocity_field[scalar_index(x, y, z)].z = z_sum * dens_inv;
+      }      
     }
   }
 }
@@ -269,8 +269,8 @@ void stream() {
     }
   }
 }
-// 1 - 1/tau
-void collision() { // Performs the collision step.
+
+void collision() { 
   // flops = NZ*NY*NX*215
   // bytes = NX*NY*NZ*8*(3+ 3+15+15) + 15*8
   for (int z = 0; z < NZ; z++) {
