@@ -387,10 +387,33 @@ inline int run() {
 
       // flops = Ny*Nx*(3 adds)
       start_run(vort_profiler);
-      for (int j = 0; j < Ny; j++) {
+      // Calculate j = 0 boundary
+      // Calculate k = 0 boundary
+      double ux_roll = ux[Nx - 1] - ux[1];
+      double uy_roll = uy[(Ny - 1) * Nx] - uy[Nx];
+      vorticity[0] = cylinder[0] == 1 ? 0 : ux_roll - uy_roll;
+
+      // Calculate k = [1, Nx - 2]
+      for (int k = 1; k < Nx - 1; k++) {
+        // (np.roll(ux, -1, axis=0) - np.roll(ux, 1, axis=0))
+        double ux_roll = ux[k - 1] - ux[k + 1];
+
+        // (np.roll(uy, -1, axis=1) - np.roll(uy, 1, axis=1))
+        double uy_roll = uy[(Ny - 1) * Nx + k] - uy[Nx + k];
+
+        vorticity[k] = cylinder[k] == 1 ? 0 : ux_roll - uy_roll;
+      }
+
+      // Calculate k = Nx - 1 boundary
+      ux_roll = ux[Nx - 2] - ux[0];
+      uy_roll = uy[(Ny - 1) * Nx + Nx - 1] - uy[Nx + Nx - 1];
+      vorticity[Nx - 1] = cylinder[Nx - 1] == 1 ? 0 : ux_roll - uy_roll;
+
+      // Calculate j = [1, Ny - 2]
+      for (int j = 1; j < Ny; j++) {
         // Calculate k = 0 boundary
         double ux_roll = ux[j * Nx + Nx - 1] - ux[j * Nx + 1];
-        double uy_roll = uy[((j - 1 + Ny) % Ny) * Nx] - uy[((j + 1 + Ny) % Ny) * Nx];
+        double uy_roll = uy[(j - 1) * Nx] - uy[(j + 1) * Nx];
         vorticity[j * Nx] = cylinder[j * Nx] == 1 ? 0 : ux_roll - uy_roll;
 
         // Calculate k = [1, Nx - 2]
@@ -399,16 +422,38 @@ inline int run() {
           double ux_roll = ux[j * Nx + k - 1] - ux[j * Nx + k + 1];
 
           // (np.roll(uy, -1, axis=1) - np.roll(uy, 1, axis=1))
-          double uy_roll = uy[((j - 1 + Ny) % Ny) * Nx + k] - uy[((j + 1) % Ny) * Nx + k];
+          double uy_roll = uy[(j - 1) * Nx + k] - uy[(j + 1) * Nx + k];
 
           vorticity[j * Nx + k] = cylinder[j * Nx + k] == 1 ? 0 : ux_roll - uy_roll;
         }
 
         // Calculate k = Nx - 1 boundary
         ux_roll = ux[j * Nx + Nx - 2] - ux[j * Nx];
-        uy_roll = uy[((j - 1 + Ny) % Ny) * Nx + Nx - 1] - uy[((j + 1) % Ny) * Nx + Nx - 1];
+        uy_roll = uy[(j - 1) * Nx + Nx - 1] - uy[(j + 1) * Nx + Nx - 1];
         vorticity[j * Nx + Nx - 1] = cylinder[j * Nx + Nx - 1] == 1 ? 0 : ux_roll - uy_roll;
       }
+
+      // Calculate j = Ny - 1 boundary
+      // Calculate k = 0 boundary
+      ux_roll = ux[(Ny - 1) * Nx + Nx - 1] - ux[(Ny - 1) * Nx + 1];
+      uy_roll = uy[(Ny - 2) * Nx] - uy[0];
+      vorticity[(Ny - 1) * Nx] = cylinder[(Ny - 1) * Nx] == 1 ? 0 : ux_roll - uy_roll;
+
+      // Calculate k = [1, Nx - 2]
+      for (int k = 1; k < Nx - 1; k++) {
+        // (np.roll(ux, -1, axis=0) - np.roll(ux, 1, axis=0))
+        double ux_roll = ux[(Ny - 1) * Nx + k - 1] - ux[(Ny - 1) * Nx + k + 1];
+
+        // (np.roll(uy, -1, axis=1) - np.roll(uy, 1, axis=1))
+        double uy_roll = uy[(Ny - 2) * Nx + k] - uy[k];
+
+        vorticity[(Ny - 1) * Nx + k] = cylinder[(Ny - 1) * Nx + k] == 1 ? 0 : ux_roll - uy_roll;
+      }
+
+      // Calculate k = Nx - 1 boundary
+      ux_roll = ux[(Ny - 1) * Nx + Nx - 2] - ux[(Ny - 1) * Nx];
+      uy_roll = uy[(Ny - 2) * Nx + Nx - 1] - uy[Nx - 1];
+      vorticity[(Ny - 1) * Nx + Nx - 1] = cylinder[(Ny - 1) * Nx + Nx - 1] == 1 ? 0 : ux_roll - uy_roll;
       end_run(vort_profiler);
 
 #ifdef DEBUG
