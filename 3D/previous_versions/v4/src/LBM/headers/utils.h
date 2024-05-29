@@ -11,6 +11,10 @@
 #define tauinv (1.0 / tau)
 #define omtauinv (1.0 - tauinv)
 
+#define weights_29 (2.0 / 9.0)
+#define weights_19 (1.0/9.0)
+#define weights_172 (1.0/72.0)
+
 #include <string>
 
 struct vector_3_int {
