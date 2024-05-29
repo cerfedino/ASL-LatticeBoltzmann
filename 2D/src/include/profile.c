@@ -17,13 +17,14 @@ profiler_stats finish_profiler(profiler *p) {
 uint64_t time() {
   uint64_t t;
   __asm__ volatile("cpuid;"
-                   "lfence;"
+                   "mfence;"
                    "rdtsc;"
                    "shl  $32, %%rdx;"
                    "lea  (%%rax, %%rdx),  %0;"
                    : "=r"(t)
                    :
-                   : "rax", "rdx", "rbx", "rcx");
+                   : "rax", "rdx", "rbx", "rcx", "memory");
+  __sync_synchronize();
   return t;
 }
 
@@ -49,7 +50,7 @@ void end_run(profiler *p) {
     p->_min_cycles = time_diff;
   }
   if (p->_cycles > (UINT64_MAX - time_diff)) {
-    printf("\nOVERFLOW WHEN ENDING PROFILE RUN\n");
+    printf("\nOVERFLOW WHEN ENDING PROFILE RUN, time_diff: %llu, end_t: %llu, p->_start: %llu, time: %llu\n", time_diff, end_t, p->_start, time());
     exit(1);
   }
   p->_cycles += end_t - p->_start;
