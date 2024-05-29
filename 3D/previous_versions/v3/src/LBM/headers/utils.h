@@ -7,8 +7,8 @@
 #define nu 0.16666666666
 #define tau 1
 #define gamma_dot 0.01
-#define boundary_conditions "couette"
-
+#define boundary_conditions "lees_edwards"
+#define PROFILE
 #include <string>
 
 struct vector_3_int {

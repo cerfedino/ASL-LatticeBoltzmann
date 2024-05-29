@@ -22,22 +22,12 @@ project(cmdline_LBM)
 include_directories("${CMAKE_SOURCE_DIR}/LBM" "${CMAKE_SOURCE_DIR}/LBM/headers" "${CMAKE_SOURCE_DIR}/cmdline/rapidjson" "${CMAKE_SOURCE_DIR}/cmdline/fast-cpp-csv-parser" "${CMAKE_SOURCE_DIR}/LBM/include")
 find_package (Threads)
 add_executable(main_${MNx}_${MNy}_${MNz}_${MNt}.o ${CMAKE_SOURCE_DIR}/cmdline/main.cpp ${CMAKE_SOURCE_DIR}/LBM/include/utils.cpp ${CMAKE_SOURCE_DIR}/LBM/include/profile.cpp)
+add_compile_definitions(PROFILE)
+add_executable(main_${MNx}_${MNy}_${MNz}_${MNt}_profiled.o ${CMAKE_SOURCE_DIR}/cmdline/main.cpp ${CMAKE_SOURCE_DIR}/LBM/include/utils.cpp ${CMAKE_SOURCE_DIR}/LBM/include/profile.cpp)
 target_sources(main_${MNx}_${MNy}_${MNz}_${MNt}.o
 PRIVATE
   ${CMAKE_SOURCE_DIR}/cmdline/csv.h
   ${CMAKE_SOURCE_DIR}/LBM/headers/utils.h
   ${CMAKE_SOURCE_DIR}/LBM/headers/profile.h
 )
-target_compile_definitions(main_${MNx}_${MNy}_${MNz}_${MNt}.o PRIVATE OUTPUT)
 target_link_libraries(main_${MNx}_${MNy}_${MNz}_${MNt}.o ${CMAKE_THREAD_LIBS_INIT})
-
-#add_compile_definitions(PROFILE)
-add_executable(main_${MNx}_${MNy}_${MNz}_${MNt}_profiler.o ${CMAKE_SOURCE_DIR}/cmdline/main.cpp ${CMAKE_SOURCE_DIR}/LBM/include/utils.cpp ${CMAKE_SOURCE_DIR}/LBM/include/profile.cpp)
-target_compile_definitions(main_${MNx}_${MNy}_${MNz}_${MNt}_profiler.o PRIVATE PROFILE)
-target_sources(main_${MNx}_${MNy}_${MNz}_${MNt}_profiler.o
-PRIVATE
-  ${CMAKE_SOURCE_DIR}/cmdline/csv.h
-  ${CMAKE_SOURCE_DIR}/LBM/headers/utils.h
-  ${CMAKE_SOURCE_DIR}/LBM/headers/profile.h
-)
-target_link_libraries(main_${MNx}_${MNy}_${MNz}_${MNt}_profiler.o ${CMAKE_THREAD_LIBS_INIT})

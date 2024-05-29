@@ -1,4 +1,4 @@
-.PHONY: all clean build 
+.PHONY: all clean build profile
 
 
 RUN_PARAMS = 30 50 10 500
@@ -15,7 +15,7 @@ CURRENT_VERSION_OBJ = src/cmdline/main_$(RUN_PARAMS_ESCAPED).o
 PAST_VERSIONS_OBJ = $(foreach file,$(wildcard previous_versions/*/src/cmdline/main.cpp),$(file:.cpp=_$(RUN_PARAMS_ESCAPED).o))
 
 
-all: 
+all: build test profile
 
 clean:
 	@find . \( -iname '*.o' -o -iname 'timestamp.txt' \) -print -delete
@@ -23,7 +23,6 @@ clean:
 	@find . -type d -exec bash -c 'rm -r src/cmdline/{CMakeFiles,cmake_install.cmake,CMakeCache.txt,Makefile,output/*} 2> /dev/null' \;
 
 build: $(CURRENT_VERSION_OBJ) $(BASE_VERSION_OBJ) $(PAST_VERSIONS_OBJ) 
-
 
 # Recipe for building any version
 %/cmdline/main_$(RUN_PARAMS_ESCAPED).o: %/cmdline/main.cpp
@@ -35,3 +34,7 @@ build: $(CURRENT_VERSION_OBJ) $(BASE_VERSION_OBJ) $(PAST_VERSIONS_OBJ)
 
 test: previous_versions/v0/src/cmdline/output/timestamp_$(RUN_PARAMS_ESCAPED).txt src/cmdline/output/timestamp_$(RUN_PARAMS_ESCAPED).txt
 	python3 compare.py --baseline=previous_versions/v0/src/cmdline/output/ --output=src/cmdline/output/
+
+
+profile: $(CURRENT_VERSION_OBJ) $(BASE_VERSION_OBJ) $(PAST_VERSIONS_OBJ) 
+	cd $(dir $<); ./main_$(RUN_PARAMS_ESCAPED)_profiler.o $(RUN_PARAMS)

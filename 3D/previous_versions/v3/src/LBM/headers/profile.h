@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#define PROFILE
 typedef struct profiler {
   // Flops that will be profiled
   uint64_t flops;
