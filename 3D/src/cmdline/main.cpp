@@ -71,9 +71,9 @@ void initialise() {
     }
   }
 
-  compute_density_momentum_profiler = init_profiler(NX * NY * NZ * direction_size * 7 + NX * NY * NZ * 3, 8 * NX * NY * NZ * direction_size * 7 + (NX * NY * NZ * 3 + 15) * 8);
-  collision_profiler = init_profiler((NX * NY * NZ * direction_size * 22), 8 * (4 * NX * NY * NZ + 15 + 15));
-  stream_profiler = init_profiler(NZ * 4, 2 * 8 * NZ * NX * NY * 15 + 2 * 8);
+  compute_density_momentum_profiler = init_profiler(NZ*NY*NX*(14*4+2), NX*NY*NZ*8*19);
+  collision_profiler = init_profiler(NZ*NY*NX*215, NX*NY*NZ*8*(3+ 3+15+15) + 15*8);
+  stream_profiler = init_profiler(NZ*8, 15*2*NZ*NY*NX+NZ*10+NZ*18);
 }
 
 double c_s_4 = 2 * c_s * c_s * c_s * c_s;
@@ -142,104 +142,99 @@ void set_velocity(int x_field, int y_field, int z_field, double u_x, double u_y,
 }
 
 void compute_density_momentum_moment() {
+  //smart thing TODO: just sum up the things; then one additional loop for the division with new density; a lot better memory then
+  //inverting doesnt count as a flop, right?
+  //flops = NZ*NY*NX*(14*4+2)
+  //bytes = NX*NY*NZ*8*19
   int scalar_index_curr = 0;
-  // we got some terrible memory accesses here...
-  //  we gotta do some blocking most probably
-  //  oof
   for (int z = 0; z < NZ; z++) {
     for (int y = 0; y < NY; y++) {
       for (int x = 0; x < NX; x++) {
 
+        
         double new_density, new_density_0 = 0, new_density_1 = 0, new_density_2 = 0, new_density_3 = 0, new_density_4 = 0, new_density_5 = 0, new_density_6 = 0, new_density_7 = 0, new_density_8 = 0, new_density_9 = 0, new_density_10 = 0,
                             new_density_11 = 0, new_density_12 = 0, new_density_13 = 0, new_density_14 = 0;
-        // vector_3_double u, u1, u2, u3, u4, u5;
-        double x_0 = 0, x_1 = 0, x_2 = 0, x_3 = 0, x_4 = 0, x_5 = 0, x_6 = 0, x_7 = 0, x_8 = 0, x_9 = 0, x_10 = 0, x_11 = 0, x_12 = 0, x_13 = 0, x_14 = 0;
-        double y_0 = 0, y_1 = 0, y_2 = 0, y_3 = 0, y_4 = 0, y_5 = 0, y_6 = 0, y_7 = 0, y_8 = 0, y_9 = 0, y_10 = 0, y_11 = 0, y_12 = 0, y_13 = 0, y_14 = 0;
-        double z_0 = 0, z_1 = 0, z_2 = 0, z_3 = 0, z_4 = 0, z_5 = 0, z_6 = 0, z_7 = 0, z_8 = 0, z_9 = 0, z_10 = 0, z_11 = 0, z_12 = 0, z_13 = 0, z_14 = 0;
 
-        int i = 0;
         scalar_index_curr = scalar_index(x, y, z, 0);
-        new_density_0 += particle_distributions[scalar_index_curr];
-        x_0 += particle_distributions[scalar_index_curr] * directions[0].x;
-        y_0 += particle_distributions[scalar_index_curr] * directions[0].y;
-        z_0 += particle_distributions[scalar_index_curr] * directions[0].z;
+        new_density_0 = particle_distributions[scalar_index_curr];
+
         scalar_index_curr += NX * NY * NZ;
-        new_density_1 += particle_distributions[scalar_index_curr];
-        x_1 += particle_distributions[scalar_index_curr] * directions[1].x;
-        y_1 += particle_distributions[scalar_index_curr] * directions[1].y;
-        z_1 += particle_distributions[scalar_index_curr] * directions[1].z;
+        new_density_1 = particle_distributions[scalar_index_curr];
+        double x_1 = particle_distributions[scalar_index_curr];
+
         scalar_index_curr += NX * NY * NZ;
-        new_density_2 += particle_distributions[scalar_index_curr];
-        x_2 += particle_distributions[scalar_index_curr] * directions[2].x;
-        y_2 += particle_distributions[scalar_index_curr] * directions[2].y;
-        z_2 += particle_distributions[scalar_index_curr] * directions[2].z;
+        new_density_2 = particle_distributions[scalar_index_curr];
+        double x_2 = -particle_distributions[scalar_index_curr];
+
         scalar_index_curr += NX * NY * NZ;
-        new_density_3 += particle_distributions[scalar_index_curr];
-        x_3 += particle_distributions[scalar_index_curr] * directions[3].x;
-        y_3 += particle_distributions[scalar_index_curr] * directions[3].y;
-        z_3 += particle_distributions[scalar_index_curr] * directions[3].z;
+        new_density_3 = particle_distributions[scalar_index_curr];
+        double y_3 = particle_distributions[scalar_index_curr];
+  
         scalar_index_curr += NX * NY * NZ;
-        new_density_4 += particle_distributions[scalar_index_curr];
-        x_4 += particle_distributions[scalar_index_curr] * directions[4].x;
-        y_4 += particle_distributions[scalar_index_curr] * directions[4].y;
-        z_4 += particle_distributions[scalar_index_curr] * directions[4].z;
+        new_density_4 = particle_distributions[scalar_index_curr];
+        double y_4 = -particle_distributions[scalar_index_curr];
+
         scalar_index_curr += NX * NY * NZ;
-        new_density_5 += particle_distributions[scalar_index_curr];
-        x_5 += particle_distributions[scalar_index_curr] * directions[5].x;
-        y_5 += particle_distributions[scalar_index_curr] * directions[5].y;
-        z_5 += particle_distributions[scalar_index_curr] * directions[5].z;
+        new_density_5 = particle_distributions[scalar_index_curr];
+        double z_5 = particle_distributions[scalar_index_curr];
+
         scalar_index_curr += NX * NY * NZ;
-        new_density_6 += particle_distributions[scalar_index_curr];
-        x_6 += particle_distributions[scalar_index_curr] * directions[6].x;
-        y_6 += particle_distributions[scalar_index_curr] * directions[6].y;
-        z_6 += particle_distributions[scalar_index_curr] * directions[6].z;
+        new_density_6 = particle_distributions[scalar_index_curr];
+        double z_6 = -particle_distributions[scalar_index_curr];
+        
         scalar_index_curr += NX * NY * NZ;
-        new_density_7 += particle_distributions[scalar_index_curr];
-        x_7 += particle_distributions[scalar_index_curr] * directions[7].x;
-        y_7 += particle_distributions[scalar_index_curr] * directions[7].y;
-        z_7 += particle_distributions[scalar_index_curr] * directions[7].z;
+        new_density_7 = particle_distributions[scalar_index_curr];
+        double x_7 = particle_distributions[scalar_index_curr];
+        double y_7 = particle_distributions[scalar_index_curr];
+        double z_7 = particle_distributions[scalar_index_curr];
+
         scalar_index_curr += NX * NY * NZ;
-        new_density_8 += particle_distributions[scalar_index_curr];
-        x_8 += particle_distributions[scalar_index_curr] * directions[8].x;
-        y_8 += particle_distributions[scalar_index_curr] * directions[8].y;
-        z_8 += particle_distributions[scalar_index_curr] * directions[8].z;
+        new_density_8 = particle_distributions[scalar_index_curr];
+        double x_8 = -particle_distributions[scalar_index_curr];
+        double y_8 = -particle_distributions[scalar_index_curr];
+        double z_8 = -particle_distributions[scalar_index_curr];
+
         scalar_index_curr += NX * NY * NZ;
-        new_density_9 += particle_distributions[scalar_index_curr];
-        x_9 += particle_distributions[scalar_index_curr] * directions[9].x;
-        y_9 += particle_distributions[scalar_index_curr] * directions[9].y;
-        z_9 += particle_distributions[scalar_index_curr] * directions[9].z;
+        new_density_9 = particle_distributions[scalar_index_curr];
+        double x_9 = particle_distributions[scalar_index_curr];
+        double y_9 = particle_distributions[scalar_index_curr];
+        double z_9 = -particle_distributions[scalar_index_curr];
+
         scalar_index_curr += NX * NY * NZ;
-        new_density_10 += particle_distributions[scalar_index_curr];
-        x_10 += particle_distributions[scalar_index_curr] * directions[10].x;
-        y_10 += particle_distributions[scalar_index_curr] * directions[10].y;
-        z_10 += particle_distributions[scalar_index_curr] * directions[10].z;
+        new_density_10 = particle_distributions[scalar_index_curr];
+        double x_10 = -particle_distributions[scalar_index_curr];
+        double y_10 = -particle_distributions[scalar_index_curr];
+        double z_10 = particle_distributions[scalar_index_curr];
+
         scalar_index_curr += NX * NY * NZ;
-        new_density_11 += particle_distributions[scalar_index_curr];
-        x_11 += particle_distributions[scalar_index_curr] * directions[11].x;
-        y_11 += particle_distributions[scalar_index_curr] * directions[11].y;
-        z_11 += particle_distributions[scalar_index_curr] * directions[11].z;
+        new_density_11 = particle_distributions[scalar_index_curr];
+        double x_11 = particle_distributions[scalar_index_curr];
+        double y_11 = -particle_distributions[scalar_index_curr];
+        double z_11 = particle_distributions[scalar_index_curr];
+
         scalar_index_curr += NX * NY * NZ;
-        new_density_12 += particle_distributions[scalar_index_curr];
-        x_12 += particle_distributions[scalar_index_curr] * directions[12].x;
-        y_12 += particle_distributions[scalar_index_curr] * directions[12].y;
-        z_12 += particle_distributions[scalar_index_curr] * directions[12].z;
+        new_density_12 = particle_distributions[scalar_index_curr];
+        double x_12 = -particle_distributions[scalar_index_curr];
+        double y_12 = particle_distributions[scalar_index_curr];
+        double z_12 = -particle_distributions[scalar_index_curr];
+
         scalar_index_curr += NX * NY * NZ;
-        new_density_13 += particle_distributions[scalar_index_curr];
-        x_13 += particle_distributions[scalar_index_curr] * directions[13].x;
-        y_13 += particle_distributions[scalar_index_curr] * directions[13].y;
-        z_13 += particle_distributions[scalar_index_curr] * directions[13].z;
+        new_density_13 = particle_distributions[scalar_index_curr];
+        double x_13 = -particle_distributions[scalar_index_curr];
+        double y_13 = particle_distributions[scalar_index_curr];
+        double z_13 = particle_distributions[scalar_index_curr];
+
         scalar_index_curr += NX * NY * NZ;
-        new_density_14 += particle_distributions[scalar_index_curr];
-        x_14 += particle_distributions[scalar_index_curr] * directions[14].x;
-        y_14 += particle_distributions[scalar_index_curr] * directions[14].y;
-        z_14 += particle_distributions[scalar_index_curr] * directions[14].z;
+        new_density_14 = particle_distributions[scalar_index_curr];
+        double x_14 = particle_distributions[scalar_index_curr];
+        double y_14 = -particle_distributions[scalar_index_curr];
+        double z_14 = -particle_distributions[scalar_index_curr];
         scalar_index_curr += NX * NY * NZ;
 
-        new_density =
-            new_density_0 + new_density_1 + new_density_2 + new_density_3 + new_density_4 + new_density_5 + new_density_6 + new_density_7 + new_density_8 + new_density_9 + new_density_10 + new_density_11 + new_density_12 + new_density_13 + new_density_14;
-        double x_sum = x_0 + x_1 + x_2 + x_3 + x_4 + x_5 + x_6 + x_7 + x_8 + x_9 + x_10 + x_11 + x_12 + x_13 + x_14;
-        double y_sum = y_0 + y_1 + y_2 + y_3 + y_4 + y_5 + y_6 + y_7 + y_8 + y_9 + y_10 + y_11 + y_12 + y_13 + y_14;
-        double z_sum = z_0 + z_1 + z_2 + z_3 + z_4 + z_5 + z_6 + z_7 + z_8 + z_9 + z_10 + z_11 + z_12 + z_13 + z_14;
+        new_density = new_density_0 + new_density_1 + new_density_2 + new_density_3 + new_density_4 + new_density_5 + new_density_6 + new_density_7 + new_density_8 + new_density_9 + new_density_10 + new_density_11 + new_density_12 + new_density_13 + new_density_14;
+        double x_sum = x_1 + x_2 + x_7 + x_8 + x_9 + x_10 + x_11 + x_12 + x_13 + x_14;
+        double y_sum = y_3 + y_4 + y_7 + y_8 + y_9 + y_10 + y_11 + y_12 + y_13 + y_14;
+        double z_sum = z_5 + z_6 + z_7 + z_8 + z_9 + z_10 + z_11 + z_12 + z_13 + z_14;
 
         density_field[scalar_index(x, y, z)] = new_density;
         velocity_field[scalar_index(x, y, z)].x = x_sum / new_density;
@@ -249,46 +244,29 @@ void compute_density_momentum_moment() {
     }
   }
 }
-/*
-  directions[0] = {0, 0, 0};
-  directions[1] = {1, 0, 0};
-  directions[2] = {-1, 0, 0};
-  directions[3] = {0, 1, 0};
-  directions[4] = {0, -1, 0};
-  directions[5] = {0, 0, 1};
-  directions[6] = {0, 0, -1};
-  directions[7] = {1, 1, 1};
-  directions[8] = {-1, -1, -1};
-  directions[9] = {1, 1, -1};
-  directions[10] = {-1, -1, 1};
-  directions[11] = {1, -1, 1};
-  directions[12] = {-1, 1, -1};
-  directions[13] = {-1, 1, 1};
-  directions[14] = {1, -1, -1};
-*/
 
 void stream() {
+  //we can do better memory accesses here most probably... 
   for (int z = 0; z < NZ; z++) {
     for (int y = 0; y < NY; y++) {
       for (int x = 0; x < NX; x++) {
-        // flops = (between 0 and NZ)*4
-        // bytes = 2*8*NZ*NX*NY*15+2*8
-
-        particle_distributions[scalar_index(x, y, z, 0)] = previous_particle_distributions[scalar_index((NX + x - directions[0].x) % NX, y - directions[0].y, (NZ + z - directions[0].z) % NZ, 0)];
-        particle_distributions[scalar_index(x, y, z, 1)] = previous_particle_distributions[scalar_index((NX + x - directions[1].x) % NX, y - directions[1].y, (NZ + z - directions[1].z) % NZ, 1)];
-        particle_distributions[scalar_index(x, y, z, 2)] = previous_particle_distributions[scalar_index((NX + x - directions[2].x) % NX, y - directions[2].y, (NZ + z - directions[2].z) % NZ, 2)];
-        particle_distributions[scalar_index(x, y, z, 3)] = previous_particle_distributions[scalar_index((NX + x - directions[3].x) % NX, y - directions[3].y, (NZ + z - directions[3].z) % NZ, 3)];
-        particle_distributions[scalar_index(x, y, z, 4)] = previous_particle_distributions[scalar_index((NX + x - directions[4].x) % NX, y - directions[4].y, (NZ + z - directions[4].z) % NZ, 4)];
-        particle_distributions[scalar_index(x, y, z, 5)] = previous_particle_distributions[scalar_index((NX + x - directions[5].x) % NX, y - directions[5].y, (NZ + z - directions[5].z) % NZ, 5)];
-        particle_distributions[scalar_index(x, y, z, 6)] = previous_particle_distributions[scalar_index((NX + x - directions[6].x) % NX, y - directions[6].y, (NZ + z - directions[6].z) % NZ, 6)];
-        particle_distributions[scalar_index(x, y, z, 7)] = previous_particle_distributions[scalar_index((NX + x - directions[7].x) % NX, y - directions[7].y, (NZ + z - directions[7].z) % NZ, 7)];
-        particle_distributions[scalar_index(x, y, z, 8)] = previous_particle_distributions[scalar_index((NX + x - directions[8].x) % NX, y - directions[8].y, (NZ + z - directions[8].z) % NZ, 8)];
-        particle_distributions[scalar_index(x, y, z, 9)] = previous_particle_distributions[scalar_index((NX + x - directions[9].x) % NX, y - directions[9].y, (NZ + z - directions[9].z) % NZ, 9)];
-        particle_distributions[scalar_index(x, y, z, 10)] = previous_particle_distributions[scalar_index((NX + x - directions[10].x) % NX, y - directions[10].y, (NZ + z - directions[10].z) % NZ, 10)];
-        particle_distributions[scalar_index(x, y, z, 11)] = previous_particle_distributions[scalar_index((NX + x - directions[11].x) % NX, y - directions[11].y, (NZ + z - directions[11].z) % NZ, 11)];
-        particle_distributions[scalar_index(x, y, z, 12)] = previous_particle_distributions[scalar_index((NX + x - directions[12].x) % NX, y - directions[12].y, (NZ + z - directions[12].z) % NZ, 12)];
-        particle_distributions[scalar_index(x, y, z, 13)] = previous_particle_distributions[scalar_index((NX + x - directions[13].x) % NX, y - directions[13].y, (NZ + z - directions[13].z) % NZ, 13)];
-        particle_distributions[scalar_index(x, y, z, 14)] = previous_particle_distributions[scalar_index((NX + x - directions[14].x) % NX, y - directions[14].y, (NZ + z - directions[14].z) % NZ, 14)];
+        // flops = NZ*8
+        // bytes = 15*2*NZ*NY*NX+NZ*10+NZ*18
+        particle_distributions[scalar_index(x, y, z, 0)] = previous_particle_distributions[scalar_index((NX + x) % NX, y, (NZ + z) % NZ, 0)];
+        particle_distributions[scalar_index(x, y, z, 1)] = previous_particle_distributions[scalar_index((NX + x - 1) % NX, y, (NZ + z) % NZ, 1)];
+        particle_distributions[scalar_index(x, y, z, 2)] = previous_particle_distributions[scalar_index((NX + x + 1) % NX, y, (NZ + z) % NZ, 2)];
+        particle_distributions[scalar_index(x, y, z, 3)] = previous_particle_distributions[scalar_index((NX + x) % NX, y - 1, (NZ + z) % NZ, 3)];
+        particle_distributions[scalar_index(x, y, z, 4)] = previous_particle_distributions[scalar_index((NX + x) % NX, y +1, (NZ + z ) % NZ, 4)];
+        particle_distributions[scalar_index(x, y, z, 5)] = previous_particle_distributions[scalar_index((NX + x) % NX, y, (NZ + z - 1) % NZ, 5)];
+        particle_distributions[scalar_index(x, y, z, 6)] = previous_particle_distributions[scalar_index((NX + x) % NX, y, (NZ + z +1) % NZ, 6)];
+        particle_distributions[scalar_index(x, y, z, 7)] = previous_particle_distributions[scalar_index((NX + x - 1) % NX, y - 1, (NZ + z - 1) % NZ, 7)];
+        particle_distributions[scalar_index(x, y, z, 8)] = previous_particle_distributions[scalar_index((NX + x + 1) % NX, y + 1, (NZ + z +1) % NZ, 8)];
+        particle_distributions[scalar_index(x, y, z, 9)] = previous_particle_distributions[scalar_index((NX + x - 1) % NX, y - 1, (NZ + z +1) % NZ, 9)];
+        particle_distributions[scalar_index(x, y, z, 10)] = previous_particle_distributions[scalar_index((NX + x + 1) % NX, y +1, (NZ + z - 1) % NZ, 10)];
+        particle_distributions[scalar_index(x, y, z, 11)] = previous_particle_distributions[scalar_index((NX + x - 1) % NX, y +1, (NZ + z - 1) % NZ, 11)];
+        particle_distributions[scalar_index(x, y, z, 12)] = previous_particle_distributions[scalar_index((NX + x + 1) % NX, y - 1, (NZ + z +1) % NZ, 12)];
+        particle_distributions[scalar_index(x, y, z, 13)] = previous_particle_distributions[scalar_index((NX + x + 1) % NX, y - 1, (NZ + z - 1) % NZ, 13)];
+        particle_distributions[scalar_index(x, y, z, 14)] = previous_particle_distributions[scalar_index((NX + x - 1) % NX, y+1, (NZ + z+1) % NZ, 14)];
 
         if (y == 0) {
           particle_distributions[scalar_index(x, y, z, 3)] = previous_particle_distributions[scalar_index(x, y, z, reverse_indexes[3])];
@@ -299,71 +277,101 @@ void stream() {
         }
 
         if (y == NY - 1) {
-          particle_distributions[scalar_index(x, y, z, 4)] = previous_particle_distributions[scalar_index(x, y, z, reverse_indexes[4])] + directions[4].x * weights[4] * c_s_2_inv_02;
-          particle_distributions[scalar_index(x, y, z, 8)] = previous_particle_distributions[scalar_index(x, y, z, reverse_indexes[8])] + directions[8].x * weights[8] * c_s_2_inv_02;
-          particle_distributions[scalar_index(x, y, z, 10)] = previous_particle_distributions[scalar_index(x, y, z, reverse_indexes[10])] + directions[10].x * weights[10] * c_s_2_inv_02;
-          particle_distributions[scalar_index(x, y, z, 11)] = previous_particle_distributions[scalar_index(x, y, z, reverse_indexes[11])] + directions[11].x * weights[11] * c_s_2_inv_02;
-          particle_distributions[scalar_index(x, y, z, 14)] = previous_particle_distributions[scalar_index(x, y, z, reverse_indexes[14])] + directions[14].x * weights[14] * c_s_2_inv_02;
+          particle_distributions[scalar_index(x, y, z, 4)] = previous_particle_distributions[scalar_index(x, y, z, reverse_indexes[4])];
+          particle_distributions[scalar_index(x, y, z, 8)] = previous_particle_distributions[scalar_index(x, y, z, reverse_indexes[8])] - weights[8] * c_s_2_inv_02;
+          particle_distributions[scalar_index(x, y, z, 10)] = previous_particle_distributions[scalar_index(x, y, z, reverse_indexes[10])] -  weights[10] * c_s_2_inv_02;
+          particle_distributions[scalar_index(x, y, z, 11)] = previous_particle_distributions[scalar_index(x, y, z, reverse_indexes[11])] +  weights[11] * c_s_2_inv_02;
+          particle_distributions[scalar_index(x, y, z, 14)] = previous_particle_distributions[scalar_index(x, y, z, reverse_indexes[14])] + weights[14] * c_s_2_inv_02;
         }
       }
     }
   }
 }
-
+ // 1 - 1/tau
 void collision() { // Performs the collision step.
-  const double tauinv = 1.0 / tau;
-  const double omtauinv = 1.0 - tauinv; // 1 - 1/tau
-
+  //flops = NZ*NY*NX*215
+  //bytes = NX*NY*NZ*8*(3+ 3+15+15) + 15*8
   for (int z = 0; z < NZ; z++) {
     for (int y = 0; y < NY; y++) {
       for (int x = 0; x < NX; x++) {
+        //5
         int index = scalar_index(x, y, z);
         double norm_square = velocity_field[index].x * velocity_field[index].x + velocity_field[index].y * velocity_field[index].y + velocity_field[index].z * velocity_field[index].z;
-        double dot_product_0 = velocity_field[index].x * (double)directions[0].x + velocity_field[index].y * (double)directions[0].y + velocity_field[index].z * (double)directions[0].z;
+        //12
+        double dot_product_0 =  0.0;
         double feq_0 = weights[0] * density_field[index] * (1.0 + dot_product_0 * c_s_2_inv + dot_product_0 * dot_product_0 * c_s_4_inv - norm_square * c_s_2_inv_2);
         previous_particle_distributions[scalar_index(x, y, z, 0)] = omtauinv * particle_distributions[scalar_index(x, y, z, 0)] + tauinv * feq_0;
-        double dot_product_1 = velocity_field[index].x * (double)directions[1].x + velocity_field[index].y * (double)directions[1].y + velocity_field[index].z * (double)directions[1].z;
+
+        //13
+        double dot_product_1 = velocity_field[index].x;
         double feq_1 = weights[1] * density_field[index] * (1.0 + dot_product_1 * c_s_2_inv + dot_product_1 * dot_product_1 * c_s_4_inv - norm_square * c_s_2_inv_2);
         previous_particle_distributions[scalar_index(x, y, z, 1)] = omtauinv * particle_distributions[scalar_index(x, y, z, 1)] + tauinv * feq_1;
-        double dot_product_2 = velocity_field[index].x * (double)directions[2].x + velocity_field[index].y * (double)directions[2].y + velocity_field[index].z * (double)directions[2].z;
+
+        //13
+        double dot_product_2 = -velocity_field[index].x;
         double feq_2 = weights[2] * density_field[index] * (1.0 + dot_product_2 * c_s_2_inv + dot_product_2 * dot_product_2 * c_s_4_inv - norm_square * c_s_2_inv_2);
         previous_particle_distributions[scalar_index(x, y, z, 2)] = omtauinv * particle_distributions[scalar_index(x, y, z, 2)] + tauinv * feq_2;
-        double dot_product_3 = velocity_field[index].x * (double)directions[3].x + velocity_field[index].y * (double)directions[3].y + velocity_field[index].z * (double)directions[3].z;
+
+        //13
+        double dot_product_3 = velocity_field[index].y;
         double feq_3 = weights[3] * density_field[index] * (1.0 + dot_product_3 * c_s_2_inv + dot_product_3 * dot_product_3 * c_s_4_inv - norm_square * c_s_2_inv_2);
         previous_particle_distributions[scalar_index(x, y, z, 3)] = omtauinv * particle_distributions[scalar_index(x, y, z, 3)] + tauinv * feq_3;
-        double dot_product_4 = velocity_field[index].x * (double)directions[4].x + velocity_field[index].y * (double)directions[4].y + velocity_field[index].z * (double)directions[4].z;
+
+        //13
+        double dot_product_4 = -velocity_field[index].y;
         double feq_4 = weights[4] * density_field[index] * (1.0 + dot_product_4 * c_s_2_inv + dot_product_4 * dot_product_4 * c_s_4_inv - norm_square * c_s_2_inv_2);
         previous_particle_distributions[scalar_index(x, y, z, 4)] = omtauinv * particle_distributions[scalar_index(x, y, z, 4)] + tauinv * feq_4;
-        double dot_product_5 = velocity_field[index].x * (double)directions[5].x + velocity_field[index].y * (double)directions[5].y + velocity_field[index].z * (double)directions[5].z;
+
+        //13
+        double dot_product_5 =velocity_field[index].z;
         double feq_5 = weights[5] * density_field[index] * (1.0 + dot_product_5 * c_s_2_inv + dot_product_5 * dot_product_5 * c_s_4_inv - norm_square * c_s_2_inv_2);
         previous_particle_distributions[scalar_index(x, y, z, 5)] = omtauinv * particle_distributions[scalar_index(x, y, z, 5)] + tauinv * feq_5;
-        double dot_product_6 = velocity_field[index].x * (double)directions[6].x + velocity_field[index].y * (double)directions[6].y + velocity_field[index].z * (double)directions[6].z;
+
+        //13
+        double dot_product_6 =-velocity_field[index].z;
         double feq_6 = weights[6] * density_field[index] * (1.0 + dot_product_6 * c_s_2_inv + dot_product_6 * dot_product_6 * c_s_4_inv - norm_square * c_s_2_inv_2);
         previous_particle_distributions[scalar_index(x, y, z, 6)] = omtauinv * particle_distributions[scalar_index(x, y, z, 6)] + tauinv * feq_6;
-        double dot_product_7 = velocity_field[index].x * (double)directions[7].x + velocity_field[index].y * (double)directions[7].y + velocity_field[index].z * (double)directions[7].z;
+
+        //15
+        double dot_product_7 = velocity_field[index].x + velocity_field[index].y + velocity_field[index].z;
         double feq_7 = weights[7] * density_field[index] * (1.0 + dot_product_7 * c_s_2_inv + dot_product_7 * dot_product_7 * c_s_4_inv - norm_square * c_s_2_inv_2);
         previous_particle_distributions[scalar_index(x, y, z, 7)] = omtauinv * particle_distributions[scalar_index(x, y, z, 7)] + tauinv * feq_7;
-        double dot_product_8 = velocity_field[index].x * (double)directions[8].x + velocity_field[index].y * (double)directions[8].y + velocity_field[index].z * (double)directions[8].z;
+
+        //15
+        double dot_product_8 = -velocity_field[index].x - velocity_field[index].y - velocity_field[index].z;
         double feq_8 = weights[8] * density_field[index] * (1.0 + dot_product_8 * c_s_2_inv + dot_product_8 * dot_product_8 * c_s_4_inv - norm_square * c_s_2_inv_2);
         previous_particle_distributions[scalar_index(x, y, z, 8)] = omtauinv * particle_distributions[scalar_index(x, y, z, 8)] + tauinv * feq_8;
-        double dot_product_9 = velocity_field[index].x * (double)directions[9].x + velocity_field[index].y * (double)directions[9].y + velocity_field[index].z * (double)directions[9].z;
+
+        //15
+        double dot_product_9 = velocity_field[index].x + velocity_field[index].y -velocity_field[index].z;
         double feq_9 = weights[9] * density_field[index] * (1.0 + dot_product_9 * c_s_2_inv + dot_product_9 * dot_product_9 * c_s_4_inv - norm_square * c_s_2_inv_2);
         previous_particle_distributions[scalar_index(x, y, z, 9)] = omtauinv * particle_distributions[scalar_index(x, y, z, 9)] + tauinv * feq_9;
-        double dot_product_10 = velocity_field[index].x * (double)directions[10].x + velocity_field[index].y * (double)directions[10].y + velocity_field[index].z * (double)directions[10].z;
+
+        //15
+        double dot_product_10 = -velocity_field[index].x - velocity_field[index].y + velocity_field[index].z;
         double feq_10 = weights[10] * density_field[index] * (1.0 + dot_product_10 * c_s_2_inv + dot_product_10 * dot_product_10 * c_s_4_inv - norm_square * c_s_2_inv_2);
         previous_particle_distributions[scalar_index(x, y, z, 10)] = omtauinv * particle_distributions[scalar_index(x, y, z, 10)] + tauinv * feq_10;
-        double dot_product_11 = velocity_field[index].x * (double)directions[11].x + velocity_field[index].y * (double)directions[11].y + velocity_field[index].z * (double)directions[11].z;
+
+        //15
+        double dot_product_11 = velocity_field[index].x - velocity_field[index].y  + velocity_field[index].z;
         double feq_11 = weights[11] * density_field[index] * (1.0 + dot_product_11 * c_s_2_inv + dot_product_11 * dot_product_11 * c_s_4_inv - norm_square * c_s_2_inv_2);
         previous_particle_distributions[scalar_index(x, y, z, 11)] = omtauinv * particle_distributions[scalar_index(x, y, z, 11)] + tauinv * feq_11;
-        double dot_product_12 = velocity_field[index].x * (double)directions[12].x + velocity_field[index].y * (double)directions[12].y + velocity_field[index].z * (double)directions[12].z;
+
+        //15
+        double dot_product_12 = -velocity_field[index].x  + velocity_field[index].y  - velocity_field[index].z;
         double feq_12 = weights[12] * density_field[index] * (1.0 + dot_product_12 * c_s_2_inv + dot_product_12 * dot_product_12 * c_s_4_inv - norm_square * c_s_2_inv_2);
         previous_particle_distributions[scalar_index(x, y, z, 12)] = omtauinv * particle_distributions[scalar_index(x, y, z, 12)] + tauinv * feq_12;
-        double dot_product_13 = velocity_field[index].x * (double)directions[13].x + velocity_field[index].y * (double)directions[13].y + velocity_field[index].z * (double)directions[13].z;
+
+        //15
+        double dot_product_13 = -velocity_field[index].x  + velocity_field[index].y + velocity_field[index].z;
         double feq_13 = weights[13] * density_field[index] * (1.0 + dot_product_13 * c_s_2_inv + dot_product_13 * dot_product_13 * c_s_4_inv - norm_square * c_s_2_inv_2);
         previous_particle_distributions[scalar_index(x, y, z, 13)] = omtauinv * particle_distributions[scalar_index(x, y, z, 13)] + tauinv * feq_13;
-        double dot_product_14 = velocity_field[index].x * (double)directions[14].x + velocity_field[index].y * (double)directions[14].y + velocity_field[index].z * (double)directions[14].z;
+
+        //15
+        double dot_product_14 = velocity_field[index].x - velocity_field[index].y - velocity_field[index].z;
         double feq_14 = weights[14] * density_field[index] * (1.0 + dot_product_14 * c_s_2_inv + dot_product_14 * dot_product_14 * c_s_4_inv - norm_square * c_s_2_inv_2);
         previous_particle_distributions[scalar_index(x, y, z, 14)] = omtauinv * particle_distributions[scalar_index(x, y, z, 14)] + tauinv * feq_14;
+
       }
     }
   }

@@ -8,6 +8,8 @@
 #define tau 1
 #define gamma_dot 0.01
 #define boundary_conditions "couette"
+#define tauinv (1.0 / tau)
+#define omtauinv (1.0 - tauinv)
 
 #include <string>
 
