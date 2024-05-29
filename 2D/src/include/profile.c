@@ -14,7 +14,7 @@ profiler_stats finish_profiler(profiler *p) {
 }
 #else
 // Returns the current cycle time as accurately as possible
-uint64_t time() {
+inline uint64_t time() {
   uint64_t t;
   __asm__ volatile("cpuid;"
                    "mfence;"
@@ -24,7 +24,6 @@ uint64_t time() {
                    : "=r"(t)
                    :
                    : "rax", "rdx", "rbx", "rcx", "memory");
-  __sync_synchronize();
   return t;
 }
 
@@ -48,6 +47,11 @@ void end_run(profiler *p) {
   uint64_t time_diff = end_t - p->_start;
   if (time_diff < p->_min_cycles) {
     p->_min_cycles = time_diff;
+  }
+  if (end_t < p->_start) {
+    printf("End time is before than start time, disregarding run... end_t: %llu, p->_start: %llu, time: %llu\n", end_t, p->_start, time());
+    p->_runs--;
+    return;
   }
   if (p->_cycles > (UINT64_MAX - time_diff)) {
     printf("\nOVERFLOW WHEN ENDING PROFILE RUN, time_diff: %llu, end_t: %llu, p->_start: %llu, time: %llu\n", time_diff, end_t, p->_start, time());
