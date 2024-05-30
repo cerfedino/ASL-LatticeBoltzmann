@@ -37,7 +37,6 @@ double *density_field;
 double *velocity_field;
 double *previous_particle_distributions;
 double *particle_distributions;
-int direction_size = 15;
 
 inline int scalar_index(int x, int y, int z) { return (z * NX * NY) + (y * NX) + x; }
 inline int scalar_index(int x, int y, int z, int w) { return (x + y * NX + z * NX * NY + w * NX * NY * NZ); }
@@ -76,12 +75,12 @@ void initialise() {
   stream_profiler = init_profiler(NZ * 8, 15 * 2 * NZ * NY * NX + NZ * 10 + NZ * 18);
 }
 
-double c_s_4 = 2 * c_s * c_s * c_s * c_s;
-double c_s_2 = c_s * c_s;
-double c_s_2_inv = 1 / c_s_2;
-double c_s_4_inv = 1 / c_s_4;
-double c_s_2_inv_2 = 1 / (2 * c_s_2);
-double c_s_2_inv_02 = c_s_2_inv * 0.2;
+const double c_s_4 = 2 * c_s * c_s * c_s * c_s;
+const double c_s_2 = c_s * c_s;
+const double c_s_2_inv = 1 / c_s_2;
+const double c_s_4_inv = 1 / c_s_4;
+const double c_s_2_inv_2 = 1 / (2 * c_s_2);
+const double c_s_2_inv_02 = c_s_2_inv * 0.2;
 
 void set_velocity_set() {
   // Allocate memory for an array of vector_3_int structs
@@ -125,8 +124,7 @@ void set_velocity_set() {
 
 int box_length = NX*NY*NZ;
 void compute_density_momentum_moment() {
-  // smart thing TODO: just sum up the things; then one additional loop for the division with new density; a lot better memory then
-  // inverting doesnt count as a flop, right?
+  // negation doesnt count as a flop, right?
   // flops = NZ*NY*NX*(14*4+2)
   // bytes = NX*NY*NZ*8*19
   int scalar_index_curr, scalar_index_curr_0, scalar_index_curr_1, scalar_index_curr_2, scalar_index_curr_3, scalar_index_curr_4, scalar_index_curr_5, scalar_index_curr_6, scalar_index_curr_7, scalar_index_curr_8, scalar_index_curr_9, scalar_index_curr_10, scalar_index_curr_11, scalar_index_curr_12, scalar_index_curr_13, scalar_index_curr_14;

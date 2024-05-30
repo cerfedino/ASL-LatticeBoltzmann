@@ -77,11 +77,11 @@ void initialise() {
   collision_profiler = init_profiler((NX * NY * NZ * direction_size * 22), 8 * (4 * NX * NY * NZ + 15 + 15));
 }
 
-double c_s_4 = 2 * c_s * c_s * c_s * c_s;
-double c_s_2 = c_s * c_s;
-double c_s_2_inv = 1 / c_s_2;
-double c_s_4_inv = 1 / c_s_4;
-double c_s_2_inv_2 = 1 / (2 * c_s_2);
+const double c_s_4 = 2 * c_s * c_s * c_s * c_s;
+const double c_s_2 = c_s * c_s;
+const double c_s_2_inv = 1 / c_s_2;
+const double c_s_4_inv = 1 / c_s_4;
+const double c_s_2_inv_2 = 1 / (2 * c_s_2);
 
 // inline double norm_square(vector_3_double d) { return (d.x * d.x + d.y * d.y + d.z * d.z); }
 // flops = 19

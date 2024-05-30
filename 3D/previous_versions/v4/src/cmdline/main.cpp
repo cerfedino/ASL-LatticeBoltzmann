@@ -75,12 +75,12 @@ void initialise() {
   stream_profiler = init_profiler(NZ * 8, 15 * 2 * NZ * NY * NX + NZ * 10 + NZ * 18);
 }
 
-double c_s_4 = 2 * c_s * c_s * c_s * c_s;
-double c_s_2 = c_s * c_s;
-double c_s_2_inv = 1 / c_s_2;
-double c_s_4_inv = 1 / c_s_4;
-double c_s_2_inv_2 = 1 / (2 * c_s_2);
-double c_s_2_inv_02 = c_s_2_inv * 0.2;
+const double c_s_4 = 2 * c_s * c_s * c_s * c_s;
+const double c_s_2 = c_s * c_s;
+const double c_s_2_inv = 1 / c_s_2;
+const double c_s_4_inv = 1 / c_s_4;
+const double c_s_2_inv_2 = 1 / (2 * c_s_2);
+const double c_s_2_inv_02 = c_s_2_inv * 0.2;
 
 // flops = 19
 double calculate_feq(int x, int y, int z, int i) { return 0.0; }
