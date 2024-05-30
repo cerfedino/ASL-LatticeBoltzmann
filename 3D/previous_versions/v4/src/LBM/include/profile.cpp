@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <iostream>
 
 #ifndef PROFILE
 profiler *init_profiler(uint64_t flops, uint64_t bytes) { return NULL; }
@@ -14,16 +15,16 @@ profiler_stats finish_profiler(profiler *p) {
 }
 #else
 // Returns the current cycle time as accurately as possible
-inline uint64_t time() {
+uint64_t time() {
   uint64_t t;
   __asm__ volatile("cpuid;"
-                   "mfence;"
+                   "lfence;"
                    "rdtsc;"
                    "shl  $32, %%rdx;"
                    "lea  (%%rax, %%rdx),  %0;"
                    : "=r"(t)
                    :
-                   : "rax", "rdx", "rbx", "rcx", "memory");
+                   : "rax", "rdx", "rbx", "rcx");
   return t;
 }
 
