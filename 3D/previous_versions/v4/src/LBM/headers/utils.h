@@ -14,7 +14,7 @@
 #define weights_29 (2.0 / 9.0)
 #define weights_19 (1.0/9.0)
 #define weights_172 (1.0/72.0)
-#define direction_size 15
+
 #include <string>
 
 struct vector_3_int {
@@ -37,10 +37,10 @@ struct vector_3_double {
 inline double norm_square(vector_3_double d) { return (d.x * d.x + d.y * d.y + d.z * d.z); }
 
 extern double *density_field;
-extern double *velocity_field;
+extern vector_3_double *velocity_field;
 extern double *previous_particle_distributions;
 extern double *particle_distributions;
-
+extern int direction_size;
 extern int NX, NY, NZ, NT;
 
 inline void free_up() {
