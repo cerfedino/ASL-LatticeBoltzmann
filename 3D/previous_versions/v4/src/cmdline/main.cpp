@@ -72,7 +72,7 @@ void initialise() {
 
   compute_density_momentum_profiler = init_profiler(NZ * NY * NX * (14 * 4 + 2), NX * NY * NZ * 8 * 19);
   collision_profiler = init_profiler(NZ * NY * NX * 215, NX * NY * NZ * 8 * (3 + 3 + 15 + 15) + 15 * 8);
-  stream_profiler = init_profiler(NZ * 8, 15 * 2 * NZ * NY * NX + NZ * 10 + NZ * 18);
+  stream_profiler = init_profiler(NZ*8*NX, 15 * 2 * NZ * NY * NX + NZ * 10 + NZ * 18);
 }
 
 const double c_s_4 = 2 * c_s * c_s * c_s * c_s;
@@ -240,8 +240,8 @@ void stream() {
   for (int z = 0; z < NZ; z++) {
     for (int y = 0; y < NY; y++) {
       for (int x = 0; x < NX; x++) {
-        // flops = NZ*8
-        // bytes = 15*2*NZ*NY*NX+NZ*10+NZ*18
+        // flops = NZ*8*NX
+        // bytes = 15*2*NZ*NY*NX*8 +NZ*10 +NZ*18
         particle_distributions[scalar_index(x, y, z, 0)] = previous_particle_distributions[scalar_index((NX + x) % NX, y, (NZ + z) % NZ, 0)];
         particle_distributions[scalar_index(x, y, z, 1)] = previous_particle_distributions[scalar_index((NX + x - 1) % NX, y, (NZ + z) % NZ, 1)];
         particle_distributions[scalar_index(x, y, z, 2)] = previous_particle_distributions[scalar_index((NX + x + 1) % NX, y, (NZ + z) % NZ, 2)];
@@ -383,8 +383,8 @@ void perform_timestep() {
 }
 
 int main(int argc, char const *argv[]) {
-  system("rm -rf output");
-  system("mkdir output");
+  if(system("rm -rf output") == -1){std::cout<<"UNSUCCESSFULLY REMOVED OUTPUT FOLDER"<<std::endl;}
+  if(system("mkdir output")== -1){std::cout<<"UNSUCCESSFULLY CREATED OUTPUT FOLDER"<<std::endl;}
 
   unsigned long long start_cycle, end_cycle;
   time_t start_sec, end_sec;

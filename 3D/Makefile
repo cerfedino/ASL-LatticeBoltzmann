@@ -1,4 +1,4 @@
-.PHONY: all clean build profile
+.PHONY: all clean build benchmark profile
 
 
 RUN_PARAMS = 30 50 10 500
@@ -15,7 +15,7 @@ CURRENT_VERSION_OBJ = src/cmdline/main_$(RUN_PARAMS_ESCAPED).o
 PAST_VERSIONS_OBJ = $(foreach file,$(wildcard previous_versions/*/src/cmdline/main.cpp),$(file:.cpp=_$(RUN_PARAMS_ESCAPED).o))
 
 
-all: build test profile
+all: build test benchmark profile
 
 clean:
 	@find . \( -iname '*.o' -o -iname 'timestamp.txt' \) -print -delete
@@ -35,6 +35,8 @@ build: $(CURRENT_VERSION_OBJ) $(BASE_VERSION_OBJ) $(PAST_VERSIONS_OBJ)
 test: previous_versions/v0/src/cmdline/output/timestamp_$(RUN_PARAMS_ESCAPED).txt src/cmdline/output/timestamp_$(RUN_PARAMS_ESCAPED).txt
 	python3 compare.py --baseline=previous_versions/v0/src/cmdline/output/ --output=src/cmdline/output/
 
+benchmark: $(PAST_VERSIONS_OBJ)
+	mkdir -p artifacts/; python3 benchmark.py $(RUN_PARAMS);
 
 profile: $(CURRENT_VERSION_OBJ) $(BASE_VERSION_OBJ) $(PAST_VERSIONS_OBJ) 
 	cd $(dir $<); ./main_$(RUN_PARAMS_ESCAPED)_profiler.o $(RUN_PARAMS)
