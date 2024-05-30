@@ -211,12 +211,14 @@ void compute_density_momentum_moment() {
         double y_14 = -particle_distributions[scalar_index_curr_14];
         double z_14 = -particle_distributions[scalar_index_curr_14];
 
+        //14*4 Adds
         new_density =
             new_density_0 + new_density_1 + new_density_2 + new_density_3 + new_density_4 + new_density_5 + new_density_6 + new_density_7 + new_density_8 + new_density_9 + new_density_10 + new_density_11 + new_density_12 + new_density_13 + new_density_14;
         double x_sum = x_1 + x_2 + x_7 + x_8 + x_9 + x_10 + x_11 + x_12 + x_13 + x_14;
         double y_sum = y_3 + y_4 + y_7 + y_8 + y_9 + y_10 + y_11 + y_12 + y_13 + y_14;
         double z_sum = z_5 + z_6 + z_7 + z_8 + z_9 + z_10 + z_11 + z_12 + z_13 + z_14;
-
+        //1 div
+        //3 mults
         double dens_inv = 1/new_density;
         density_field[scalar_index(x, y, z)] = new_density;
         velocity_field[(scalar_index(x, y, z))*3] = x_sum * dens_inv;

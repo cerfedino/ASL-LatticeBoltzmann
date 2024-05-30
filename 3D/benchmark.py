@@ -109,17 +109,12 @@ def plot_roofline(plt, label, perf, intensity, simd=False):
     plt.gca().text(intensity * 1.15, perf, f"{label} ({perf:.2f} iops/cycle)", fontsize=12, ha='left', color='red')
     return plt
 
-
-
 def run_executable_and_get_output(executable_path, args):
     print(f"Running {executable_path} {' '.join(args)}")
     result = subprocess.run([executable_path] + list(args), stdout=subprocess.PIPE, text=True)
     return result.stdout
 
-
 def main():
-    print("start")
-    print(PREVIOUS_VERSIONS_PATH)
     previous_versions = []
     # Scan for all previous version that we plan to benchmark
     for folder in os.listdir(PREVIOUS_VERSIONS_PATH):
@@ -127,36 +122,34 @@ def main():
         if not os.path.isdir(PREVIOUS_VERSIONS_PATH + folder):
             continue
         previous_versions.append(PREVIOUS_VERSIONS_PATH + folder)
-    
+
     if len(previous_versions) == 0:
         print("No previous versions found, stopping...")
         exit(0)
     
     previous_versions.sort()
-    print(previous_versions)
 
     # Init empty roofline plot
     plt_all = make_roofline_plot(PEAK_SCALAR, MEM_BW, SIMD_LEN_BITS)
   
     '''
-    TODO:
-    Port 1 is the bottleneck. We have N divisions and 20N mults. N divisions are scheduled on Port 1, and the remaining 19N multiplications on both ports 0 and 1.
-    Thus, port 1 has to process N + 19N/2 = 10.5N ops. With a throughput of 2 ops/cycle, this results in a run time of 5.25N cycles.
-    Total flops are 48N flops.
-    Max performance is thus 48N/5.25N =~ 9.15 flops/cycle
+    
+    We have 14*4 additions, 1 division and 3 multiplications
+    Total flops - 14*4+1+3
+    Ports 2 and 3 have to process 14*4 additions, which would take 14*2 cycles
+    Thus we would have (14*4+1+3)/28 = 2.14 flops/cycle
     '''
-    plt_density_momentum  = make_roofline_plot(9.15, MEM_BW, SIMD_LEN_BITS); plt_density_momentum.suptitle("Compute density momentum moment")
+    plt_density_momentum  = make_roofline_plot(2.14, MEM_BW, SIMD_LEN_BITS); plt_density_momentum.suptitle("Compute density momentum moment")
  
     '''
-    TODO:
-    Ports 0/1 are the bottlenecks for this calculation
-    These perform 4 ops per cycle together.
-    In total, they have to process 10*N ops, which thus take 10*N/4 cycles = 2.5*N cycles.
-    The calculation has a total of 15*N ops, meaning we have a max performance of 15/2.5 = 6 flops/cycle
+    We got only 2 FMAs... Its kinda sad
     '''
-    plt_stream  = make_roofline_plot(6, MEM_BW, SIMD_LEN_BITS); plt_stream.suptitle("Stream")
-    # One FMA per cycle, thus we can only utilize the FMA ports, of which we have 2, which perform two ops per cycle
-    plt_collision   = make_roofline_plot(8, MEM_BW, SIMD_LEN_BITS); plt_collision.suptitle("Collision")
+    plt_stream  = make_roofline_plot(4, MEM_BW, SIMD_LEN_BITS); plt_stream.suptitle("Stream")
+    
+    '''
+    We can do 2 FMAs and 2 Adds
+    '''
+    plt_collision   = make_roofline_plot(6, MEM_BW, SIMD_LEN_BITS); plt_collision.suptitle("Collision")
 
     min_performance = math.inf
 
@@ -218,19 +211,17 @@ def main():
             cycles_collision  = int(re.search(r".*Compute collision\s*Calculation: .* (\d+) cycles.*", output).group(1))
             cycles_stream    = int(re.search(r".*Compute stream\s*Calculation: .* (\d+) cycles.*", output).group(1))
             
-            cycles = cycles_density_momentum + cycles_collision# + cycles_stream
+            cycles = cycles_density_momentum + cycles_collision + cycles_stream
 
-            loop_cycles["density_momentum"].append(cycles_density_momentum); loop_cycles["collision"].append(cycles_collision);# loop_cycles["stream"].append(cycles_stream); 
+            loop_cycles["density_momentum"].append(cycles_density_momentum); loop_cycles["collision"].append(cycles_collision); loop_cycles["stream"].append(cycles_stream); 
         except AttributeError as e:
             print("Couldn't match regex to output:\n")
             print(output)
             print("\n\nException: ", e)
-        #exit(2)
         print()
         print(f"Compute density cycles: {cycles_density_momentum }")
         print(f"Compute collision cycles: {cycles_collision }")
-        #print(f"F    cycles: {cycles_f   }")
-        #print(f"Vort cycles: {cycles_vort}")
+        print(f"Compute stream cycles: {cycles_stream }")
         print(f"Total Number of Cycles: {cycles}")
         
         work_string = sympify(WORK).subs(PARAMS).subs(PARAMS2).evalf()
@@ -265,7 +256,7 @@ def main():
 
     plt_density_momentum.gca().set_ylim(min(min_performance_density_momentum, PEAK_SCALAR)/2.5, 2.5 * PEAK_simd)
     plt_collision.gca().set_ylim(min(min_performance_collision, PEAK_SCALAR)/2.5, 2.5 * PEAK_simd)
-    #plt_f.gca().set_ylim(min(min_performance_f, PEAK_SCALAR)/2.5, 2.5 * PEAK_simd)
+    plt_stream.gca().set_ylim(min(min_performance_stream, PEAK_SCALAR)/2.5, 2.5 * PEAK_simd)
     #plt_vort.gca().set_ylim(min(min_performance_vort, PEAK_SCALAR)/2.5, 2.5 * PEAK_simd)
 
     bar_fig = plt.figure("bar", figsize=(20, 12), facecolor="white")
@@ -283,7 +274,7 @@ def main():
     plt_all.savefig(f"{OUTPUT_FOLDER}/roofline_plot.out.pdf")
     plt_density_momentum.savefig(f"{OUTPUT_FOLDER}/roofline_plot_density_momentum.out.pdf")
     plt_collision.savefig(f"{OUTPUT_FOLDER}/roofline_plot_collision.out.pdf")
-    #plt_f.savefig(f"{OUTPUT_FOLDER}/roofline_plot_f.out.pdf")
+    plt_stream.savefig(f"{OUTPUT_FOLDER}/roofline_plot_stream.out.pdf")
     #plt_vort.savefig(f"{OUTPUT_FOLDER}/roofline_plot_vort.out.pdf")
     bar_fig.savefig(f"{OUTPUT_FOLDER}/bar_plot.out.pdf")
 
