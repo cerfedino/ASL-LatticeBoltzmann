@@ -10,8 +10,8 @@ from sympy import symbols, evalf, sympify
 import sys
 
 
-PREVIOUS_VERSIONS_PATH = f"{os.path.dirname(__file__)}previous_versions/"
-OUTPUT_FOLDER = f"{os.path.dirname(__file__)}artifacts/"
+PREVIOUS_VERSIONS_PATH = os.path.join(os.path.dirname(__file__), 'previous_versions/')
+OUTPUT_FOLDER = os.path.join(os.path.dirname(__file__),'artifacts/')
 
 
 if len(sys.argv) != 5:
