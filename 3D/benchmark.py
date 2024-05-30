@@ -147,7 +147,7 @@ def main():
     plt_stream  = make_roofline_plot(4, MEM_BW, SIMD_LEN_BITS); plt_stream.suptitle("Stream")
     
     '''
-    We can do 2 FMAs and 2 Adds
+    We can do 2 FMAs and 2 Adds, and those are the only ops we do in the whole for-loops basically, so in the best case we would start one at every cycle at every port
     '''
     plt_collision   = make_roofline_plot(6, MEM_BW, SIMD_LEN_BITS); plt_collision.suptitle("Collision")
 
