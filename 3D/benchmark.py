@@ -237,7 +237,6 @@ def main():
         min_performance_density_momentum  = min(min_performance_density_momentum , performance_density_momentum )
         min_performance_collision  = min(min_performance_collision , performance_collision )
         min_performance_stream    = min(min_performance_stream   , performance_stream   )
-        #min_performance_vort = min(min_performance_vort, performance_vort)
         
         print()
         print("Work: ", WORK, "= " + str(WORK_eval))
@@ -250,14 +249,12 @@ def main():
         plt_density_momentum  = plot_roofline(plt_density_momentum , TITLE, performance_density_momentum , intensity_density_momentum , simd=True)
         plt_collision  = plot_roofline(plt_collision , TITLE, performance_collision , intensity_collision , simd=True)
         plt_stream    = plot_roofline(plt_stream   , TITLE, performance_stream   , intensity_stream   , simd=True)
-        #plt_vort = plot_roofline(plt_vort, TITLE, performance_vort, intensity_vort, simd=True)
 
     plt_all.gca().set_ylim(min(min_performance, PEAK_SCALAR)/2.5, 2.5 * PEAK_simd)
 
     plt_density_momentum.gca().set_ylim(min(min_performance_density_momentum, PEAK_SCALAR)/2.5, 2.5 * PEAK_simd)
     plt_collision.gca().set_ylim(min(min_performance_collision, PEAK_SCALAR)/2.5, 2.5 * PEAK_simd)
     plt_stream.gca().set_ylim(min(min_performance_stream, PEAK_SCALAR)/2.5, 2.5 * PEAK_simd)
-    #plt_vort.gca().set_ylim(min(min_performance_vort, PEAK_SCALAR)/2.5, 2.5 * PEAK_simd)
 
     bar_fig = plt.figure("bar", figsize=(20, 12), facecolor="white")
     df = pd.DataFrame.from_dict(loop_cycles, columns=version_labels, orient='index')
@@ -274,8 +271,7 @@ def main():
     plt_all.savefig(f"{OUTPUT_FOLDER}/roofline_plot.out.pdf")
     plt_density_momentum.savefig(f"{OUTPUT_FOLDER}/roofline_plot_density_momentum.out.pdf")
     plt_collision.savefig(f"{OUTPUT_FOLDER}/roofline_plot_collision.out.pdf")
-    plt_stream.savefig(f"{OUTPUT_FOLDER}/roofline_plot_stream.out.pdf")
-    #plt_vort.savefig(f"{OUTPUT_FOLDER}/roofline_plot_vort.out.pdf")
+    #plt_stream.savefig(f"{OUTPUT_FOLDER}/roofline_plot_stream.out.pdf")
     bar_fig.savefig(f"{OUTPUT_FOLDER}/bar_plot.out.pdf")
 
     plt.show()
