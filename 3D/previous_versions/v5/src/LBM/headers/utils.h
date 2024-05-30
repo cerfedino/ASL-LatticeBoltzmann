@@ -40,7 +40,6 @@ extern double *density_field;
 extern double *velocity_field;
 extern double *previous_particle_distributions;
 extern double *particle_distributions;
-
 extern int NX, NY, NZ, NT;
 
 inline void free_up() {
