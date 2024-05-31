@@ -1,6 +1,8 @@
 #pragma once
 
+#include <cstdint>
 #include <stdint.h>
+
 typedef struct profiler {
   // Flops that will be profiled
   uint64_t flops;
