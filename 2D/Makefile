@@ -22,7 +22,7 @@ PAST_VERSIONS_OBJ = $(foreach file,$(wildcard previous_versions/*/src/main.cpp),
 .PHONY: all clean test leaks benchmark profile
 
 
-all: test leaks benchmark profile
+all: test benchmark profile
 clean:
 	find . \( -iname '*.o' -o -iname 'timestamp_*.txt' \) -print -delete; rm -r artifacts/* output/*
 

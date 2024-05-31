@@ -50,6 +50,8 @@ using namespace std;
 #define tau -1.66666667 // reciprocal collision timescale (1/0.6)
 #define tau_plus_1 (tau + 1)
 
+// #define Nt 30  // number of timesteps
+
 // Lattice speeds / weights
 #define NL 9
 const double idx[9] = {0, 1, 2, 3, 4, 5, 6, 7, 8};
@@ -82,7 +84,6 @@ profiler *rho_profiler = init_profiler(5 * Ny * Nx * NL + 3 * Ny * Nx, 8 * 5 * N
 profiler *feq_profiler = init_profiler(15 * Nx * Ny * NL, 8 * 13 * Nx * Ny * NL), *f_profiler = init_profiler(2 * Nx * Ny * NL, 8 * 3 * Nx * Ny * NL);
 profiler *vort_profiler = init_profiler(3 * Nx * Ny, 8 * 6 * Nx * Ny);
 string folder_name;
-
 void initialize() {
   folder_name = make_output_folder(); // TODO delete empty folders
 
@@ -121,6 +122,10 @@ void initialize() {
   // flops = Ny*Nx( 2 add + 5 mult + 1 cos + 1 div )
   for (int i = 0; i < Ny; i++) {
     for (int j = 0; j < Nx; j++) {
+      // in python we access [3] but here we do on [1] what this dictates is the
+      // direction we go maybe something else too, but my brain is more fried
+      // than a kfc chicken AHAHAHAHAHAHAH HILARIOUS KARLO LOL IM LITERALLY
+      // DYING OF LAUGHTER
       F[i * (Nx * NL) + Nx + j] += 2.0 * (1.0 + 0.2 * cos(2.0 * M_PI * (double)x_coords[i * Nx + j] / (double)Nx * 4.0));
     }
   }
@@ -190,6 +195,16 @@ void do_drift() {
   }
 
   // bndryF = F[cylinder,:]
+  // bndryF = F[cylinder,:]
+  // its 2d of size 1941x9 but no idea how this is calculated ??????
+  // TODO to support dynamic sized we could evaluate the size of the
+  // array and then allocate memory for now its hardcoded :pikashrug:
+  // TODO: FIX
+  // bndryF = F[cylinder,:]
+  // its 2d of size 1941x9 but no idea how this is calculated ??????
+  // TODO to support dynamic sized we could evaluate the size of the
+  // array and then allocate memory for now its hardcoded :pikashrug:
+  // TODO: FIX
   // flops = 0
   int index_bndryF = 0;
   for (int j = 0; j < Ny; j++) {
@@ -291,13 +306,21 @@ void do_set_to_zero() {
   for (int j = 0; j < Ny; j++) {
     for (int k = 0; k < Nx; k++) {
       if (cylinder[j * Nx + k] == 1) {
-        ux[j * Nx + k] = 0;
-        uy[j * Nx + k] = 0;
         for (int l = 0; l < NL; l++) {
           F[j * (Nx * NL) + l * Nx + k] = bndryF[index_bndryF2 * NL + l];
-
         }
         index_bndryF2++;
+      }
+    }
+  }
+
+  // set ux and uy to zero where cylinder is 1
+  // flops = 0
+  for (int j = 0; j < Ny; j++) {
+    for (int k = 0; k < Nx; k++) {
+      if (cylinder[j * Nx + k] == 1) {
+        ux[j * Nx + k] = 0;
+        uy[j * Nx + k] = 0;
       }
     }
   }
