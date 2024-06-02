@@ -66,7 +66,9 @@ void meshgrid(int *x_coords, int *y_coords) {
 }
 
 inline int scalar_index(int x, int l) { return (x * Nx) + l; }
-inline int scalar_index(int y, int x, int l) { return y*Nx*NL + x*Nx + l; }
+inline int scalar_index(int y, int x, int l) {
+  return y * Nx * NL + x * Nx + l;
+}
 
 double *Feq;
 double *F;
@@ -81,14 +83,14 @@ int *x_coords;
 int *y_coords;
 int bndryF_size = 0;
 double *bndryF;
-profiler *rho_profiler = init_profiler(5 * Ny * Nx * NL + 3 * Ny * Nx, 8 * 5 * Ny * Nx * NL + 3 * Ny * Nx);
-profiler *feq_profiler = init_profiler(Ny*Nx*67, 8 * 13 * Nx * Ny * NL);
+profiler *rho_profiler = init_profiler(5 * Ny * Nx * NL + 3 * Ny * Nx,
+                                       8 * 5 * Ny * Nx * NL + 3 * Ny * Nx);
+profiler *feq_profiler = init_profiler(Ny * Nx * 67, 8 * 13 * Nx * Ny * NL);
 profiler *f_profiler = init_profiler(2 * Nx * Ny * NL, 8 * 3 * Nx * Ny * NL);
 profiler *vort_profiler = init_profiler(3 * Nx * Ny, 8 * 6 * Nx * Ny);
-profiler *drift_profiler = init_profiler(0, Nx*Ny*9*2*8);
+profiler *drift_profiler = init_profiler(0, Nx *Ny * 9 * 2 * 8);
 
 string folder_name;
-
 
 void initialize() {
   folder_name = make_output_folder(); // TODO delete empty folders
@@ -128,7 +130,9 @@ void initialize() {
   // flops = Ny*Nx( 2 add + 5 mult + 1 cos + 1 div )
   for (int i = 0; i < Ny; i++) {
     for (int j = 0; j < Nx; j++) {
-      F[i * (Nx * NL) + Nx + j] += 2.0 * (1.0 + 0.2 * cos(2.0 * M_PI * (double)x_coords[i * Nx + j] / (double)Nx * 4.0));
+      F[i * (Nx * NL) + Nx + j] +=
+          2.0 * (1.0 + 0.2 * cos(2.0 * M_PI * (double)x_coords[i * Nx + j] /
+                                 (double)Nx * 4.0));
     }
   }
 
@@ -157,10 +161,14 @@ void initialize() {
   // cylinder = (X - Nx/4)**2 + (Y - Ny/2)**2 < (Ny/4)**2
   // flops = Ny*Nx*(2 pow + 2 subs + 2 divs+ 1 add)
 
-  // TODO: cylinder is a constant. it should be an array of indeces what would be 1, not an array of 0s and 1s
+  // TODO: cylinder is a constant. it should be an array of indeces what would
+  // be 1, not an array of 0s and 1s
   for (int i = 0; i < Ny; i++) {
     for (int j = 0; j < Nx; j++) {
-      cylinder[i * Nx + j] = (pow((double)x_coords[i * Nx + j] - (double)Nx / 4, 2) + pow((double)y_coords[i * Nx + j] - (double)Ny / 2, 2)) < pow(Ny / 4, 2);
+      cylinder[i * Nx + j] =
+          (pow((double)x_coords[i * Nx + j] - (double)Nx / 4, 2) +
+           pow((double)y_coords[i * Nx + j] - (double)Ny / 2, 2)) <
+          pow(Ny / 4, 2);
     }
   }
 
@@ -190,7 +198,7 @@ void do_drift() {
       F[scalar_index(y, 1, x)] = temp[scalar_index(y, x)];
     }
   }
-  
+
   for (int y = 0; y < Ny; y++) {
     for (int x = 0; x < Nx; x++) {
       temp[scalar_index((y + 1) % Ny, (x + 1) % Nx)] = F[scalar_index(y, 2, x)];
@@ -201,10 +209,10 @@ void do_drift() {
       F[scalar_index(y, 2, x)] = temp[scalar_index(y, x)];
     }
   }
-  
+
   for (int y = 0; y < Ny; y++) {
     for (int x = 0; x < Nx; x++) {
-      temp[scalar_index((y+1)%Ny, x)] = F[scalar_index(y, 3, x)];
+      temp[scalar_index((y + 1) % Ny, x)] = F[scalar_index(y, 3, x)];
     }
   }
   for (int y = 0; y < Ny; y++) {
@@ -212,10 +220,11 @@ void do_drift() {
       F[scalar_index(y, 3, x)] = temp[scalar_index(y, x)];
     }
   }
-  
+
   for (int y = 0; y < Ny; y++) {
     for (int x = 0; x < Nx; x++) {
-      temp[scalar_index(((y + 1) % Ny), ((x - 1 + Nx) % Nx))] = F[scalar_index(y, 4, x)];
+      temp[scalar_index(((y + 1) % Ny), ((x - 1 + Nx) % Nx))] =
+          F[scalar_index(y, 4, x)];
     }
   }
   for (int y = 0; y < Ny; y++) {
@@ -226,7 +235,8 @@ void do_drift() {
 
   for (int y = 0; y < Ny; y++) {
     for (int x = 0; x < Nx; x++) {
-      temp[scalar_index(((y + Ny) % Ny), ((x - 1 + Nx) % Nx))] = F[scalar_index(y, 5, x)];
+      temp[scalar_index(((y + Ny) % Ny), ((x - 1 + Nx) % Nx))] =
+          F[scalar_index(y, 5, x)];
     }
   }
   for (int y = 0; y < Ny; y++) {
@@ -237,7 +247,8 @@ void do_drift() {
 
   for (int y = 0; y < Ny; y++) {
     for (int x = 0; x < Nx; x++) {
-      temp[scalar_index(((y - 1 + Ny) % Ny) , ((x - 1 + Nx) % Nx))] = F[scalar_index(y, 6, x)];
+      temp[scalar_index(((y - 1 + Ny) % Ny), ((x - 1 + Nx) % Nx))] =
+          F[scalar_index(y, 6, x)];
     }
   }
   for (int y = 0; y < Ny; y++) {
@@ -245,10 +256,11 @@ void do_drift() {
       F[scalar_index(y, 6, x)] = temp[scalar_index(y, x)];
     }
   }
-  
+
   for (int y = 0; y < Ny; y++) {
     for (int x = 0; x < Nx; x++) {
-      temp[scalar_index(((y - 1 + Ny) % Ny),((x + Nx) % Nx))] = F[scalar_index(y, 7, x)];
+      temp[scalar_index(((y - 1 + Ny) % Ny), ((x + Nx) % Nx))] =
+          F[scalar_index(y, 7, x)];
     }
   }
   for (int y = 0; y < Ny; y++) {
@@ -259,7 +271,8 @@ void do_drift() {
 
   for (int y = 0; y < Ny; y++) {
     for (int x = 0; x < Nx; x++) {
-      temp[scalar_index(((y - 1 + Ny) % Ny) ,((x + 1) % Nx))] = F[scalar_index(y, 8, x)];
+      temp[scalar_index(((y - 1 + Ny) % Ny), ((x + 1) % Nx))] =
+          F[scalar_index(y, 8, x)];
     }
   }
   for (int y = 0; y < Ny; y++) {
@@ -305,15 +318,23 @@ void do_drift() {
 }
 
 void do_rho() {
-  //flops = Ny*Nx*21
-  //bytes = Ny*Nx*8*2+Ny*Nx*8*9
-  
+  // flops = Ny*Nx*21
+  // bytes = Ny*Nx*8*2+Ny*Nx*8*9
+
   for (int j = 0; j < Ny; j++) {
     for (int k = 0; k < Nx; k++) {
-      double res1 = F[scalar_index(j, 0,k)] + F[scalar_index(j, 1,k)] + F[scalar_index(j, 2,k)] + F[scalar_index(j, 3,k)] + F[scalar_index(j, 4,k)] + F[scalar_index(j, 5,k)] + F[scalar_index(j, 6,k)] + F[scalar_index(j, 7,k)] + F[scalar_index(j, 8,k)];
-      double res2 = F[scalar_index(j, 2,k)] + F[scalar_index(j, 3,k)] + F[scalar_index(j, 4,k)] - F[scalar_index(j, 6,k)] - F[scalar_index(j, 7,k)] - F[scalar_index(j, 8,k)];
-      double res3 = F[scalar_index(j, 1,k)] + F[scalar_index(j, 2,k)] - F[scalar_index(j, 4,k)] - F[scalar_index(j, 5,k)] - F[scalar_index(j, 6,k)] + F[scalar_index(j, 8,k)];
-      
+      double res1 = F[scalar_index(j, 0, k)] + F[scalar_index(j, 1, k)] +
+                    F[scalar_index(j, 2, k)] + F[scalar_index(j, 3, k)] +
+                    F[scalar_index(j, 4, k)] + F[scalar_index(j, 5, k)] +
+                    F[scalar_index(j, 6, k)] + F[scalar_index(j, 7, k)] +
+                    F[scalar_index(j, 8, k)];
+      double res2 = F[scalar_index(j, 2, k)] + F[scalar_index(j, 3, k)] +
+                    F[scalar_index(j, 4, k)] - F[scalar_index(j, 6, k)] -
+                    F[scalar_index(j, 7, k)] - F[scalar_index(j, 8, k)];
+      double res3 = F[scalar_index(j, 1, k)] + F[scalar_index(j, 2, k)] -
+                    F[scalar_index(j, 4, k)] - F[scalar_index(j, 5, k)] -
+                    F[scalar_index(j, 6, k)] + F[scalar_index(j, 8, k)];
+
       double inv = 1 / res1;
       rho[scalar_index(j, k)] = res1;
       ux[scalar_index(j, k)] = res2 * inv;
@@ -323,38 +344,53 @@ void do_rho() {
 }
 
 void do_feq() {
-  //flops = Ny*Nx*67
-  //bytes = 
+  // flops = Ny*Nx*67
+  // bytes =
   for (int y = 0; y < Ny; y++) {
     for (int x = 0; x < Nx; x++) {
-      double third = 1 - 1.5 * (ux[y * Nx + x] * ux[y * Nx + x] + uy[y * Nx + x] * uy[y * Nx + x]);
+      double third = 1 - 1.5 * (ux[y * Nx + x] * ux[y * Nx + x] +
+                                uy[y * Nx + x] * uy[y * Nx + x]);
       double weight_val;
       double curr = 0;
       double first = 0;
       double second = 0;
       Feq[scalar_index(y, 0, x)] = rho[scalar_index(y, x)] * tau_4_9 * third;
-      
-      Feq[scalar_index(y, 1, x)] = rho[scalar_index(y, x)] * tau_1_9 * (3 * uy[scalar_index(y, x)] + 4.5 * uy[scalar_index(y, x)] * uy[scalar_index(y, x)] + third);
-      
-      curr = ux[scalar_index(y, x)] + uy[scalar_index(y, x)];
-      Feq[scalar_index(y, 2, x)] = rho[scalar_index(y, x)] * tau_1_36 * (3 * curr + 4.5 * curr * curr + third);
 
-      Feq[scalar_index(y, 3, x)] = rho[scalar_index(y, x)] * tau_1_9 * (3 * ux[scalar_index(y, x)] + 4.5 * ux[scalar_index(y, x)] * ux[scalar_index(y, x)] + third);
+      Feq[scalar_index(y, 1, x)] =
+          rho[scalar_index(y, x)] * tau_1_9 *
+          (3 * uy[scalar_index(y, x)] +
+           4.5 * uy[scalar_index(y, x)] * uy[scalar_index(y, x)] + third);
+
+      curr = ux[scalar_index(y, x)] + uy[scalar_index(y, x)];
+      Feq[scalar_index(y, 2, x)] = rho[scalar_index(y, x)] * tau_1_36 *
+                                   (3 * curr + 4.5 * curr * curr + third);
+
+      Feq[scalar_index(y, 3, x)] =
+          rho[scalar_index(y, x)] * tau_1_9 *
+          (3 * ux[scalar_index(y, x)] +
+           4.5 * ux[scalar_index(y, x)] * ux[scalar_index(y, x)] + third);
 
       curr = ux[scalar_index(y, x)] - uy[scalar_index(y, x)];
-      Feq[scalar_index(y, 4, x)] = rho[scalar_index(y, x)] * tau_1_36 * (3 * curr + 4.5 * curr * curr + third);
+      Feq[scalar_index(y, 4, x)] = rho[scalar_index(y, x)] * tau_1_36 *
+                                   (3 * curr + 4.5 * curr * curr + third);
 
-      Feq[scalar_index(y, 5, x)] = rho[scalar_index(y, x)] * tau_1_9 * (-3 * uy[scalar_index(y, x)] + 4.5 * uy[scalar_index(y, x)] * uy[scalar_index(y, x)] + third);
+      Feq[scalar_index(y, 5, x)] =
+          rho[scalar_index(y, x)] * tau_1_9 *
+          (-3 * uy[scalar_index(y, x)] +
+           4.5 * uy[scalar_index(y, x)] * uy[scalar_index(y, x)] + third);
 
-      
       curr = -ux[scalar_index(y, x)] - uy[scalar_index(y, x)];
-      Feq[scalar_index(y, 6, x)] = rho[scalar_index(y, x)] * tau_1_36 * (3 * curr + 4.5 * curr * curr + third);
-      
+      Feq[scalar_index(y, 6, x)] = rho[scalar_index(y, x)] * tau_1_36 *
+                                   (3 * curr + 4.5 * curr * curr + third);
 
-      Feq[scalar_index(y, 7, x)] = rho[scalar_index(y, x)] * tau_1_9 * (-3 * ux[scalar_index(y, x)] + 4.5 * ux[scalar_index(y, x)] * ux[scalar_index(y, x)] + third);
-      
+      Feq[scalar_index(y, 7, x)] =
+          rho[scalar_index(y, x)] * tau_1_9 *
+          (-3 * ux[scalar_index(y, x)] +
+           4.5 * ux[scalar_index(y, x)] * ux[scalar_index(y, x)] + third);
+
       curr = uy[scalar_index(y, x)] - ux[scalar_index(y, x)];
-      Feq[scalar_index(y, 8, x)] = rho[scalar_index(y, x)] * tau_1_36 * (3 * curr + 4.5 * curr * curr + third);
+      Feq[scalar_index(y, 8, x)] = rho[scalar_index(y, x)] * tau_1_36 *
+                                   (3 * curr + 4.5 * curr * curr + third);
     }
   }
 }
@@ -363,20 +399,21 @@ void do_f() {
   for (int y = 0; y < Ny; y++) {
     for (int l = 0; l < NL; l++) {
       for (int x = 0; x < Nx; x++) {
-        F[scalar_index(y, l, x)] = tau_plus_1 * F[scalar_index(y, l, x)] - Feq[scalar_index(y, l, x)];
+        F[scalar_index(y, l, x)] =
+            tau_plus_1 * F[scalar_index(y, l, x)] - Feq[scalar_index(y, l, x)];
       }
     }
   }
 }
 
 void do_vort() {
-  
+
   int index_bndryF2 = 0;
   for (int y = 0; y < Ny; y++) {
     for (int x = 0; x < Nx; x++) {
-      if (cylinder[scalar_index(y,x)] == 1) {
-        ux[scalar_index(y,x)] = 0;
-        uy[scalar_index(y,x)] = 0;
+      if (cylinder[scalar_index(y, x)] == 1) {
+        ux[scalar_index(y, x)] = 0;
+        uy[scalar_index(y, x)] = 0;
         for (int l = 0; l < NL; l++) {
           F[scalar_index(y, l, x)] = bndryF[index_bndryF2 * NL + l];
         }
@@ -395,7 +432,7 @@ void do_vort() {
   for (int x = 1; x < Nx - 1; x++) {
     if (cylinder[x] == 0) {
       double ux_roll = ux[x - 1] - ux[x + 1];
-      double uy_roll = uy[scalar_index(Ny-1, x)] - uy[scalar_index(1, x)];
+      double uy_roll = uy[scalar_index(Ny - 1, x)] - uy[scalar_index(1, x)];
       vorticity[x] = ux_roll - uy_roll;
     } else
       vorticity[x] = 0;
@@ -408,15 +445,17 @@ void do_vort() {
   // Calculate j = [1, Ny - 2]
   for (int j = 1; j < Ny; j++) {
     // Calculate k = 0 boundary
-    double ux_roll = ux[scalar_index(j, Nx-1)] - ux[scalar_index(j, 1)];
-    double uy_roll = uy[scalar_index(j-1, 0)] - uy[scalar_index(j+1,0)];
-    vorticity[scalar_index(j, 0)] = cylinder[scalar_index(j, 0)] == 1 ? 0 : ux_roll - uy_roll;
+    double ux_roll = ux[scalar_index(j, Nx - 1)] - ux[scalar_index(j, 1)];
+    double uy_roll = uy[scalar_index(j - 1, 0)] - uy[scalar_index(j + 1, 0)];
+    vorticity[scalar_index(j, 0)] =
+        cylinder[scalar_index(j, 0)] == 1 ? 0 : ux_roll - uy_roll;
 
     // Calculate k = [1, Nx - 2]
     for (int k = 1; k < Nx - 1; k++) {
       if (cylinder[j * Nx + k] == 0) {
-        double ux_roll = ux[scalar_index(j, k-1)] - ux[j * Nx + k + 1];
-        double uy_roll = uy[scalar_index(j-1, k)] - uy[scalar_index(j+1, k)];
+        double ux_roll = ux[scalar_index(j, k - 1)] - ux[j * Nx + k + 1];
+        double uy_roll =
+            uy[scalar_index(j - 1, k)] - uy[scalar_index(j + 1, k)];
         vorticity[scalar_index(j, k)] = ux_roll - uy_roll;
       } else
         vorticity[scalar_index(j, k)] = 0;
@@ -424,31 +463,36 @@ void do_vort() {
 
     // Calculate k = Nx - 1 boundary
     if (cylinder[j * Nx + Nx - 1] == 0) {
-      ux_roll = ux[scalar_index(j, Nx-2)] - ux[scalar_index(j, 0)];
-      uy_roll = uy[scalar_index(j-1, Nx-1)] - uy[scalar_index(j+1, Nx-1)];
-      vorticity[scalar_index(j, Nx-1)] = ux_roll - uy_roll;
+      ux_roll = ux[scalar_index(j, Nx - 2)] - ux[scalar_index(j, 0)];
+      uy_roll =
+          uy[scalar_index(j - 1, Nx - 1)] - uy[scalar_index(j + 1, Nx - 1)];
+      vorticity[scalar_index(j, Nx - 1)] = ux_roll - uy_roll;
     } else
-      vorticity[scalar_index(j, Nx-1)] = 0;
+      vorticity[scalar_index(j, Nx - 1)] = 0;
   }
 
   // Calculate j = Ny - 1 boundary
   // Calculate k = 0 boundary
-  ux_roll = ux[scalar_index(Ny-1, Nx-1)] - ux[scalar_index(Ny-1, 1)];
-  uy_roll = uy[scalar_index(Ny-2, 0)] - uy[0];
-  vorticity[scalar_index(Ny-1, 0)] = cylinder[scalar_index(Ny-1, 0)] == 1 ? 0 : ux_roll - uy_roll;
+  ux_roll = ux[scalar_index(Ny - 1, Nx - 1)] - ux[scalar_index(Ny - 1, 1)];
+  uy_roll = uy[scalar_index(Ny - 2, 0)] - uy[0];
+  vorticity[scalar_index(Ny - 1, 0)] =
+      cylinder[scalar_index(Ny - 1, 0)] == 1 ? 0 : ux_roll - uy_roll;
 
   // Calculate k = [1, Nx - 2]
   for (int k = 1; k < Nx - 1; k++) {
 
-    double ux_roll = ux[scalar_index(Ny-1, k-1)] - ux[scalar_index(Ny-1, k+1)];
-    double uy_roll = uy[scalar_index(Ny-2, k)] - uy[k];
-    vorticity[scalar_index(Ny-1, k)] = cylinder[scalar_index(Ny-1, k)] == 1 ? 0 : ux_roll - uy_roll;
+    double ux_roll =
+        ux[scalar_index(Ny - 1, k - 1)] - ux[scalar_index(Ny - 1, k + 1)];
+    double uy_roll = uy[scalar_index(Ny - 2, k)] - uy[k];
+    vorticity[scalar_index(Ny - 1, k)] =
+        cylinder[scalar_index(Ny - 1, k)] == 1 ? 0 : ux_roll - uy_roll;
   }
 
   // Calculate k = Nx - 1 boundary
-  ux_roll = ux[scalar_index(Ny-1, Nx-2)] - ux[scalar_index(Ny-1, 0)];
-  uy_roll = uy[scalar_index(Ny-2, Nx-1)] - uy[Nx - 1];
-  vorticity[scalar_index(Ny-1, Nx-1)] = cylinder[scalar_index(Ny-1, Nx-1)] == 1 ? 0 : ux_roll - uy_roll;
+  ux_roll = ux[scalar_index(Ny - 1, Nx - 2)] - ux[scalar_index(Ny - 1, 0)];
+  uy_roll = uy[scalar_index(Ny - 2, Nx - 1)] - uy[Nx - 1];
+  vorticity[scalar_index(Ny - 1, Nx - 1)] =
+      cylinder[scalar_index(Ny - 1, Nx - 1)] == 1 ? 0 : ux_roll - uy_roll;
 }
 void do_timestep() {
   start_run(drift_profiler);
@@ -472,7 +516,6 @@ void do_timestep() {
   end_run(vort_profiler);
 }
 
-
 inline int run() {
   initialize();
 
@@ -481,7 +524,8 @@ inline int run() {
   const int PROFILE_DIGITS = floor(log10(PROFILE_RUNS)) + 1;
   printf("\rRun %-*d/%d done", PROFILE_DIGITS, 0, PROFILE_RUNS);
   fflush(stdout);
-  for (int profile_counter = 0; profile_counter < PROFILE_RUNS; profile_counter++) {
+  for (int profile_counter = 0; profile_counter < PROFILE_RUNS;
+       profile_counter++) {
 #endif
     // Simulation loop
     for (int i = 0; i < Nt; i++) {
@@ -496,30 +540,36 @@ inline int run() {
 #endif
     }
 #ifdef PROFILE
-    printf("\rRun %-*d/%d done", PROFILE_DIGITS, profile_counter + 1, PROFILE_RUNS);
+    printf("\rRun %-*d/%d done", PROFILE_DIGITS, profile_counter + 1,
+           PROFILE_RUNS);
     fflush(stdout);
   }
   printf("\nProfiling results:\n");
   profiler_stats drift_stats = finish_profiler(drift_profiler);
   printf("- Drift  Calculation: %4.2f Flops/Cycle, %10ld cycles in %d runs. "
          "Arithmetic intensity: %4.2f\n",
-         drift_stats.performance, drift_stats.cycles, drift_stats.runs, drift_stats.arithmetic_intensity);
+         drift_stats.performance, drift_stats.cycles, drift_stats.runs,
+         drift_stats.arithmetic_intensity);
   profiler_stats rho_stats = finish_profiler(rho_profiler);
   printf("- Rho  Calculation: %4.2f Flops/Cycle, %10ld cycles in %d runs. "
          "Arithmetic intensity: %4.2f\n",
-         rho_stats.performance, rho_stats.cycles, rho_stats.runs, rho_stats.arithmetic_intensity);
+         rho_stats.performance, rho_stats.cycles, rho_stats.runs,
+         rho_stats.arithmetic_intensity);
   profiler_stats feq_stats = finish_profiler(feq_profiler);
   printf("- FEQ  Calculation: %4.2f Flops/Cycle, %10ld cycles in %d runs. "
          "Arithmetic intensity: %4.2f\n",
-         feq_stats.performance, feq_stats.cycles, feq_stats.runs, feq_stats.arithmetic_intensity);
+         feq_stats.performance, feq_stats.cycles, feq_stats.runs,
+         feq_stats.arithmetic_intensity);
   profiler_stats f_stats = finish_profiler(f_profiler);
   printf("- F    Calculation: %4.2f Flops/Cycle, %10ld cycles in %d runs. "
          "Arithmetic intensity: %4.2f\n",
-         f_stats.performance, f_stats.cycles, f_stats.runs, f_stats.arithmetic_intensity);
+         f_stats.performance, f_stats.cycles, f_stats.runs,
+         f_stats.arithmetic_intensity);
   profiler_stats vort_stats = finish_profiler(vort_profiler);
   printf("- Vort Calculation: %4.2f Flops/Cycle, %10ld cycles in %d runs. "
          "Arithmetic intensity: %4.2f\n",
-         vort_stats.performance, vort_stats.cycles, vort_stats.runs, vort_stats.arithmetic_intensity);
+         vort_stats.performance, vort_stats.cycles, vort_stats.runs,
+         vort_stats.arithmetic_intensity);
 #endif
 
   printf("\n");
@@ -538,7 +588,8 @@ inline int run() {
 
 #ifdef DEBUG
   char timestamp_filename[100];
-  sprintf(timestamp_filename, "%s/timestamp_%d_%d_%d.txt", folder_name.c_str(), Nx, Ny, Nt);
+  sprintf(timestamp_filename, "%s/timestamp_%d_%d_%d.txt", folder_name.c_str(),
+          Nx, Ny, Nt);
   FILE *timestamp_file = fopen(timestamp_filename, "w");
   fclose(timestamp_file);
   make_latest_output(folder_name);
@@ -555,7 +606,8 @@ int main(int argc, char const *argv[]) {
   run();
   asm volatile("RDTSC" : "=A"(end_cycle));
   time(&end_sec);
-  printf("Cycles taken: %llu (%ld seconds)\n", end_cycle - start_cycle, end_sec - start_sec);
+  printf("Cycles taken: %llu (%ld seconds)\n", end_cycle - start_cycle,
+         end_sec - start_sec);
 
   return 0;
 }
