@@ -72,7 +72,7 @@ double *Feq;
 double *F;
 double *vorticity;
 double *rho;
-double *cylinder;
+bool *cylinder;
 int *collision_shape;
 double *ux;
 double *uy;
@@ -99,7 +99,7 @@ void initialize() {
   F = (double *)aligned_alloc(32, Ny * Nx * NL * sizeof(double));
   vorticity = (double *)aligned_alloc(32, Ny * Nx * sizeof(double));
   rho = (double *)aligned_alloc(32, Ny * Nx * sizeof(double));
-  cylinder = (double *)aligned_alloc(32, Ny * Nx * sizeof(double));
+  cylinder = (bool *)aligned_alloc(32, Ny * Nx * sizeof(bool));
   ux = (double *)aligned_alloc(32, Ny * Nx * sizeof(double));
   uy = (double *)aligned_alloc(32, Ny * Nx * sizeof(double));
   temp = (double *)aligned_alloc(32, Ny * Nx * sizeof(double));

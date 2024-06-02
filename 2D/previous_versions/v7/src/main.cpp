@@ -4,7 +4,6 @@
 // divs+ 1 add)+ Nt*(Ny*Nx*NL(3 adds + 2 mults) + Ny*Nx*(2 divs))+NL*Ny*Nx*(9
 // mults + 2 div  + 3 pows + 6 adds)+Ny*Nx*NL (2 add + 1 mult )+Ny*Nx*(3 adds)
 #include <math.h>
-#include <profile.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -18,7 +17,6 @@
 
 #include "include/npy.hpp"
 #include "include/profile.h"
-#include "include/utils.c"
 
 #ifdef DEBUG
 #define debug_printf(fmt, ...) fprintf(stdout, fmt, __VA_ARGS__)
@@ -267,7 +265,7 @@ void do_rho() {
 
 void do_feq() {
   // set to zero
-  //memset(Feq, 0, Ny * Nx * NL * sizeof(double));
+  // memset(Feq, 0, Ny * Nx * NL * sizeof(double));
 
   // flops = NL*Ny*Nx*(9 mults + 2 div  + 3 pows + 6 adds)
   for (int k = 0; k < NL; k++) {
@@ -414,7 +412,6 @@ void do_timestep() {
   do_f();
   end_run(f_profiler);
 
-
   start_run(vort_profiler);
   do_vort();
   end_run(vort_profiler);
@@ -504,7 +501,7 @@ int main(int argc, char const *argv[]) {
   run();
   asm volatile("RDTSC" : "=A"(end_cycle));
   time(&end_sec);
-  printf("Cycles taken: %llu (%ld seconds)\n", end_cycle - start_cycle, end_sec - start_sec);
+  printf("Cycles taken: %lu (%ld seconds)\n", end_cycle - start_cycle, end_sec - start_sec);
 
   return 0;
 }
