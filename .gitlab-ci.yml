@@ -1,8 +1,11 @@
 image: gcc
 variables:
-  MEM_BW: 5
-  PEAK_SCALAR: 5
+  MEM_BW: 51200
+  PEAK_SCALAR: 12
   SIMD_LEN_BITS: 256
+  L1_SIZE_BITS: 1024000
+  L2_SIZE_BITS: 8192000
+  L3_SIZE_BITS: 64000000
   
 stages:
   - tests
@@ -45,6 +48,22 @@ benchmark:
     - python3 -m venv venv && source venv/bin/activate
     - pip install -r requirements.txt
     - make benchmark
+  only:
+    - merge_requests
+    - main
+
+sizevscyclesplot:
+  stage: benchmark
+  timeout: 1h
+  artifacts:
+    paths:
+      - 2D/artifacts/*
+  script:
+    - cd 2D
+    - sudo apt update && sudo apt install -y python3 python3-pip python3.10-venv 
+    - python3 -m venv venv && source venv/bin/activate
+    - pip install -r requirements.txt
+    - make sizevscyclesplot
   only:
     - merge_requests
     - main

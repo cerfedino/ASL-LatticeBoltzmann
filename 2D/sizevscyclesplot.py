@@ -1,9 +1,7 @@
 import os
 import subprocess
 import re
-import math
 import numpy as np
-import pandas as pd
 from dotenv import load_dotenv, dotenv_values
 import matplotlib.pyplot as plt
 from matplotlib.colors import hsv_to_rgb
