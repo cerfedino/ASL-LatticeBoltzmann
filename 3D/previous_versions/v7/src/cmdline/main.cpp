@@ -239,8 +239,8 @@ void stream() {
     // first iteration has no big impact, so we can start at 1
     for (int y = 1; y < NY - 1; y++) {
       for (int x = 0; x < NX; x++) {
-        // flops = NZ*8
-        // bytes = 15*2*NZ*NY*NX+NZ*10+NZ*18
+        // flops = 0
+        // bytes = 14 * 2 * NX * (NY - 2) * NZ
         particle_distributions[scalar_index(x, y, z, 0)] = previous_particle_distributions[scalar_index(x, y, z, 0)];
         particle_distributions[scalar_index(x, y, z, 1)] = previous_particle_distributions[scalar_index(x, y, z, 1)];
         particle_distributions[scalar_index(x, y, z, 2)] = previous_particle_distributions[scalar_index(x, y, z, 2)];
@@ -261,8 +261,8 @@ void stream() {
 
     int y = NY - 1;
     for (int x = 0; x < NX; x++) {
-      // flops = NZ*8
-      // bytes = 15*2*NZ*NY*NX+NZ*10+NZ*18
+      // flops = 4 * 2 * NX * NZ
+      // bytes = 14 * 2 * NX * NZ
       particle_distributions[scalar_index(x, y, z, 0)] = previous_particle_distributions[scalar_index(x, y, z, 0)];
       particle_distributions[scalar_index(x, y, z, 1)] = previous_particle_distributions[scalar_index(x, y, z, 1)];
       particle_distributions[scalar_index(x, y, z, 2)] = previous_particle_distributions[scalar_index(x, y, z, 2)];
