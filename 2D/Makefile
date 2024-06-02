@@ -1,3 +1,4 @@
+.SECONDEXPANSION:
 CFLAGS = -g -march=native
 OPTIM_FLAGS = -Ofast
 
@@ -6,10 +7,12 @@ OPTIM_FLAGS = -Ofast
 ifeq ($(firstword $(MAKECMDGOALS)),benchmark)
     RUN_PARAMS = 400 200 300
 else ifeq ($(firstword $(MAKECMDGOALS)),profile)
-    RUN_PARAMS = 400 200 2000
+    RUN_PARAMS = 80 40 300
+else ifeq ($(firstword $(MAKECMDGOALS)),sizevscyclesplot)
+    RUN_PARAMS = 80 40 100
 else
 	# $(info 'USING DEFAULT RUN_PARAMS')
-	RUN_PARAMS = 400 200 300
+	RUN_PARAMS = 200 100 100
 endif
 RUN_PARAMS_ESCAPED =  $(shell echo $(RUN_PARAMS) | tr ' ' '_')
 
@@ -17,12 +20,20 @@ PAST_VERSIONS_CPP = $(wildcard previous_versions/*/src/main.cpp)
 PAST_VERSIONS_PROFILE_OBJ = $(foreach file,$(PAST_VERSIONS_CPP),$(file:.cpp=_optimized_profile_$(RUN_PARAMS_ESCAPED).o))
 
 
-.PHONY: all clean test leaks benchmark profile
-
-
+.PHONY: all clean test leaks sizevscyclesplot benchmark profile
 all: test leaks benchmark profile
 clean:
 	find . \( -iname '*.o' -o -iname 'timestamp_*.txt' \) -print -delete; rm -r artifacts/* output/*
+
+
+# For the "sizevscyclesplot" target
+# For each previous_version we compile a binary where MNx=NX*i, MNy=NY*i, MNt=300 for every i in RANGE_I
+RANGE_I = 1 2 3 4 #5 6 7
+multiply = $(shell echo $$(( $(1) * $(2) )))
+NX_VALUES := $(foreach i,$(RANGE_I),$(eval NX_$(i)=$(call multiply, $(word 1,$(RUN_PARAMS)), $(i))))
+NY_VALUES := $(foreach i,$(RANGE_I),$(eval NY_$(i)=$(call multiply, $(word 2,$(RUN_PARAMS)), $(i))))
+PAST_VERSIONS_PROFILE_OBJ_RANGE = $(foreach i,$(RANGE_I),$(foreach file,$(PAST_VERSIONS_CPP),$(file:.cpp=_optimized_profile_$(NX_$(i))_$(NY_$(i))_$(word 3,$(RUN_PARAMS)).o)))
+
 
 
 define PREPROCESS
@@ -36,12 +47,17 @@ endef
 
 ./previous_versions/v1/src/main_%.o: ./previous_versions/v1/src/main.cpp src/include/utils.c src/include/profile.c
 	$(call PREPROCESS,$@)
-	g++ $(CFLAGS) 							 -DMNx=$(MNx) -DMNy=$(MNy) -DMNt=$(MNt) $(DDEBUG) $(DPROFILE) $< -o $@ src/include/profile.c
+	g++ $(CFLAGS) 							 -DMNx=$(MNx) -DMNy=$(MNy) -DMNt=$(MNt) $(DDEBUG) $(DPROFILE) $< src/include/profile.c -o $@ 
 
-%.o: ./src/main.cpp src/include/utils.c src/include/profile.c
+%.o: $$(dir $$@)main.cpp src/include/utils.c src/include/profile.c
 	$(call PREPROCESS,$@)
-	g++ $(CFLAGS) $(OPTIM_FLAGS) -DMNx=$(MNx) -DMNy=$(MNy) -DMNt=$(MNt) $(DDEBUG) $(DPROFILE) $< -o $@ src/include/profile.c
+	$(info $(dir $@)main.cpp)
+	g++ $(CFLAGS) $(OPTIM_FLAGS) -DMNx=$(MNx) -DMNy=$(MNy) -DMNt=$(MNt) $(DDEBUG) $(DPROFILE) $< src/include/profile.c -o $@ 
 
+
+
+sizevscyclesplot: $(PAST_VERSIONS_PROFILE_OBJ_RANGE)
+	mkdir -p artifacts/; python3 sizevscyclesplot.py $(RUN_PARAMS) $(RANGE_I)
 
 
 output/00_latest_$(RUN_PARAMS_ESCAPED)/timestamp_$(RUN_PARAMS_ESCAPED).txt: ./src/main_optimized_debug_$(RUN_PARAMS_ESCAPED).o
