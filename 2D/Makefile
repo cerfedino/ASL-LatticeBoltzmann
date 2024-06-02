@@ -12,7 +12,7 @@ else ifeq ($(firstword $(MAKECMDGOALS)),sizevscyclesplot)
     RUN_PARAMS = 80 40 100
 else
 	# $(info 'USING DEFAULT RUN_PARAMS')
-	RUN_PARAMS = 200 100 100
+	RUN_PARAMS = 400 200 300
 endif
 RUN_PARAMS_ESCAPED =  $(shell echo $(RUN_PARAMS) | tr ' ' '_')
 
@@ -47,12 +47,11 @@ endef
 
 ./previous_versions/v1/src/main_%.o: ./previous_versions/v1/src/main.cpp src/include/utils.c src/include/profile.c
 	$(call PREPROCESS,$@)
-	g++ $(CFLAGS) 							 -DMNx=$(MNx) -DMNy=$(MNy) -DMNt=$(MNt) $(DDEBUG) $(DPROFILE) $< src/include/profile.c -o $@ 
+	g++ $(CFLAGS) 							 -DMNx=$(MNx) -DMNy=$(MNy) -DMNt=$(MNt) $(DDEBUG) $(DPROFILE) $< src/include/utils.c src/include/profile.c -o $@ 
 
 %.o: $$(dir $$@)main.cpp src/include/utils.c src/include/profile.c
 	$(call PREPROCESS,$@)
-	$(info $(dir $@)main.cpp)
-	g++ $(CFLAGS) $(OPTIM_FLAGS) -DMNx=$(MNx) -DMNy=$(MNy) -DMNt=$(MNt) $(DDEBUG) $(DPROFILE) $< src/include/profile.c -o $@ 
+	g++ $(CFLAGS) $(OPTIM_FLAGS) -DMNx=$(MNx) -DMNy=$(MNy) -DMNt=$(MNt) $(DDEBUG) $(DPROFILE) $<  src/include/utils.c src/include/profile.c -o $@ 
 
 
 
