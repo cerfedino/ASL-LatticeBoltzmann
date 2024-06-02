@@ -83,8 +83,7 @@ int *x_coords;
 int *y_coords;
 int bndryF_size = 0;
 double *bndryF;
-profiler *rho_profiler = init_profiler(5 * Ny * Nx * NL + 3 * Ny * Nx,
-                                       8 * 5 * Ny * Nx * NL + 3 * Ny * Nx);
+profiler *rho_profiler = init_profiler(5 * Ny * Nx * NL + 3 * Ny * Nx, 8 * 5 * Ny * Nx * NL + 3 * Ny * Nx);
 profiler *feq_profiler = init_profiler(Ny * Nx * 67, 8 * 13 * Nx * Ny * NL);
 profiler *f_profiler = init_profiler(2 * Nx * Ny * NL, 8 * 3 * Nx * Ny * NL);
 profiler *vort_profiler = init_profiler(3 * Nx * Ny, 8 * 6 * Nx * Ny);
@@ -130,9 +129,7 @@ void initialize() {
   // flops = Ny*Nx( 2 add + 5 mult + 1 cos + 1 div )
   for (int i = 0; i < Ny; i++) {
     for (int j = 0; j < Nx; j++) {
-      F[i * (Nx * NL) + Nx + j] +=
-          2.0 * (1.0 + 0.2 * cos(2.0 * M_PI * (double)x_coords[i * Nx + j] /
-                                 (double)Nx * 4.0));
+      F[i * (Nx * NL) + Nx + j] += 2.0 * (1.0 + 0.2 * cos(2.0 * M_PI * (double)x_coords[i * Nx + j] / (double)Nx * 4.0));
     }
   }
 
@@ -165,10 +162,7 @@ void initialize() {
   // be 1, not an array of 0s and 1s
   for (int i = 0; i < Ny; i++) {
     for (int j = 0; j < Nx; j++) {
-      cylinder[i * Nx + j] =
-          (pow((double)x_coords[i * Nx + j] - (double)Nx / 4, 2) +
-           pow((double)y_coords[i * Nx + j] - (double)Ny / 2, 2)) <
-          pow(Ny / 4, 2);
+      cylinder[i * Nx + j] = (pow((double)x_coords[i * Nx + j] - (double)Nx / 4, 2) + pow((double)y_coords[i * Nx + j] - (double)Ny / 2, 2)) < pow(Ny / 4, 2);
     }
   }
 
@@ -191,8 +185,7 @@ void do_drift() {
   // bytes = Nx*Ny*9*2*8
   for (int k = 0; k < Ny; k++) {
     for (int l = 0; l < Nx; l++) {
-      temp[((k + Ny) % Ny) * Nx + ((l + 1 + Nx) % Nx)] =
-          F[k * (Nx * NL) + Nx + l];
+      temp[((k + Ny) % Ny) * Nx + ((l + 1 + Nx) % Nx)] = F[k * (Nx * NL) + Nx + l];
     }
   }
   for (int k = 0; k < Ny; k++) {
@@ -203,8 +196,7 @@ void do_drift() {
 
   for (int k = 0; k < Ny; k++) {
     for (int l = 0; l < Nx; l++) {
-      temp[((k + 1 + Ny) % Ny) * Nx + ((l + 1 + Nx) % Nx)] =
-          F[k * (Nx * NL) + 2 * Nx + l];
+      temp[((k + 1 + Ny) % Ny) * Nx + ((l + 1 + Nx) % Nx)] = F[k * (Nx * NL) + 2 * Nx + l];
     }
   }
   for (int k = 0; k < Ny; k++) {
@@ -215,8 +207,7 @@ void do_drift() {
 
   for (int k = 0; k < Ny; k++) {
     for (int l = 0; l < Nx; l++) {
-      temp[((k + 1 + Ny) % Ny) * Nx + ((l + Nx) % Nx)] =
-          F[k * (Nx * NL) + 3 * Nx + l];
+      temp[((k + 1 + Ny) % Ny) * Nx + ((l + Nx) % Nx)] = F[k * (Nx * NL) + 3 * Nx + l];
     }
   }
   for (int k = 0; k < Ny; k++) {
@@ -227,8 +218,7 @@ void do_drift() {
 
   for (int k = 0; k < Ny; k++) {
     for (int l = 0; l < Nx; l++) {
-      temp[((k + 1 + Ny) % Ny) * Nx + ((l - 1 + Nx) % Nx)] =
-          F[k * (Nx * NL) + 4 * Nx + l];
+      temp[((k + 1 + Ny) % Ny) * Nx + ((l - 1 + Nx) % Nx)] = F[k * (Nx * NL) + 4 * Nx + l];
     }
   }
   for (int k = 0; k < Ny; k++) {
@@ -239,8 +229,7 @@ void do_drift() {
 
   for (int k = 0; k < Ny; k++) {
     for (int l = 0; l < Nx; l++) {
-      temp[((k + Ny) % Ny) * Nx + ((l - 1 + Nx) % Nx)] =
-          F[k * (Nx * NL) + 5 * Nx + l];
+      temp[((k + Ny) % Ny) * Nx + ((l - 1 + Nx) % Nx)] = F[k * (Nx * NL) + 5 * Nx + l];
     }
   }
   for (int k = 0; k < Ny; k++) {
@@ -251,8 +240,7 @@ void do_drift() {
 
   for (int k = 0; k < Ny; k++) {
     for (int l = 0; l < Nx; l++) {
-      temp[((k - 1 + Ny) % Ny) * Nx + ((l - 1 + Nx) % Nx)] =
-          F[k * (Nx * NL) + 6 * Nx + l];
+      temp[((k - 1 + Ny) % Ny) * Nx + ((l - 1 + Nx) % Nx)] = F[k * (Nx * NL) + 6 * Nx + l];
     }
   }
   for (int k = 0; k < Ny; k++) {
@@ -263,8 +251,7 @@ void do_drift() {
 
   for (int k = 0; k < Ny; k++) {
     for (int l = 0; l < Nx; l++) {
-      temp[((k - 1 + Ny) % Ny) * Nx + ((l + Nx) % Nx)] =
-          F[k * (Nx * NL) + 7 * Nx + l];
+      temp[((k - 1 + Ny) % Ny) * Nx + ((l + Nx) % Nx)] = F[k * (Nx * NL) + 7 * Nx + l];
     }
   }
   for (int k = 0; k < Ny; k++) {
@@ -275,8 +262,7 @@ void do_drift() {
 
   for (int k = 0; k < Ny; k++) {
     for (int l = 0; l < Nx; l++) {
-      temp[((k - 1 + Ny) % Ny) * Nx + ((l + 1 + Nx) % Nx)] =
-          F[k * (Nx * NL) + 8 * Nx + l];
+      temp[((k - 1 + Ny) % Ny) * Nx + ((l + 1 + Nx) % Nx)] = F[k * (Nx * NL) + 8 * Nx + l];
     }
   }
   for (int k = 0; k < Ny; k++) {
@@ -327,20 +313,10 @@ void do_rho() {
 
   for (int j = 0; j < Ny; j++) {
     for (int k = 0; k < Nx; k++) {
-      double res1 =
-          F[j * (Nx * NL) + 0 * Nx + k] + F[j * (Nx * NL) + 1 * Nx + k] +
-          F[j * (Nx * NL) + 2 * Nx + k] + F[j * (Nx * NL) + 3 * Nx + k] +
-          F[j * (Nx * NL) + 4 * Nx + k] + F[j * (Nx * NL) + 5 * Nx + k] +
-          F[j * (Nx * NL) + 6 * Nx + k] + F[j * (Nx * NL) + 7 * Nx + k] +
-          F[j * (Nx * NL) + 8 * Nx + k];
-      double res2 =
-          F[j * (Nx * NL) + 2 * Nx + k] + F[j * (Nx * NL) + 3 * Nx + k] +
-          F[j * (Nx * NL) + 4 * Nx + k] - F[j * (Nx * NL) + 6 * Nx + k] -
-          F[j * (Nx * NL) + 7 * Nx + k] - F[j * (Nx * NL) + 8 * Nx + k];
-      double res3 =
-          F[j * (Nx * NL) + 1 * Nx + k] + F[j * (Nx * NL) + 2 * Nx + k] -
-          F[j * (Nx * NL) + 4 * Nx + k] - F[j * (Nx * NL) + 5 * Nx + k] -
-          F[j * (Nx * NL) + 6 * Nx + k] + F[j * (Nx * NL) + 8 * Nx + k];
+      double res1 = F[j * (Nx * NL) + 0 * Nx + k] + F[j * (Nx * NL) + 1 * Nx + k] + F[j * (Nx * NL) + 2 * Nx + k] + F[j * (Nx * NL) + 3 * Nx + k] + F[j * (Nx * NL) + 4 * Nx + k] + F[j * (Nx * NL) + 5 * Nx + k] + F[j * (Nx * NL) + 6 * Nx + k] +
+                    F[j * (Nx * NL) + 7 * Nx + k] + F[j * (Nx * NL) + 8 * Nx + k];
+      double res2 = F[j * (Nx * NL) + 2 * Nx + k] + F[j * (Nx * NL) + 3 * Nx + k] + F[j * (Nx * NL) + 4 * Nx + k] - F[j * (Nx * NL) + 6 * Nx + k] - F[j * (Nx * NL) + 7 * Nx + k] - F[j * (Nx * NL) + 8 * Nx + k];
+      double res3 = F[j * (Nx * NL) + 1 * Nx + k] + F[j * (Nx * NL) + 2 * Nx + k] - F[j * (Nx * NL) + 4 * Nx + k] - F[j * (Nx * NL) + 5 * Nx + k] - F[j * (Nx * NL) + 6 * Nx + k] + F[j * (Nx * NL) + 8 * Nx + k];
 
       double inv = 1 / res1;
       rho[j * Nx + k] = res1;
@@ -355,45 +331,32 @@ void do_feq() {
   // bytes =
   for (int j = 0; j < Ny; j++) {
     for (int l = 0; l < Nx; l++) {
-      double third = 1 - 1.5 * (ux[j * Nx + l] * ux[j * Nx + l] +
-                                uy[j * Nx + l] * uy[j * Nx + l]);
+      double third = 1 - 1.5 * (ux[j * Nx + l] * ux[j * Nx + l] + uy[j * Nx + l] * uy[j * Nx + l]);
       double weight_val;
       double curr = 0;
       double first = 0;
       double second = 0;
       Feq[j * (Nx * NL) + l] = rho[j * Nx + l] * tau_4_9 * third;
 
-      Feq[j * (Nx * NL) + 1 * Nx + l] =
-          rho[j * Nx + l] * tau_1_9 *
-          (3 * uy[j * Nx + l] + 4.5 * uy[j * Nx + l] * uy[j * Nx + l] + third);
+      Feq[j * (Nx * NL) + 1 * Nx + l] = rho[j * Nx + l] * tau_1_9 * (3 * uy[j * Nx + l] + 4.5 * uy[j * Nx + l] * uy[j * Nx + l] + third);
 
       curr = ux[j * Nx + l] + uy[j * Nx + l];
-      Feq[j * (Nx * NL) + 2 * Nx + l] =
-          rho[j * Nx + l] * tau_1_36 * (3 * curr + 4.5 * curr * curr + third);
+      Feq[j * (Nx * NL) + 2 * Nx + l] = rho[j * Nx + l] * tau_1_36 * (3 * curr + 4.5 * curr * curr + third);
 
-      Feq[j * (Nx * NL) + 3 * Nx + l] =
-          rho[j * Nx + l] * tau_1_9 *
-          (3 * ux[j * Nx + l] + 4.5 * ux[j * Nx + l] * ux[j * Nx + l] + third);
+      Feq[j * (Nx * NL) + 3 * Nx + l] = rho[j * Nx + l] * tau_1_9 * (3 * ux[j * Nx + l] + 4.5 * ux[j * Nx + l] * ux[j * Nx + l] + third);
 
       curr = ux[j * Nx + l] - uy[j * Nx + l];
-      Feq[j * (Nx * NL) + 4 * Nx + l] =
-          rho[j * Nx + l] * tau_1_36 * (3 * curr + 4.5 * curr * curr + third);
+      Feq[j * (Nx * NL) + 4 * Nx + l] = rho[j * Nx + l] * tau_1_36 * (3 * curr + 4.5 * curr * curr + third);
 
-      Feq[j * (Nx * NL) + 5 * Nx + l] =
-          rho[j * Nx + l] * tau_1_9 *
-          (-3 * uy[j * Nx + l] + 4.5 * uy[j * Nx + l] * uy[j * Nx + l] + third);
+      Feq[j * (Nx * NL) + 5 * Nx + l] = rho[j * Nx + l] * tau_1_9 * (-3 * uy[j * Nx + l] + 4.5 * uy[j * Nx + l] * uy[j * Nx + l] + third);
 
       curr = -ux[j * Nx + l] - uy[j * Nx + l];
-      Feq[j * (Nx * NL) + 6 * Nx + l] =
-          rho[j * Nx + l] * tau_1_36 * (3 * curr + 4.5 * curr * curr + third);
+      Feq[j * (Nx * NL) + 6 * Nx + l] = rho[j * Nx + l] * tau_1_36 * (3 * curr + 4.5 * curr * curr + third);
 
-      Feq[j * (Nx * NL) + 7 * Nx + l] =
-          rho[j * Nx + l] * tau_1_9 *
-          (-3 * ux[j * Nx + l] + 4.5 * ux[j * Nx + l] * ux[j * Nx + l] + third);
+      Feq[j * (Nx * NL) + 7 * Nx + l] = rho[j * Nx + l] * tau_1_9 * (-3 * ux[j * Nx + l] + 4.5 * ux[j * Nx + l] * ux[j * Nx + l] + third);
 
       curr = uy[j * Nx + l] - ux[j * Nx + l];
-      Feq[j * (Nx * NL) + 8 * Nx + l] =
-          rho[j * Nx + l] * tau_1_36 * (3 * curr + 4.5 * curr * curr + third);
+      Feq[j * (Nx * NL) + 8 * Nx + l] = rho[j * Nx + l] * tau_1_36 * (3 * curr + 4.5 * curr * curr + third);
     }
   }
 }
@@ -402,9 +365,7 @@ void do_f() {
   for (int j = 0; j < Ny; j++) {
     for (int l = 0; l < NL; l++) {
       for (int k = 0; k < Nx; k++) {
-        F[j * (Nx * NL) + l * Nx + k] =
-            tau_plus_1 * F[j * (Nx * NL) + l * Nx + k] -
-            Feq[j * (Nx * NL) + l * Nx + k];
+        F[j * (Nx * NL) + l * Nx + k] = tau_plus_1 * F[j * (Nx * NL) + l * Nx + k] - Feq[j * (Nx * NL) + l * Nx + k];
       }
     }
   }
@@ -476,8 +437,7 @@ void do_vort() {
   // Calculate k = 0 boundary
   ux_roll = ux[(Ny - 1) * Nx + Nx - 1] - ux[(Ny - 1) * Nx + 1];
   uy_roll = uy[(Ny - 2) * Nx] - uy[0];
-  vorticity[(Ny - 1) * Nx] =
-      cylinder[(Ny - 1) * Nx] == 1 ? 0 : ux_roll - uy_roll;
+  vorticity[(Ny - 1) * Nx] = cylinder[(Ny - 1) * Nx] == 1 ? 0 : ux_roll - uy_roll;
 
   // Calculate k = [1, Nx - 2]
   for (int k = 1; k < Nx - 1; k++) {
@@ -487,15 +447,13 @@ void do_vort() {
     // (np.roll(uy, -1, axis=1) - np.roll(uy, 1, axis=1))
     double uy_roll = uy[(Ny - 2) * Nx + k] - uy[k];
 
-    vorticity[(Ny - 1) * Nx + k] =
-        cylinder[(Ny - 1) * Nx + k] == 1 ? 0 : ux_roll - uy_roll;
+    vorticity[(Ny - 1) * Nx + k] = cylinder[(Ny - 1) * Nx + k] == 1 ? 0 : ux_roll - uy_roll;
   }
 
   // Calculate k = Nx - 1 boundary
   ux_roll = ux[(Ny - 1) * Nx + Nx - 2] - ux[(Ny - 1) * Nx];
   uy_roll = uy[(Ny - 2) * Nx + Nx - 1] - uy[Nx - 1];
-  vorticity[(Ny - 1) * Nx + Nx - 1] =
-      cylinder[(Ny - 1) * Nx + Nx - 1] == 1 ? 0 : ux_roll - uy_roll;
+  vorticity[(Ny - 1) * Nx + Nx - 1] = cylinder[(Ny - 1) * Nx + Nx - 1] == 1 ? 0 : ux_roll - uy_roll;
 }
 void do_timestep() {
   start_run(drift_profiler);
@@ -527,8 +485,7 @@ inline int run() {
   const int PROFILE_DIGITS = floor(log10(PROFILE_RUNS)) + 1;
   printf("\rRun %-*d/%d done", PROFILE_DIGITS, 0, PROFILE_RUNS);
   fflush(stdout);
-  for (int profile_counter = 0; profile_counter < PROFILE_RUNS;
-       profile_counter++) {
+  for (int profile_counter = 0; profile_counter < PROFILE_RUNS; profile_counter++) {
 #endif
     // Simulation loop
     for (int i = 0; i < Nt; i++) {
@@ -543,36 +500,30 @@ inline int run() {
 #endif
     }
 #ifdef PROFILE
-    printf("\rRun %-*d/%d done", PROFILE_DIGITS, profile_counter + 1,
-           PROFILE_RUNS);
+    printf("\rRun %-*d/%d done", PROFILE_DIGITS, profile_counter + 1, PROFILE_RUNS);
     fflush(stdout);
   }
   printf("\nProfiling results:\n");
   profiler_stats drift_stats = finish_profiler(drift_profiler);
   printf("- Drift  Calculation: %4.2f Flops/Cycle, %10ld cycles in %d runs. "
          "Arithmetic intensity: %4.2f\n",
-         drift_stats.performance, drift_stats.cycles, drift_stats.runs,
-         drift_stats.arithmetic_intensity);
+         drift_stats.performance, drift_stats.cycles, drift_stats.runs, drift_stats.arithmetic_intensity);
   profiler_stats rho_stats = finish_profiler(rho_profiler);
   printf("- Rho  Calculation: %4.2f Flops/Cycle, %10ld cycles in %d runs. "
          "Arithmetic intensity: %4.2f\n",
-         rho_stats.performance, rho_stats.cycles, rho_stats.runs,
-         rho_stats.arithmetic_intensity);
+         rho_stats.performance, rho_stats.cycles, rho_stats.runs, rho_stats.arithmetic_intensity);
   profiler_stats feq_stats = finish_profiler(feq_profiler);
   printf("- FEQ  Calculation: %4.2f Flops/Cycle, %10ld cycles in %d runs. "
          "Arithmetic intensity: %4.2f\n",
-         feq_stats.performance, feq_stats.cycles, feq_stats.runs,
-         feq_stats.arithmetic_intensity);
+         feq_stats.performance, feq_stats.cycles, feq_stats.runs, feq_stats.arithmetic_intensity);
   profiler_stats f_stats = finish_profiler(f_profiler);
   printf("- F    Calculation: %4.2f Flops/Cycle, %10ld cycles in %d runs. "
          "Arithmetic intensity: %4.2f\n",
-         f_stats.performance, f_stats.cycles, f_stats.runs,
-         f_stats.arithmetic_intensity);
+         f_stats.performance, f_stats.cycles, f_stats.runs, f_stats.arithmetic_intensity);
   profiler_stats vort_stats = finish_profiler(vort_profiler);
   printf("- Vort Calculation: %4.2f Flops/Cycle, %10ld cycles in %d runs. "
          "Arithmetic intensity: %4.2f\n",
-         vort_stats.performance, vort_stats.cycles, vort_stats.runs,
-         vort_stats.arithmetic_intensity);
+         vort_stats.performance, vort_stats.cycles, vort_stats.runs, vort_stats.arithmetic_intensity);
 #endif
 
   printf("\n");
@@ -591,8 +542,7 @@ inline int run() {
 
 #ifdef DEBUG
   char timestamp_filename[100];
-  sprintf(timestamp_filename, "%s/timestamp_%d_%d_%d.txt", folder_name.c_str(),
-          Nx, Ny, Nt);
+  sprintf(timestamp_filename, "%s/timestamp_%d_%d_%d.txt", folder_name.c_str(), Nx, Ny, Nt);
   FILE *timestamp_file = fopen(timestamp_filename, "w");
   fclose(timestamp_file);
   make_latest_output(folder_name);
@@ -609,8 +559,7 @@ int main(int argc, char const *argv[]) {
   run();
   asm volatile("RDTSC" : "=A"(end_cycle));
   time(&end_sec);
-  printf("Cycles taken: %llu (%ld seconds)\n", end_cycle - start_cycle,
-         end_sec - start_sec);
+  printf("Cycles taken: %llu (%ld seconds)\n", end_cycle - start_cycle, end_sec - start_sec);
 
   return 0;
 }

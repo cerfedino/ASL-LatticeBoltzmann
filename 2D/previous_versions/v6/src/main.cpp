@@ -269,7 +269,7 @@ inline int run() {
       end_run(rho_profiler);
 
       // set to zero
-      //memset(Feq, 0, Ny * Nx * NL * sizeof(double));
+      // memset(Feq, 0, Ny * Nx * NL * sizeof(double));
 
       // flops = NL*Ny*Nx*(10 mults + 5 adds)
       __m256d const_vec_1 = _mm256_set1_pd(1);
