@@ -17,7 +17,7 @@ RUN_PARAMS_DEFINITIONS = -DMNx=$(word 1,$(RUN_PARAMS)) -DMNy=$(word 2,$(RUN_PARA
 
 
 
-PAST_VERSIONS_OBJ = $(foreach file,$(wildcard previous_versions/*/src/main.cpp),$(file:.cpp=_optimized_profile_$(RUN_PARAMS_ESCAPED).o))
+PAST_VERSIONS_OBJ = $(foreach file,$(wildcard previous_versions/v*/src/main.cpp),$(file:.cpp=_optimized_benchmark_$(RUN_PARAMS_ESCAPED).o) $(file:.cpp=_optimized_profile_$(RUN_PARAMS_ESCAPED).o))
 
 .PHONY: all clean test leaks benchmark profile
 
@@ -34,6 +34,8 @@ clean:
 	g++ $(CFLAGS) $(OPTIM_FLAGS) $(RUN_PARAMS_DEFINITIONS) -DDEBUG $< -o $@ src/include/profile.c
 %/main_optimized_profile_$(RUN_PARAMS_ESCAPED).o: %/main.cpp src/include/utils.c src/include/profile.c
 	g++ $(CFLAGS) $(OPTIM_FLAGS) $(RUN_PARAMS_DEFINITIONS) -DPROFILE $< -o $@ src/include/profile.c
+%/main_optimized_benchmark_$(RUN_PARAMS_ESCAPED).o: %/main.cpp src/include/utils.c src/include/profile.c
+	g++ $(CFLAGS) $(OPTIM_FLAGS) $(RUN_PARAMS_DEFINITIONS) -DBENCHMARK -lpapi $< -o $@ src/include/profile.c
 
 
 
@@ -54,3 +56,5 @@ benchmark: $(PAST_VERSIONS_OBJ)
 	mkdir -p artifacts/; python3 benchmark.py $(RUN_PARAMS);
 profile: ./src/main_optimized_profile_$(RUN_PARAMS_ESCAPED).o
 	./src/main_optimized_profile_$(RUN_PARAMS_ESCAPED).o $(RUN_PARAMS)
+benchmark_cur: ./src/main_optimized_benchmark_$(RUN_PARAMS_ESCAPED).o
+	./src/main_optimized_benchmark_$(RUN_PARAMS_ESCAPED).o

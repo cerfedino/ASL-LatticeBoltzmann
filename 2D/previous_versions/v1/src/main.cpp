@@ -18,6 +18,10 @@
 #include "include/profile.h"
 #include "include/utils.h"
 
+#ifdef BENCHMARK
+#include <papi.h>
+#endif
+
 #ifdef DEBUG
 #define debug_printf(fmt, ...) fprintf(stdout, fmt, __VA_ARGS__)
 #define debug_print(fmt) fprintf(stdout, fmt)
@@ -41,6 +45,18 @@ int Nt = 5000;          // number of timesteps
 #define rho0 0.01       // reciprocal average density
 #define tau -1.66666667 // reciprocal collision timescale (1/0.6)
 
+#ifdef BENCHMARK
+int papi_event_set = PAPI_NULL;
+
+long long papi_values[2];
+
+long long papi_drift_values[2] = {0, 0};
+long long papi_rho_values[2] = {0, 0};
+long long papi_feq_values[2] = {0, 0};
+long long papi_f_values[2] = {0, 0};
+long long papi_vort_values[2] = {0, 0};
+#endif
+
 // #define Nt 30  // number of timesteps
 
 // Lattice speeds / weights
@@ -63,6 +79,29 @@ void meshgrid(int *x_coords, int *y_coords) {
 // TODO arrays need to be initialized likely with 0 values
 inline int run() {
   string folder_name = make_output_folder(); // TODO delete empty folders
+
+#ifdef BENCHMARK
+  if (PAPI_library_init(PAPI_VER_CURRENT) != PAPI_VER_CURRENT) {
+    fprintf(stderr, "PAPI library init error!\n");
+    exit(1);
+  }
+
+  if (PAPI_create_eventset(&papi_event_set) != PAPI_OK) {
+    fprintf(stderr, "PAPI create event set error!\n");
+    exit(1);
+  }
+
+  // Register memory event
+  if (PAPI_add_named_event(papi_event_set, "ANY_DATA_CACHE_FILLS_FROM_SYSTEM:MEM_IO_LCL") != PAPI_OK) {
+    fprintf(stderr, "Couldn't add memory event to PAPI!\n");
+    exit(1);
+  }
+  // Register flops event
+  if (PAPI_add_event(papi_event_set, PAPI_FP_OPS) != PAPI_OK) {
+    fprintf(stderr, "Couldn't add flop event to PAPI\n");
+    exit(1);
+  }
+#endif
 
   debug_printf("Output folder: %s\n", folder_name.c_str());
 
@@ -238,8 +277,14 @@ inline int run() {
         bndryF[j * NL + 8] = temp;
       }
 
-      // rho = np.sum(F,2)
-      // flops = Ny*Nx*NL(3 adds + 2 mults) + Ny*Nx*(1 div + 2 mults)
+// rho = np.sum(F,2)
+// flops = Ny*Nx*NL(3 adds + 2 mults) + Ny*Nx*(1 div + 2 mults)
+#ifdef BENCHMARK
+      if (PAPI_start(papi_event_set) != PAPI_OK) {
+        fprintf(stderr, "PAPI start error!\n");
+        exit(1);
+      }
+#endif
       start_run(rho_profiler);
       for (int j = 0; j < Ny; j++) {
         for (int k = 0; k < Nx; k++) {
@@ -258,11 +303,25 @@ inline int run() {
         }
       }
       end_run(rho_profiler);
+#ifdef BENCHMARK
+      if (PAPI_stop(papi_event_set, papi_values) != PAPI_OK) {
+        fprintf(stderr, "PAPI stop error!\n");
+        exit(1);
+      }
+      papi_rho_values[0] += 64 * papi_values[0];
+      papi_rho_values[1] += papi_values[1];
+#endif
 
       // set to zero
       memset(Feq, 0, Ny * Nx * NL * sizeof(double));
 
-      // flops = NL*Ny*Nx*(9 mults + 2 div  + 3 pows + 6 adds)
+// flops = NL*Ny*Nx*(9 mults + 2 div  + 3 pows + 6 adds)
+#ifdef BENCHMARK
+      if (PAPI_start(papi_event_set) != PAPI_OK) {
+        fprintf(stderr, "PAPI start error!\n");
+        exit(1);
+      }
+#endif
       start_run(feq_profiler);
       for (int k = 0; k < NL; k++) {
         for (int j = 0; j < Ny; j++) {
@@ -285,9 +344,23 @@ inline int run() {
         }
       }
       end_run(feq_profiler);
+#ifdef BENCHMARK
+      if (PAPI_stop(papi_event_set, papi_values) != PAPI_OK) {
+        fprintf(stderr, "PAPI stop error!\n");
+        exit(1);
+      }
+      papi_feq_values[0] += 64 * papi_values[0];
+      papi_feq_values[1] += papi_values[1];
+#endif
 
-      // F += -(1.0/tau) * (F - Feq)
-      // flops = Ny*Nx*NL (2 add + 1 mult )
+// F += -(1.0/tau) * (F - Feq)
+// flops = Ny*Nx*NL (2 add + 1 mult )
+#ifdef BENCHMARK
+      if (PAPI_start(papi_event_set) != PAPI_OK) {
+        fprintf(stderr, "PAPI start error!\n");
+        exit(1);
+      }
+#endif
       start_run(f_profiler);
       for (int j = 0; j < Ny; j++) {
         for (int k = 0; k < Nx; k++) {
@@ -297,6 +370,14 @@ inline int run() {
         }
       }
       end_run(f_profiler);
+#ifdef BENCHMARK
+      if (PAPI_stop(papi_event_set, papi_values) != PAPI_OK) {
+        fprintf(stderr, "PAPI stop error!\n");
+        exit(1);
+      }
+      papi_f_values[0] += 64 * papi_values[0];
+      papi_f_values[1] += papi_values[1];
+#endif
 
       // Apply boundary
       // F[cylinder,:] = bndryF
@@ -324,12 +405,18 @@ inline int run() {
         }
       }
 
-      // vorticity = (np.roll(ux, -1, axis=0) - np.roll(ux, 1, axis=0)) -
-      // (np.roll(uy, -1, axis=1) - np.roll(uy, 1, axis=1))
-      // vorticity[cylinder] = np.nan vorticity = np.ma.array(vorticity,
-      // mask=cylinder)
+// vorticity = (np.roll(ux, -1, axis=0) - np.roll(ux, 1, axis=0)) -
+// (np.roll(uy, -1, axis=1) - np.roll(uy, 1, axis=1))
+// vorticity[cylinder] = np.nan vorticity = np.ma.array(vorticity,
+// mask=cylinder)
 
-      // flops = Ny*Nx*(3 adds)
+// flops = Ny*Nx*(3 adds)
+#ifdef BENCHMARK
+      if (PAPI_start(papi_event_set) != PAPI_OK) {
+        fprintf(stderr, "PAPI start error!\n");
+        exit(1);
+      }
+#endif
       start_run(vort_profiler);
       for (int j = 0; j < Ny; j++) {
         for (int k = 0; k < Nx; k++) {
@@ -344,6 +431,14 @@ inline int run() {
         }
       }
       end_run(vort_profiler);
+#ifdef BENCHMARK
+      if (PAPI_stop(papi_event_set, papi_values) != PAPI_OK) {
+        fprintf(stderr, "PAPI stop error!\n");
+        exit(1);
+      }
+      papi_vort_values[0] += 64 * papi_values[0];
+      papi_vort_values[1] += papi_values[1];
+#endif
 
 #ifdef DEBUG
       char vortex_filename[100];
@@ -375,6 +470,31 @@ inline int run() {
   printf("- Vort Calculation: %4.2f Flops/Cycle, %10llu cycles in %d runs. "
          "Arithmetic intensity: %4.2f\n",
          vort_stats.performance, vort_stats.cycles, vort_stats.runs, vort_stats.arithmetic_intensity);
+#endif
+
+#ifdef BENCHMARK
+  printf("Drift Mem Transfer: %lld\n", papi_drift_values[0] / Nt);
+  printf("Drift Floating point operations: %lld\n", papi_drift_values[1] / Nt);
+  printf("Drift Arithmetic Intensity: %f\n", (double)papi_drift_values[1] / (double)papi_drift_values[0]);
+
+  printf("Rho Mem Transfer: %lld\n", papi_rho_values[0] / Nt);
+  printf("Rho Floating point operations: %lld\n", papi_rho_values[1] / Nt);
+  printf("Rho Arithmetic Intensity: %f\n", (double)papi_rho_values[1] / (double)papi_rho_values[0]);
+
+  printf("FEQ Mem Transfer: %lld\n", papi_feq_values[0] / Nt);
+  printf("FEQ Floating point operations: %lld\n", papi_feq_values[1] / Nt);
+  printf("FEQ Arithmetic Intensity: %f\n", (double)papi_feq_values[1] / (double)papi_feq_values[0]);
+
+  printf("F Mem Transfer: %lld\n", papi_f_values[0] / Nt);
+  printf("F Floating point operations: %lld\n", papi_f_values[1] / Nt);
+  printf("F Arithmetic Intensity: %f\n", (double)papi_f_values[1] / (double)papi_f_values[0]);
+
+  printf("Vort Mem Transfer: %lld\n", papi_vort_values[0] / Nt);
+  printf("Vort Floating point operations: %lld\n", papi_vort_values[1] / Nt);
+  printf("Vort Arithmetic Intensity: %f\n", (double)papi_vort_values[1] / (double)papi_vort_values[0]);
+
+  // Cleanup PAPI
+  PAPI_shutdown();
 #endif
 
   printf("\n");
