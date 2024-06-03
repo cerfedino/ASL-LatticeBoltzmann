@@ -17,7 +17,6 @@
 
 #include "include/npy.hpp"
 #include "include/profile.h"
-#include "include/utils.c"
 
 #ifdef DEBUG
 #define debug_printf(fmt, ...) fprintf(stdout, fmt, __VA_ARGS__)
@@ -50,12 +49,15 @@ using namespace std;
 #define tau -1.66666667 // reciprocal collision timescale (1/0.6)
 #define tau_plus_1 (tau + 1)
 
+// #define Nt 30  // number of timesteps
+
 // Lattice speeds / weights
 #define NL 9
+const double idx[9] = {0, 1, 2, 3, 4, 5, 6, 7, 8};
+const double cxs[9] = {0.0, 0.0, 1.0, 1.0, 1.0, 0.0, -1.0, -1.0, -1.0};
+const double cys[9] = {0.0, 1.0, 1.0, 0.0, -1.0, -1.0, -1.0, 0.0, 1.0};
+const double weights[9] = {tau * 4.0 / 9, tau * 1.0 / 9, tau * 1.0 / 36, tau * 1.0 / 9, tau * 1.0 / 36, tau * 1.0 / 9, tau * 1.0 / 36, tau * 1.0 / 9, tau * 1.0 / 36}; // sums to tau * 1
 
-#define tau_4_9 (tau * 4.0 / 9)
-#define tau_1_9 (tau * 1.0 / 9)
-#define tau_1_36 (tau * 1.0 / 36)
 void meshgrid(int *x_coords, int *y_coords) {
   for (int i = 0; i < Ny; ++i) {
     for (int j = 0; j < Nx; ++j) {
@@ -65,15 +67,11 @@ void meshgrid(int *x_coords, int *y_coords) {
   }
 }
 
-inline int scalar_index(int x, int l) { return (x * Nx) + l; }
-inline int scalar_index(int y, int x, int l) { return y * Nx * NL + x * Nx + l; }
-
 double *Feq;
 double *F;
 double *vorticity;
 double *rho;
-bool *cylinder;
-int *collision_shape;
+double *cylinder;
 double *ux;
 double *uy;
 double *temp;
@@ -82,13 +80,11 @@ int *y_coords;
 int bndryF_size = 0;
 double *bndryF;
 profiler *rho_profiler = init_profiler(5 * Ny * Nx * NL + 3 * Ny * Nx, 8 * 5 * Ny * Nx * NL + 3 * Ny * Nx);
-profiler *feq_profiler = init_profiler(Ny * Nx * 67, 8 * 13 * Nx * Ny * NL);
+profiler *feq_profiler = init_profiler(15 * Nx * Ny * NL, 8 * 13 * Nx * Ny * NL);
 profiler *f_profiler = init_profiler(2 * Nx * Ny * NL, 8 * 3 * Nx * Ny * NL);
 profiler *vort_profiler = init_profiler(3 * Nx * Ny, 8 * 6 * Nx * Ny);
-profiler *drift_profiler = init_profiler(0, Nx *Ny * 9 * 2 * 8);
-
+profiler *drift_profiler = init_profiler(0, 0);
 string folder_name;
-
 void initialize() {
   folder_name = make_output_folder(); // TODO delete empty folders
 
@@ -99,7 +95,7 @@ void initialize() {
   F = (double *)aligned_alloc(32, Ny * Nx * NL * sizeof(double));
   vorticity = (double *)aligned_alloc(32, Ny * Nx * sizeof(double));
   rho = (double *)aligned_alloc(32, Ny * Nx * sizeof(double));
-  cylinder = (bool *)aligned_alloc(32, Ny * Nx * sizeof(bool));
+  cylinder = (double *)aligned_alloc(32, Ny * Nx * sizeof(double));
   ux = (double *)aligned_alloc(32, Ny * Nx * sizeof(double));
   uy = (double *)aligned_alloc(32, Ny * Nx * sizeof(double));
   temp = (double *)aligned_alloc(32, Ny * Nx * sizeof(double));
@@ -127,6 +123,10 @@ void initialize() {
   // flops = Ny*Nx( 2 add + 5 mult + 1 cos + 1 div )
   for (int i = 0; i < Ny; i++) {
     for (int j = 0; j < Nx; j++) {
+      // in python we access [3] but here we do on [1] what this dictates is the
+      // direction we go maybe something else too, but my brain is more fried
+      // than a kfc chicken AHAHAHAHAHAHAH HILARIOUS KARLO LOL IM LITERALLY
+      // DYING OF LAUGHTER
       F[i * (Nx * NL) + Nx + j] += 2.0 * (1.0 + 0.2 * cos(2.0 * M_PI * (double)x_coords[i * Nx + j] / (double)Nx * 4.0));
     }
   }
@@ -155,9 +155,6 @@ void initialize() {
 
   // cylinder = (X - Nx/4)**2 + (Y - Ny/2)**2 < (Ny/4)**2
   // flops = Ny*Nx*(2 pow + 2 subs + 2 divs+ 1 add)
-
-  // TODO: cylinder is a constant. it should be an array of indeces what would
-  // be 1, not an array of 0s and 1s
   for (int i = 0; i < Ny; i++) {
     for (int j = 0; j < Nx; j++) {
       cylinder[i * Nx + j] = (pow((double)x_coords[i * Nx + j] - (double)Nx / 4, 2) + pow((double)y_coords[i * Nx + j] - (double)Ny / 2, 2)) < pow(Ny / 4, 2);
@@ -180,102 +177,42 @@ void initialize() {
 void do_drift() {
   // # Drift
   // flops = 0
-  for (int y = 0; y < Ny; y++) {
-    for (int x = 0; x < Nx; x++) {
-      temp[scalar_index(y, (x + 1) % Nx)] = F[scalar_index(y, 1, x)];
-    }
-  }
-  for (int y = 0; y < Ny; y++) {
-    for (int x = 0; x < Nx; x++) {
-      F[scalar_index(y, 1, x)] = temp[scalar_index(y, x)];
-    }
-  }
+  for (int j = 0; j < NL; j++) {
 
-  for (int y = 0; y < Ny; y++) {
-    for (int x = 0; x < Nx; x++) {
-      temp[scalar_index((y + 1) % Ny, (x + 1) % Nx)] = F[scalar_index(y, 2, x)];
+    // Roll
+    int shiftX = cys[j];
+    int shiftY = cxs[j];
+    for (int k = 0; k < Ny; k++) {
+      for (int l = 0; l < Nx; l++) {
+        temp[((k + shiftY + Ny) % Ny) * Nx + ((l + shiftX + Nx) % Nx)] = F[k * (Nx * NL) + j * Nx + l];
+      }
     }
-  }
-  for (int y = 0; y < Ny; y++) {
-    for (int x = 0; x < Nx; x++) {
-      F[scalar_index(y, 2, x)] = temp[scalar_index(y, x)];
-    }
-  }
 
-  for (int y = 0; y < Ny; y++) {
-    for (int x = 0; x < Nx; x++) {
-      temp[scalar_index((y + 1) % Ny, x)] = F[scalar_index(y, 3, x)];
-    }
-  }
-  for (int y = 0; y < Ny; y++) {
-    for (int x = 0; x < Nx; x++) {
-      F[scalar_index(y, 3, x)] = temp[scalar_index(y, x)];
-    }
-  }
-
-  for (int y = 0; y < Ny; y++) {
-    for (int x = 0; x < Nx; x++) {
-      temp[scalar_index(((y + 1) % Ny), ((x - 1 + Nx) % Nx))] = F[scalar_index(y, 4, x)];
-    }
-  }
-  for (int y = 0; y < Ny; y++) {
-    for (int x = 0; x < Nx; x++) {
-      F[scalar_index(y, 4, x)] = temp[scalar_index(y, x)];
-    }
-  }
-
-  for (int y = 0; y < Ny; y++) {
-    for (int x = 0; x < Nx; x++) {
-      temp[scalar_index(((y + Ny) % Ny), ((x - 1 + Nx) % Nx))] = F[scalar_index(y, 5, x)];
-    }
-  }
-  for (int y = 0; y < Ny; y++) {
-    for (int x = 0; x < Nx; x++) {
-      F[scalar_index(y, 5, x)] = temp[scalar_index(y, x)];
-    }
-  }
-
-  for (int y = 0; y < Ny; y++) {
-    for (int x = 0; x < Nx; x++) {
-      temp[scalar_index(((y - 1 + Ny) % Ny), ((x - 1 + Nx) % Nx))] = F[scalar_index(y, 6, x)];
-    }
-  }
-  for (int y = 0; y < Ny; y++) {
-    for (int x = 0; x < Nx; x++) {
-      F[scalar_index(y, 6, x)] = temp[scalar_index(y, x)];
-    }
-  }
-
-  for (int y = 0; y < Ny; y++) {
-    for (int x = 0; x < Nx; x++) {
-      temp[scalar_index(((y - 1 + Ny) % Ny), ((x + Nx) % Nx))] = F[scalar_index(y, 7, x)];
-    }
-  }
-  for (int y = 0; y < Ny; y++) {
-    for (int x = 0; x < Nx; x++) {
-      F[scalar_index(y, 7, x)] = temp[scalar_index(y, x)];
-    }
-  }
-
-  for (int y = 0; y < Ny; y++) {
-    for (int x = 0; x < Nx; x++) {
-      temp[scalar_index(((y - 1 + Ny) % Ny), ((x + 1) % Nx))] = F[scalar_index(y, 8, x)];
-    }
-  }
-  for (int y = 0; y < Ny; y++) {
-    for (int x = 0; x < Nx; x++) {
-      F[scalar_index(y, 8, x)] = temp[scalar_index(y, x)];
+    for (int k = 0; k < Ny; k++) {
+      for (int l = 0; l < Nx; l++) {
+        F[k * (Nx * NL) + j * Nx + l] = temp[k * Nx + l];
+      }
     }
   }
 
   // bndryF = F[cylinder,:]
+  // bndryF = F[cylinder,:]
+  // its 2d of size 1941x9 but no idea how this is calculated ??????
+  // TODO to support dynamic sized we could evaluate the size of the
+  // array and then allocate memory for now its hardcoded :pikashrug:
+  // TODO: FIX
+  // bndryF = F[cylinder,:]
+  // its 2d of size 1941x9 but no idea how this is calculated ??????
+  // TODO to support dynamic sized we could evaluate the size of the
+  // array and then allocate memory for now its hardcoded :pikashrug:
+  // TODO: FIX
   // flops = 0
   int index_bndryF = 0;
-  for (int y = 0; y < Ny; y++) {
-    for (int x = 0; x < Nx; x++) {
-      if (cylinder[scalar_index(y, x)] == 1) {
+  for (int j = 0; j < Ny; j++) {
+    for (int k = 0; k < Nx; k++) {
+      if (cylinder[j * Nx + k] == 1) {
         for (int l = 0; l < NL; l++) {
-          bndryF[index_bndryF * NL + l] = F[scalar_index(y, l, x)];
+          bndryF[index_bndryF * NL + l] = F[j * (Nx * NL) + l * Nx + k];
         }
         index_bndryF++;
       }
@@ -286,6 +223,7 @@ void do_drift() {
   // reorder columns bndryF = bndryF[:,[0,5,6,7,8,1,2,3,4]]
   // flops = 0
   for (int j = 0; j < bndryF_size; j++) {
+    // we love pointers dont we?
     double temp = bndryF[j * NL + 1];
     bndryF[j * NL + 1] = bndryF[j * NL + 5];
     bndryF[j * NL + 5] = temp;
@@ -305,64 +243,57 @@ void do_drift() {
 }
 
 void do_rho() {
-  // flops = Ny*Nx*21
-  // bytes = Ny*Nx*8*2+Ny*Nx*8*9
-
+  // rho = np.sum(F,2)
+  // flops = Ny*Nx*NL(3 adds + 2 mults) + Ny*Nx*(2 divs)
   for (int j = 0; j < Ny; j++) {
     for (int k = 0; k < Nx; k++) {
-      double res1 =
-          F[scalar_index(j, 0, k)] + F[scalar_index(j, 1, k)] + F[scalar_index(j, 2, k)] + F[scalar_index(j, 3, k)] + F[scalar_index(j, 4, k)] + F[scalar_index(j, 5, k)] + F[scalar_index(j, 6, k)] + F[scalar_index(j, 7, k)] + F[scalar_index(j, 8, k)];
-      double res2 = F[scalar_index(j, 2, k)] + F[scalar_index(j, 3, k)] + F[scalar_index(j, 4, k)] - F[scalar_index(j, 6, k)] - F[scalar_index(j, 7, k)] - F[scalar_index(j, 8, k)];
-      double res3 = F[scalar_index(j, 1, k)] + F[scalar_index(j, 2, k)] - F[scalar_index(j, 4, k)] - F[scalar_index(j, 5, k)] - F[scalar_index(j, 6, k)] + F[scalar_index(j, 8, k)];
-
+      double res1 = 0;
+      double res2 = 0;
+      double res3 = 0;
+      for (int l = 0; l < NL; l++) {
+        res1 += F[j * (Nx * NL) + l * Nx + k];
+        res2 += F[j * (Nx * NL) + l * Nx + k] * cxs[l];
+        res3 += F[j * (Nx * NL) + l * Nx + k] * cys[l];
+      }
       double inv = 1 / res1;
-      rho[scalar_index(j, k)] = res1;
-      ux[scalar_index(j, k)] = res2 * inv;
-      uy[scalar_index(j, k)] = res3 * inv;
+      rho[j * Nx + k] = res1;
+      ux[j * Nx + k] = res2 * inv;
+      uy[j * Nx + k] = res3 * inv;
     }
   }
 }
 
 void do_feq() {
-  // flops = Ny*Nx*67
-  // bytes =
-  for (int y = 0; y < Ny; y++) {
-    for (int x = 0; x < Nx; x++) {
-      double third = 1 - 1.5 * (ux[y * Nx + x] * ux[y * Nx + x] + uy[y * Nx + x] * uy[y * Nx + x]);
-      double weight_val;
-      double curr = 0;
-      double first = 0;
-      double second = 0;
-      Feq[scalar_index(y, 0, x)] = rho[scalar_index(y, x)] * tau_4_9 * third;
+  // set to zero
+  // memset(Feq, 0, Ny * Nx * NL * sizeof(double));
 
-      Feq[scalar_index(y, 1, x)] = rho[scalar_index(y, x)] * tau_1_9 * (3 * uy[scalar_index(y, x)] + 4.5 * uy[scalar_index(y, x)] * uy[scalar_index(y, x)] + third);
+  // flops = NL*Ny*Nx*(9 mults + 2 div  + 3 pows + 6 adds)
+  for (int k = 0; k < NL; k++) {
+    for (int j = 0; j < Ny; j++) {
+      for (int l = 0; l < Nx; l++) {
+        double rho_val = rho[j * Nx + l];
+        double weight_val = weights[k];
 
-      curr = ux[scalar_index(y, x)] + uy[scalar_index(y, x)];
-      Feq[scalar_index(y, 2, x)] = rho[scalar_index(y, x)] * tau_1_36 * (3 * curr + 4.5 * curr * curr + third);
+        // 3*(cx*ux+cy*uy)
+        double first = 3 * (cxs[k] * ux[j * Nx + l] + cys[k] * uy[j * Nx + l]);
 
-      Feq[scalar_index(y, 3, x)] = rho[scalar_index(y, x)] * tau_1_9 * (3 * ux[scalar_index(y, x)] + 4.5 * ux[scalar_index(y, x)] * ux[scalar_index(y, x)] + third);
+        // 9*(cx*ux+cy*uy)**2/2
+        double second = 9 * pow(cxs[k] * ux[j * Nx + l] + cys[k] * uy[j * Nx + l], 2) / 2;
 
-      curr = ux[scalar_index(y, x)] - uy[scalar_index(y, x)];
-      Feq[scalar_index(y, 4, x)] = rho[scalar_index(y, x)] * tau_1_36 * (3 * curr + 4.5 * curr * curr + third);
+        // 3*(ux**2+uy**2)/2
+        double third = 3 * (pow(ux[j * Nx + l], 2) + pow(uy[j * Nx + l], 2)) / 2;
 
-      Feq[scalar_index(y, 5, x)] = rho[scalar_index(y, x)] * tau_1_9 * (-3 * uy[scalar_index(y, x)] + 4.5 * uy[scalar_index(y, x)] * uy[scalar_index(y, x)] + third);
-
-      curr = -ux[scalar_index(y, x)] - uy[scalar_index(y, x)];
-      Feq[scalar_index(y, 6, x)] = rho[scalar_index(y, x)] * tau_1_36 * (3 * curr + 4.5 * curr * curr + third);
-
-      Feq[scalar_index(y, 7, x)] = rho[scalar_index(y, x)] * tau_1_9 * (-3 * ux[scalar_index(y, x)] + 4.5 * ux[scalar_index(y, x)] * ux[scalar_index(y, x)] + third);
-
-      curr = uy[scalar_index(y, x)] - ux[scalar_index(y, x)];
-      Feq[scalar_index(y, 8, x)] = rho[scalar_index(y, x)] * tau_1_36 * (3 * curr + 4.5 * curr * curr + third);
+        Feq[j * (Nx * NL) + k * Nx + l] = rho_val * weight_val * (1 + first + second - third);
+      }
     }
   }
 }
 
 void do_f() {
-  for (int y = 0; y < Ny; y++) {
+  for (int j = 0; j < Ny; j++) {
     for (int l = 0; l < NL; l++) {
-      for (int x = 0; x < Nx; x++) {
-        F[scalar_index(y, l, x)] = tau_plus_1 * F[scalar_index(y, l, x)] - Feq[scalar_index(y, l, x)];
+      for (int k = 0; k < Nx; k++) {
+        F[j * (Nx * NL) + l * Nx + k] = tau_plus_1 * F[j * (Nx * NL) + l * Nx + k] - Feq[j * (Nx * NL) + l * Nx + k];
       }
     }
   }
@@ -370,16 +301,28 @@ void do_f() {
 
 void do_vort() {
 
+  // Apply boundary
+  // F[cylinder,:] = bndryF
+  // flops = 0
   int index_bndryF2 = 0;
-  for (int y = 0; y < Ny; y++) {
-    for (int x = 0; x < Nx; x++) {
-      if (cylinder[scalar_index(y, x)] == 1) {
-        ux[scalar_index(y, x)] = 0;
-        uy[scalar_index(y, x)] = 0;
+  for (int j = 0; j < Ny; j++) {
+    for (int k = 0; k < Nx; k++) {
+      if (cylinder[j * Nx + k] == 1) {
         for (int l = 0; l < NL; l++) {
-          F[scalar_index(y, l, x)] = bndryF[index_bndryF2 * NL + l];
+          F[j * (Nx * NL) + l * Nx + k] = bndryF[index_bndryF2 * NL + l];
         }
         index_bndryF2++;
+      }
+    }
+  }
+
+  // set ux and uy to zero where cylinder is 1
+  // flops = 0
+  for (int j = 0; j < Ny; j++) {
+    for (int k = 0; k < Nx; k++) {
+      if (cylinder[j * Nx + k] == 1) {
+        ux[j * Nx + k] = 0;
+        uy[j * Nx + k] = 0;
       }
     }
   }
@@ -391,14 +334,16 @@ void do_vort() {
   vorticity[0] = cylinder[0] == 1 ? 0 : ux_roll - uy_roll;
 
   // Calculate k = [1, Nx - 2]
-  for (int x = 1; x < Nx - 1; x++) {
-    if (cylinder[x] == 0) {
-      double ux_roll = ux[x - 1] - ux[x + 1];
-      double uy_roll = uy[scalar_index(Ny - 1, x)] - uy[scalar_index(1, x)];
-      vorticity[x] = ux_roll - uy_roll;
-    } else
-      vorticity[x] = 0;
+  for (int k = 1; k < Nx - 1; k++) {
+    // (np.roll(ux, -1, axis=0) - np.roll(ux, 1, axis=0))
+    double ux_roll = ux[k - 1] - ux[k + 1];
+
+    // (np.roll(uy, -1, axis=1) - np.roll(uy, 1, axis=1))
+    double uy_roll = uy[(Ny - 1) * Nx + k] - uy[Nx + k];
+
+    vorticity[k] = cylinder[k] == 1 ? 0 : ux_roll - uy_roll;
   }
+
   // Calculate k = Nx - 1 boundary
   ux_roll = ux[Nx - 2] - ux[0];
   uy_roll = uy[(Ny - 1) * Nx + Nx - 1] - uy[Nx + Nx - 1];
@@ -407,47 +352,48 @@ void do_vort() {
   // Calculate j = [1, Ny - 2]
   for (int j = 1; j < Ny; j++) {
     // Calculate k = 0 boundary
-    double ux_roll = ux[scalar_index(j, Nx - 1)] - ux[scalar_index(j, 1)];
-    double uy_roll = uy[scalar_index(j - 1, 0)] - uy[scalar_index(j + 1, 0)];
-    vorticity[scalar_index(j, 0)] = cylinder[scalar_index(j, 0)] == 1 ? 0 : ux_roll - uy_roll;
+    double ux_roll = ux[j * Nx + Nx - 1] - ux[j * Nx + 1];
+    double uy_roll = uy[(j - 1) * Nx] - uy[(j + 1) * Nx];
+    vorticity[j * Nx] = cylinder[j * Nx] == 1 ? 0 : ux_roll - uy_roll;
 
     // Calculate k = [1, Nx - 2]
     for (int k = 1; k < Nx - 1; k++) {
-      if (cylinder[j * Nx + k] == 0) {
-        double ux_roll = ux[scalar_index(j, k - 1)] - ux[j * Nx + k + 1];
-        double uy_roll = uy[scalar_index(j - 1, k)] - uy[scalar_index(j + 1, k)];
-        vorticity[scalar_index(j, k)] = ux_roll - uy_roll;
-      } else
-        vorticity[scalar_index(j, k)] = 0;
+      // (np.roll(ux, -1, axis=0) - np.roll(ux, 1, axis=0))
+      double ux_roll = ux[j * Nx + k - 1] - ux[j * Nx + k + 1];
+
+      // (np.roll(uy, -1, axis=1) - np.roll(uy, 1, axis=1))
+      double uy_roll = uy[(j - 1) * Nx + k] - uy[(j + 1) * Nx + k];
+
+      vorticity[j * Nx + k] = cylinder[j * Nx + k] == 1 ? 0 : ux_roll - uy_roll;
     }
 
     // Calculate k = Nx - 1 boundary
-    if (cylinder[j * Nx + Nx - 1] == 0) {
-      ux_roll = ux[scalar_index(j, Nx - 2)] - ux[scalar_index(j, 0)];
-      uy_roll = uy[scalar_index(j - 1, Nx - 1)] - uy[scalar_index(j + 1, Nx - 1)];
-      vorticity[scalar_index(j, Nx - 1)] = ux_roll - uy_roll;
-    } else
-      vorticity[scalar_index(j, Nx - 1)] = 0;
+    ux_roll = ux[j * Nx + Nx - 2] - ux[j * Nx];
+    uy_roll = uy[(j - 1) * Nx + Nx - 1] - uy[(j + 1) * Nx + Nx - 1];
+    vorticity[j * Nx + Nx - 1] = cylinder[j * Nx + Nx - 1] == 1 ? 0 : ux_roll - uy_roll;
   }
 
   // Calculate j = Ny - 1 boundary
   // Calculate k = 0 boundary
-  ux_roll = ux[scalar_index(Ny - 1, Nx - 1)] - ux[scalar_index(Ny - 1, 1)];
-  uy_roll = uy[scalar_index(Ny - 2, 0)] - uy[0];
-  vorticity[scalar_index(Ny - 1, 0)] = cylinder[scalar_index(Ny - 1, 0)] == 1 ? 0 : ux_roll - uy_roll;
+  ux_roll = ux[(Ny - 1) * Nx + Nx - 1] - ux[(Ny - 1) * Nx + 1];
+  uy_roll = uy[(Ny - 2) * Nx] - uy[0];
+  vorticity[(Ny - 1) * Nx] = cylinder[(Ny - 1) * Nx] == 1 ? 0 : ux_roll - uy_roll;
 
   // Calculate k = [1, Nx - 2]
   for (int k = 1; k < Nx - 1; k++) {
+    // (np.roll(ux, -1, axis=0) - np.roll(ux, 1, axis=0))
+    double ux_roll = ux[(Ny - 1) * Nx + k - 1] - ux[(Ny - 1) * Nx + k + 1];
 
-    double ux_roll = ux[scalar_index(Ny - 1, k - 1)] - ux[scalar_index(Ny - 1, k + 1)];
-    double uy_roll = uy[scalar_index(Ny - 2, k)] - uy[k];
-    vorticity[scalar_index(Ny - 1, k)] = cylinder[scalar_index(Ny - 1, k)] == 1 ? 0 : ux_roll - uy_roll;
+    // (np.roll(uy, -1, axis=1) - np.roll(uy, 1, axis=1))
+    double uy_roll = uy[(Ny - 2) * Nx + k] - uy[k];
+
+    vorticity[(Ny - 1) * Nx + k] = cylinder[(Ny - 1) * Nx + k] == 1 ? 0 : ux_roll - uy_roll;
   }
 
   // Calculate k = Nx - 1 boundary
-  ux_roll = ux[scalar_index(Ny - 1, Nx - 2)] - ux[scalar_index(Ny - 1, 0)];
-  uy_roll = uy[scalar_index(Ny - 2, Nx - 1)] - uy[Nx - 1];
-  vorticity[scalar_index(Ny - 1, Nx - 1)] = cylinder[scalar_index(Ny - 1, Nx - 1)] == 1 ? 0 : ux_roll - uy_roll;
+  ux_roll = ux[(Ny - 1) * Nx + Nx - 2] - ux[(Ny - 1) * Nx];
+  uy_roll = uy[(Ny - 2) * Nx + Nx - 1] - uy[Nx - 1];
+  vorticity[(Ny - 1) * Nx + Nx - 1] = cylinder[(Ny - 1) * Nx + Nx - 1] == 1 ? 0 : ux_roll - uy_roll;
 }
 void do_timestep() {
   start_run(drift_profiler);
@@ -471,6 +417,8 @@ void do_timestep() {
   end_run(vort_profiler);
 }
 
+// TODO CHECK TYPES IF ALL CORRECT
+// TODO arrays need to be initialized likely with 0 values
 inline int run() {
   initialize();
 
@@ -553,7 +501,7 @@ int main(int argc, char const *argv[]) {
   run();
   asm volatile("RDTSC" : "=A"(end_cycle));
   time(&end_sec);
-  printf("Cycles taken: %llu (%ld seconds)\n", end_cycle - start_cycle, end_sec - start_sec);
+  printf("Cycles taken: %lu (%ld seconds)\n", end_cycle - start_cycle, end_sec - start_sec);
 
   return 0;
 }
