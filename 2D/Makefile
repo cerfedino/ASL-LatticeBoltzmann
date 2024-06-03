@@ -1,5 +1,6 @@
 CFLAGS = -g -march=native
 OPTIM_FLAGS = -Ofast
+PAPI_DIR = "/home/kamiem123/_CCA/papi/src/install"
 
 
 
@@ -19,10 +20,10 @@ RUN_PARAMS_DEFINITIONS = -DMNx=$(word 1,$(RUN_PARAMS)) -DMNy=$(word 2,$(RUN_PARA
 
 PAST_VERSIONS_OBJ = $(foreach file,$(wildcard previous_versions/v*/src/main.cpp),$(file:.cpp=_optimized_benchmark_$(RUN_PARAMS_ESCAPED).o) $(file:.cpp=_optimized_profile_$(RUN_PARAMS_ESCAPED).o))
 
-.PHONY: all clean test leaks benchmark profile
+.PHONY: all clean test leaks benchmark benchmark_cur profile
 
 
-all: test leaks benchmark profile
+all: test benchmark profile
 clean:
 	find . \( -iname '*.o' -o -iname 'timestamp_*.txt' \) -print -delete; rm -r artifacts/* output/*
 
@@ -35,7 +36,7 @@ clean:
 %/main_optimized_profile_$(RUN_PARAMS_ESCAPED).o: %/main.cpp src/include/utils.c src/include/profile.c
 	g++ $(CFLAGS) $(OPTIM_FLAGS) $(RUN_PARAMS_DEFINITIONS) -DPROFILE $< -o $@ src/include/profile.c
 %/main_optimized_benchmark_$(RUN_PARAMS_ESCAPED).o: %/main.cpp src/include/utils.c src/include/profile.c
-	g++ $(CFLAGS) $(OPTIM_FLAGS) $(RUN_PARAMS_DEFINITIONS) -DBENCHMARK -lpapi $< -o $@ src/include/profile.c
+	g++ $(CFLAGS) $(OPTIM_FLAGS) $(RUN_PARAMS_DEFINITIONS) -DBENCHMARK  -I/${PAPI_DIR}/include -L/${PAPI_DIR}/lib  $< -o $@ src/include/profile.c -lpapi
 
 
 
