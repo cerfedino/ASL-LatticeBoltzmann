@@ -255,7 +255,6 @@ def main():
     plt_density_momentum.gca().set_ylim(min(min_performance_density_momentum, PEAK_SCALAR)/2.5, 2.5 * PEAK_simd)
     plt_collision.gca().set_ylim(min(min_performance_collision, PEAK_SCALAR)/2.5, 2.5 * PEAK_simd)
     plt_stream.gca().set_ylim(min(min_performance_stream, PEAK_SCALAR)/2.5, 2.5 * PEAK_simd)
-    print(version_labels)
 
     bar_fig = plt.figure("bar", figsize=(20, 12), facecolor="white")
     df = pd.DataFrame.from_dict(loop_cycles, columns=version_labels, orient='index')
