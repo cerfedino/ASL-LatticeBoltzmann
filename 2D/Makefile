@@ -17,7 +17,7 @@ endif
 RUN_PARAMS_ESCAPED =  $(shell echo $(RUN_PARAMS) | tr ' ' '_')
 
 PAST_VERSIONS_CPP = $(wildcard previous_versions/*/src/main.cpp)
-PAST_VERSIONS_PROFILE_OBJ = $(foreach file,$(PAST_VERSIONS_CPP),$(file:.cpp=_optimized_profile_$(RUN_PARAMS_ESCAPED).o))
+PAST_VERSIONS_PROFILE_OBJ = $(foreach file,$(PAST_VERSIONS_CPP),$(file:.cpp=_optimized_benchmark_$(RUN_PARAMS_ESCAPED).o) $(file:.cpp=_optimized_profile_$(RUN_PARAMS_ESCAPED).o))
 
 
 .PHONY: all clean test leaks sizevscyclesplot benchmark profile
@@ -42,16 +42,17 @@ $(eval MNy=$(shell echo "$(1)" | awk -F'[_.]' '{print $$(NF-2)}'))
 $(eval MNt=$(shell echo "$(1)" | awk -F'[_.]' '{print $$(NF-1)}'))
 $(eval DDEBUG=$(if $(findstring _debug,$(1)),-DDEBUG,))
 $(eval DPROFILE=$(if $(findstring _profile,$(1)),-DPROFILE,))
+$(eval DBENCHMARK=$(if $(findstring _benchmark,$(1)),-DBENCHMARK -lpapi,))
 echo "MNx: $(MNx) MNy: $(MNy) MNt: $(MNt) DDEBUG: $(DDEBUG) DPROFILE: $(DPROFILE)"
 endef
 
 ./previous_versions/v1/src/main_%.o: ./previous_versions/v1/src/main.cpp src/include/utils.c src/include/profile.c
 	$(call PREPROCESS,$@)
-	g++ $(CFLAGS)									-DMNx=$(MNx) -DMNy=$(MNy) -DMNt=$(MNt) $(DDEBUG) $(DPROFILE) $< src/include/utils.c src/include/profile.c -o $@ 
+	g++ $(CFLAGS)									-DMNx=$(MNx) -DMNy=$(MNy) -DMNt=$(MNt) $(DDEBUG) $(DPROFILE) $(DBENCHMARK) $< src/include/utils.c src/include/profile.c -o $@ 
 
 %.o: $$(dir $$@)main.cpp src/include/utils.c src/include/profile.c
 	$(call PREPROCESS,$@)
-	g++ $(CFLAGS) $(OPTIM_FLAGS) 	-DMNx=$(MNx) -DMNy=$(MNy) -DMNt=$(MNt) $(DDEBUG) $(DPROFILE) $<  src/include/utils.c src/include/profile.c -o $@ 
+	g++ $(CFLAGS) $(OPTIM_FLAGS) 	-DMNx=$(MNx) -DMNy=$(MNy) -DMNt=$(MNt) $(DDEBUG) $(DPROFILE) $(DBENCHMARK) $<  src/include/utils.c src/include/profile.c -o $@ 
 
 
 
@@ -77,3 +78,5 @@ benchmark: $(PAST_VERSIONS_PROFILE_OBJ)
 	mkdir -p artifacts/; python3 benchmark.py $(RUN_PARAMS);
 profile: ./src/main_optimized_profile_$(RUN_PARAMS_ESCAPED).o
 	./src/main_optimized_profile_$(RUN_PARAMS_ESCAPED).o $(RUN_PARAMS)
+benchmark_cur: ./src/main_optimized_benchmark_$(RUN_PARAMS_ESCAPED).o
+	./src/main_optimized_benchmark_$(RUN_PARAMS_ESCAPED).o

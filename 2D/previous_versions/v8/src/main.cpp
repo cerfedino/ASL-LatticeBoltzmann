@@ -17,7 +17,7 @@
 
 #include "include/npy.hpp"
 #include "include/profile.h"
-#include "include/utils.h"
+#include "include/utils.c"
 
 #ifdef BENCHMARK
 #include <papi.h>
@@ -53,6 +53,18 @@ using namespace std;
 #define rho0 0.01       // reciprocal average density
 #define tau -1.66666667 // reciprocal collision timescale (1/0.6)
 #define tau_plus_1 (tau + 1)
+
+#ifdef BENCHMARK
+int papi_event_set = PAPI_NULL;
+
+long long papi_values[2];
+
+long long papi_drift_values[2] = {0, 0};
+long long papi_rho_values[2] = {0, 0};
+long long papi_feq_values[2] = {0, 0};
+long long papi_f_values[2] = {0, 0};
+long long papi_vort_values[2] = {0, 0};
+#endif
 
 // Lattice speeds / weights
 #define NL 9
@@ -92,18 +104,6 @@ profiler *vort_profiler = init_profiler(3 * Nx * Ny, 8 * 6 * Nx * Ny);
 profiler *drift_profiler = init_profiler(0, Nx *Ny * 9 * 2 * 8);
 
 string folder_name;
-
-#ifdef BENCHMARK
-int papi_event_set = PAPI_NULL;
-
-long long papi_values[2];
-
-long long papi_drift_values[2] = {0, 0};
-long long papi_rho_values[2] = {0, 0};
-long long papi_feq_values[2] = {0, 0};
-long long papi_f_values[2] = {0, 0};
-long long papi_vort_values[2] = {0, 0};
-#endif
 
 void initialize() {
   folder_name = make_output_folder(); // TODO delete empty folders
@@ -489,7 +489,6 @@ void do_vort() {
   vorticity[scalar_index(Ny - 1, Nx - 1)] = cylinder[scalar_index(Ny - 1, Nx - 1)] == 1 ? 0 : ux_roll - uy_roll;
 }
 void do_timestep() {
-// ----------------- DRIFT -----------------
 #ifdef BENCHMARK
   if (PAPI_start(papi_event_set) != PAPI_OK) {
     fprintf(stderr, "PAPI start error!\n");
@@ -508,7 +507,6 @@ void do_timestep() {
   papi_drift_values[1] += papi_values[1];
 #endif
 
-// ----------------- RHO -----------------
 #ifdef BENCHMARK
   if (PAPI_start(papi_event_set) != PAPI_OK) {
     fprintf(stderr, "PAPI start error!\n");
@@ -527,7 +525,6 @@ void do_timestep() {
   papi_rho_values[1] += papi_values[1];
 #endif
 
-// ----------------- FEQ -----------------
 #ifdef BENCHMARK
   if (PAPI_start(papi_event_set) != PAPI_OK) {
     fprintf(stderr, "PAPI start error!\n");
@@ -546,7 +543,6 @@ void do_timestep() {
   papi_feq_values[1] += papi_values[1];
 #endif
 
-// ----------------- F -----------------
 #ifdef BENCHMARK
   if (PAPI_start(papi_event_set) != PAPI_OK) {
     fprintf(stderr, "PAPI start error!\n");
@@ -565,7 +561,6 @@ void do_timestep() {
   papi_f_values[1] += papi_values[1];
 #endif
 
-// ----------------- VORT -----------------
 #ifdef BENCHMARK
   if (PAPI_start(papi_event_set) != PAPI_OK) {
     fprintf(stderr, "PAPI start error!\n");
