@@ -77,7 +77,7 @@ def run_executable_and_get_output(executable_path, args):
         raise RuntimeError(f"Error running {executable_path}: {e}") from e
 
 def main():
-  XMAX=L3_SIZE_BYTES*1.2
+  XMAX=L1_SIZE_BYTES+L2_SIZE_BYTES+L3_SIZE_BYTES*1.2
 
 
   previous_versions = []
@@ -98,7 +98,6 @@ def main():
   
 
 
-  XMAX = 0
   YMAX = 0
   for v_idx,path in enumerate(previous_versions):
     print("=========")

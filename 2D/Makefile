@@ -28,7 +28,7 @@ clean:
 
 # For the "sizevscyclesplot" target
 # For each previous_version we compile a binary where MNx=NX*i, MNy=NY*i, MNt=300 for every i in RANGE_I
-RANGE_I = $(shell seq 1 1 40)
+RANGE_I = $(shell seq 1 1 35)
 multiply = $(shell echo $$(( $(1) * $(2) )))
 NX_VALUES := $(foreach i,$(RANGE_I),$(eval NX_$(i)=$(call multiply, $(word 1,$(RUN_PARAMS)), $(i))))
 NY_VALUES := $(foreach i,$(RANGE_I),$(eval NY_$(i)=$(call multiply, $(word 2,$(RUN_PARAMS)), $(i))))
