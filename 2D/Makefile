@@ -17,7 +17,7 @@ RUN_PARAMS_DEFINITIONS = -DMNx=$(word 1,$(RUN_PARAMS)) -DMNy=$(word 2,$(RUN_PARA
 
 
 
-PAST_VERSIONS_OBJ = $(foreach file,$(wildcard previous_versions/*/src/main.cpp),$(file:.cpp=_optimized_profile_$(RUN_PARAMS_ESCAPED).o))
+PAST_VERSIONS_OBJ = $(foreach file,$(wildcard previous_versions/v*/src/main.cpp),$(file:.cpp=_optimized_benchmark_$(RUN_PARAMS_ESCAPED).o) $(file:.cpp=_optimized_profile_$(RUN_PARAMS_ESCAPED).o))
 
 .PHONY: all clean test leaks benchmark profile
 
