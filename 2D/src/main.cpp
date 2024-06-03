@@ -110,30 +110,28 @@ void initialize() {
 
 #ifdef BENCHMARK
   if (PAPI_library_init(PAPI_VER_CURRENT) != PAPI_VER_CURRENT) {
-    // fprintf()
     fprintf(stderr, "PAPI library init error!\n");
     exit(1);
   }
-  std::cout << PAPI_is_initialized() << std::endl;
-  std::cout << PAPI_FP_OPS << std::endl;
 
   if (PAPI_create_eventset(&papi_event_set) != PAPI_OK) {
     fprintf(stderr, "PAPI create event set error!\n");
     exit(1);
   }
 
-  // Register flops event
-  if (PAPI_add_event(papi_event_set, 0x80000066) != PAPI_OK) {
-    fprintf(stderr, "Couldn't add flop event to PAPI\n");
-    exit(1);
-  }
-
   // Register memory event
-  if (PAPI_add_named_event(papi_event_set, "ANY_DATA_CACHE_FILLS_FROM_SYSTEM") != PAPI_OK) {
+  if (PAPI_add_named_event(papi_event_set, "ANY_DATA_CACHE_FILLS_FROM_SYSTEM:MEM_IO_LCL") != PAPI_OK) {
     fprintf(stderr, "Couldn't add memory event to PAPI!\n");
     exit(1);
   }
 
+  // Register flops event
+  if (PAPI_add_event(papi_event_set, PAPI_FP_OPS) != PAPI_OK) {
+    fprintf(stderr, "Couldn't add flop event to PAPI\n");
+    exit(1);
+  }
+
+  
 #endif
 
   debug_printf("Output folder: %s\n", folder_name.c_str());
