@@ -72,7 +72,7 @@ def make_roofline_plot(PEAK_SCALAR, MEM_BW, SIMD_LEN_BITS):
     plt.yscale("log", base=2)
     
     #  Memory bound
-    x = np.linspace(XMIN, XMAX, 100)
+    x = np.linspace(XMIN, XMAX, 120)
     memory_line, = plt.plot((XMIN, XMAX), (MEM_BW*XMIN, MEM_BW*XMAX), color=PLT_BOUND_COLOR, linestyle='--', linewidth=1.4)
     
     ### No SIMD bounds
@@ -255,6 +255,7 @@ def main():
     plt_density_momentum.gca().set_ylim(min(min_performance_density_momentum, PEAK_SCALAR)/2.5, 2.5 * PEAK_simd)
     plt_collision.gca().set_ylim(min(min_performance_collision, PEAK_SCALAR)/2.5, 2.5 * PEAK_simd)
     plt_stream.gca().set_ylim(min(min_performance_stream, PEAK_SCALAR)/2.5, 2.5 * PEAK_simd)
+    print(version_labels)
 
     bar_fig = plt.figure("bar", figsize=(20, 12), facecolor="white")
     df = pd.DataFrame.from_dict(loop_cycles, columns=version_labels, orient='index')
