@@ -34,6 +34,8 @@ clean:
 	g++ $(CFLAGS) $(OPTIM_FLAGS) $(RUN_PARAMS_DEFINITIONS) -DDEBUG $< -o $@ src/include/profile.c
 %/main_optimized_profile_$(RUN_PARAMS_ESCAPED).o: %/main.cpp src/include/utils.c src/include/profile.c
 	g++ $(CFLAGS) $(OPTIM_FLAGS) $(RUN_PARAMS_DEFINITIONS) -DPROFILE $< -o $@ src/include/profile.c
+%/main_optimized_benchmark_$(RUN_PARAMS_ESCAPED).o: %/main.cpp src/include/utils.c src/include/profile.c
+	g++ $(CFLAGS) $(OPTIM_FLAGS) $(RUN_PARAMS_DEFINITIONS) -DBENCHMARK -lpapi $< -o $@ src/include/profile.c
 
 
 
@@ -47,6 +49,9 @@ output/reference/timestamp_$(RUN_PARAMS_ESCAPED).txt: ./reference-python/lattice
 
 leaks: ./src/main_optimized_debug_$(RUN_PARAMS_ESCAPED).o
 	mkdir -p output; valgrind --leak-check=full ./src/main_optimized_debug_$(RUN_PARAMS_ESCAPED).o $(RUN_PARAMS)
+
+benchmark_cur: ./src/main_optimized_benchmark_$(RUN_PARAMS_ESCAPED).o
+	./src/main_optimized_benchmark_$(RUN_PARAMS_ESCAPED).o
 
 
 
