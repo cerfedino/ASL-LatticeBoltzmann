@@ -50,12 +50,11 @@ output/reference/timestamp_$(RUN_PARAMS_ESCAPED).txt: ./reference-python/lattice
 leaks: ./src/main_optimized_debug_$(RUN_PARAMS_ESCAPED).o
 	mkdir -p output; valgrind --leak-check=full ./src/main_optimized_debug_$(RUN_PARAMS_ESCAPED).o $(RUN_PARAMS)
 
-benchmark_cur: ./src/main_optimized_benchmark_$(RUN_PARAMS_ESCAPED).o
-	./src/main_optimized_benchmark_$(RUN_PARAMS_ESCAPED).o
-
 
 
 benchmark: $(PAST_VERSIONS_OBJ)
 	mkdir -p artifacts/; python3 benchmark.py $(RUN_PARAMS);
 profile: ./src/main_optimized_profile_$(RUN_PARAMS_ESCAPED).o
 	./src/main_optimized_profile_$(RUN_PARAMS_ESCAPED).o $(RUN_PARAMS)
+benchmark_cur: ./src/main_optimized_benchmark_$(RUN_PARAMS_ESCAPED).o
+	./src/main_optimized_benchmark_$(RUN_PARAMS_ESCAPED).o
