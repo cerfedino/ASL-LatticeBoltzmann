@@ -124,14 +124,11 @@ void initialize() {
     fprintf(stderr, "Couldn't add memory event to PAPI!\n");
     exit(1);
   }
-
   // Register flops event
   if (PAPI_add_event(papi_event_set, PAPI_FP_OPS) != PAPI_OK) {
     fprintf(stderr, "Couldn't add flop event to PAPI\n");
     exit(1);
   }
-
-  
 #endif
 
   debug_printf("Output folder: %s\n", folder_name.c_str());
