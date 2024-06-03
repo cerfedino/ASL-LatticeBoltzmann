@@ -226,6 +226,7 @@ void collision() {
         // 9
         double dot_product_8 = -velocity_field[index * 3] - velocity_field[index * 3 + 1] - velocity_field[index * 3 + 2];
         double feq_8 = density_field_172 * (dot_product_8 * (c_s_2_inv + dot_product_8 * c_s_4_inv) + norm_square_cs2);
+        // TODO: this type of thing can def be rewrtitten somehow for sure
         particle_distributions[scalar_index(x, y - 1, z, 8)] = omtauinv * particle_distributions[scalar_index(x, y, z, 8)] + feq_8;
 
         // 9
