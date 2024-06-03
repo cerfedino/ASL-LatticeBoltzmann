@@ -9,7 +9,7 @@ ifeq ($(firstword $(MAKECMDGOALS)),benchmark)
 else ifeq ($(firstword $(MAKECMDGOALS)),profile)
     RUN_PARAMS = 80 40 300
 else ifeq ($(firstword $(MAKECMDGOALS)),sizevscyclesplot)
-    RUN_PARAMS = 80 40 100
+    RUN_PARAMS = 16 8 100
 else
 	# $(info 'USING DEFAULT RUN_PARAMS')
 	RUN_PARAMS = 400 200 300
@@ -28,7 +28,7 @@ clean:
 
 # For the "sizevscyclesplot" target
 # For each previous_version we compile a binary where MNx=NX*i, MNy=NY*i, MNt=300 for every i in RANGE_I
-RANGE_I = 1 2 3 4 #5 6 7
+RANGE_I = $(shell seq 1 1 40)
 multiply = $(shell echo $$(( $(1) * $(2) )))
 NX_VALUES := $(foreach i,$(RANGE_I),$(eval NX_$(i)=$(call multiply, $(word 1,$(RUN_PARAMS)), $(i))))
 NY_VALUES := $(foreach i,$(RANGE_I),$(eval NY_$(i)=$(call multiply, $(word 2,$(RUN_PARAMS)), $(i))))
@@ -47,11 +47,11 @@ endef
 
 ./previous_versions/v1/src/main_%.o: ./previous_versions/v1/src/main.cpp src/include/utils.c src/include/profile.c
 	$(call PREPROCESS,$@)
-	g++ $(CFLAGS) 							 -DMNx=$(MNx) -DMNy=$(MNy) -DMNt=$(MNt) $(DDEBUG) $(DPROFILE) $< src/include/utils.c src/include/profile.c -o $@ 
+	g++ $(CFLAGS)									-DMNx=$(MNx) -DMNy=$(MNy) -DMNt=$(MNt) $(DDEBUG) $(DPROFILE) $< src/include/utils.c src/include/profile.c -o $@ 
 
 %.o: $$(dir $$@)main.cpp src/include/utils.c src/include/profile.c
 	$(call PREPROCESS,$@)
-	g++ $(CFLAGS) $(OPTIM_FLAGS) -DMNx=$(MNx) -DMNy=$(MNy) -DMNt=$(MNt) $(DDEBUG) $(DPROFILE) $<  src/include/utils.c src/include/profile.c -o $@ 
+	g++ $(CFLAGS) $(OPTIM_FLAGS) 	-DMNx=$(MNx) -DMNy=$(MNy) -DMNt=$(MNt) $(DDEBUG) $(DPROFILE) $<  src/include/utils.c src/include/profile.c -o $@ 
 
 
 

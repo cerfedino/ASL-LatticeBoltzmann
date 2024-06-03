@@ -28,17 +28,17 @@ print(f"Nx: {Nx}, Ny: {Ny}, Nt: {Nt}, i: {i}")
 # Read from environment variables, otherwise from .env file, otherwise display error message
 try:
     print("Reading environment variables")
-    L1_SIZE_BITS = int(os.environ["L1_SIZE_BITS"])
-    L2_SIZE_BITS = int(os.environ["L2_SIZE_BITS"])
-    L3_SIZE_BITS = int(os.environ["L3_SIZE_BITS"])
+    L1_SIZE_BYTES = int(os.environ["L1_SIZE_BITS"])/8
+    L2_SIZE_BYTES = int(os.environ["L2_SIZE_BITS"])/8
+    L3_SIZE_BYTES = int(os.environ["L3_SIZE_BITS"])/8
 except KeyError:
     print("Environment variables not found, reading from .env file")
     # make sure keys are there AND they hgave avalue set
     try:
         load_dotenv()
-        L1_SIZE_BITS = int(os.getenv("L1_SIZE_BITS"))
-        L2_SIZE_BITS = int(os.getenv("L2_SIZE_BITS"))
-        L3_SIZE_BITS = int(os.getenv("L3_SIZE_BITS"))
+        L1_SIZE_BYTES = int(os.getenv("L1_SIZE_BITS"))/8
+        L2_SIZE_BYTES = int(os.getenv("L2_SIZE_BITS"))/8
+        L3_SIZE_BYTES = int(os.getenv("L3_SIZE_BITS"))/8
     except FileNotFoundError:
         print("Error: Environment variables not found and .env file not found")
         exit(1)
@@ -46,9 +46,9 @@ except KeyError:
         print("Error: Environment variables not found and .env file does not contain the required keys")
         exit(1)
 
-print("L1_SIZE_BITS: ", L1_SIZE_BITS)
-print("L2_SIZE_BITS: ", L2_SIZE_BITS)
-print("L3_SIZE_BITS: ", L3_SIZE_BITS)
+print("L1_SIZE_BYTES: ", L1_SIZE_BYTES)
+print("L2_SIZE_BYTES: ", L2_SIZE_BYTES)
+print("L3_SIZE_BYTES: ", L3_SIZE_BYTES)
 
 
 
@@ -61,7 +61,7 @@ def init_plot():
     plt.gca().set_facecolor(PLT_FACECOLOR)
 
     plt.gca().yaxis.grid(True, which='major', color='w', linestyle='-', linewidth=1.5)
-    plt.xlabel("Input size [doubles]", fontsize=14, rotation=0, labelpad=5, ha='center')
+    plt.xlabel("Input size [bytes]", fontsize=14, rotation=0, labelpad=5, ha='center')
     plt.ylabel("Cycles [log scale]", fontsize=14, rotation=0, ha='left', labelpad=-15, position=(1,1))
 
     return fig
@@ -77,6 +77,9 @@ def run_executable_and_get_output(executable_path, args):
         raise RuntimeError(f"Error running {executable_path}: {e}") from e
 
 def main():
+  XMAX=L3_SIZE_BYTES*1.2
+
+
   previous_versions = []
   # Scan for all previous version that we plan to benchmark
   for folder in os.listdir(PREVIOUS_VERSIONS_PATH):
@@ -121,11 +124,16 @@ def main():
     input_sizes  = []
     total_cycles = []
     for idx,multiplier in enumerate(i):
+      if len(input_sizes) > 0 and input_sizes[-1] > XMAX:
+        continue
+      
       MNx = Nx * multiplier
       MNy = Ny * multiplier
       MNt = Nt
       
       print(f"[{idx+1}/{len(i)}] Running {VERSION} with {MNx}x{MNy} ...")
+      
+      memsize_bytes = MNy * MNx * 9 * 8 +  MNy * MNx * 9 * 8 + MNy * MNx * 8 + MNy * MNx * 8 + MNy * MNx * 8 + MNy * MNx * 8 + MNy * MNx * 8; + MNy * MNx * 8 + MNy * MNx * 4 + MNy * MNx * 4;
     
       # Execute executable file in subprocess and read stdout
       # If there is a specific executable for the current configuration, use it instead
@@ -156,7 +164,7 @@ def main():
       print(f"Vort cycles: {cycles_vort}")
       print(f"Total Number of Cycles: {cycles}")
       
-      input_sizes.append(MNx*MNy)
+      input_sizes.append(memsize_bytes)
       total_cycles.append(cycles)
     
     colorrange = (0, 90)
@@ -164,19 +172,17 @@ def main():
     plt.gca().plot(input_sizes, total_cycles, '-ro', label=TITLE, color=curcolor)
     
     YMAX = max(YMAX, max(total_cycles))
-    XMAX = max(XMAX, max(input_sizes))  
     
   YMAX*=1.1
-  XMAX=max(L1_SIZE_BITS/64, XMAX)*1.1
 
-  plt.axvline(x=(L1_SIZE_BITS)/64, color='gray', linestyle='--', label=f"L1 Cache Size: {int(L1_SIZE_BITS/64)} doubles")
-  plt.text((L1_SIZE_BITS)/64, YMAX*0.99, f"     L1 Cache Size: {int(L1_SIZE_BITS/64)} doubles     ", va='top', ha='right')
+  plt.axvline(x=(L1_SIZE_BYTES), color='gray', linestyle='--', label=f"L1 Cache Size: {int(L1_SIZE_BYTES)} bytes")
+  plt.text((L1_SIZE_BYTES), YMAX*0.99, f"L1", va='top', ha='right')
 
-  plt.axvline(x=(L1_SIZE_BITS+L2_SIZE_BITS)/64, color='gray', linestyle='--', label=f"L2 Cache Size: {int(L2_SIZE_BITS/64)} doubles")
-  plt.text((L1_SIZE_BITS+L2_SIZE_BITS)/64, YMAX*0.99, f"     L2 Cache Size: {int(L2_SIZE_BITS/64)} doubles     ", va='top', ha='right')
+  plt.axvline(x=(L1_SIZE_BYTES+L2_SIZE_BYTES), color='gray', linestyle='--', label=f"L2 Cache Size: {int(L2_SIZE_BYTES)} bytes")
+  plt.text((L1_SIZE_BYTES+L2_SIZE_BYTES), YMAX*0.99, f"L2", va='top', ha='right')
 
-  plt.axvline(x=(L1_SIZE_BITS+L2_SIZE_BITS+L3_SIZE_BITS)/64, color='gray', linestyle='--', label=f"L3 Cache Size: {int(L3_SIZE_BITS/64)} doubles")
-  plt.text((L1_SIZE_BITS+L2_SIZE_BITS+L3_SIZE_BITS)/64, YMAX*0.99, f"     L3 Cache Size: {int(L3_SIZE_BITS/64)} doubles     ", va='top', ha='right')
+  plt.axvline(x=(L1_SIZE_BYTES+L2_SIZE_BYTES+L3_SIZE_BYTES), color='gray', linestyle='--', label=f"L3 Cache Size: {int(L3_SIZE_BYTES)} bytes")
+  plt.text((L1_SIZE_BYTES+L2_SIZE_BYTES+L3_SIZE_BYTES), YMAX*0.99, f"L3", va='top', ha='right')
 
   plt.gca().get_yaxis().get_major_formatter().set_scientific(False)  # Disable scientific notation
   plt.yscale('log')
