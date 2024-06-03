@@ -62,7 +62,7 @@ def init_plot():
 
     plt.gca().yaxis.grid(True, which='major', color='w', linestyle='-', linewidth=1.5)
     plt.xlabel("Input size [doubles]", fontsize=14, rotation=0, labelpad=5, ha='center')
-    plt.ylabel("Cycles", fontsize=14, rotation=0, ha='left', labelpad=-15, position=(1,1))
+    plt.ylabel("Cycles [log scale]", fontsize=14, rotation=0, ha='left', labelpad=-15, position=(1,1))
 
     return fig
 
@@ -179,6 +179,7 @@ def main():
   plt.text((L1_SIZE_BITS+L2_SIZE_BITS+L3_SIZE_BITS)/64, YMAX*0.99, f"     L3 Cache Size: {int(L3_SIZE_BITS/64)} doubles     ", va='top', ha='right')
 
   plt.gca().get_yaxis().get_major_formatter().set_scientific(False)  # Disable scientific notation
+  plt.yscale('log')
   plt.xlim(0, XMAX)
   plt.ylim(0, YMAX)
   fig.legend()
