@@ -17,7 +17,7 @@
 
 #include "include/npy.hpp"
 #include "include/profile.h"
-#include "include/utils.c"
+#include "include/utils.h"
 #ifdef BENCHMARK
 #include <papi.h>
 #endif
