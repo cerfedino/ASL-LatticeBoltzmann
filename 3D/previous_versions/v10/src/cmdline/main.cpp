@@ -48,35 +48,34 @@ double *prev_13;
 inline int scalar_index(int x, int y, int z) { return (z * NX * NY) + (y * NX) + x; }
 inline int scalar_index(int x, int y, int z, int w) { return (x + y * NX + z * NX * NY + w * NX * NY * NZ); }
 
+// Lattice directions using D3DQ15. assumed speed of sound c_s = 1/sqrt(3).
+vector_3_int *directions;
+double *weights;
+int *reverse_indexes;
+
 void initialise() {
   int box_flatten_length = NX * NY * NZ;
   int distributions_flatten_length = box_flatten_length * DS;
   density_field = (double *)malloc(box_flatten_length * sizeof(double));
   velocity_field = (double *)malloc(box_flatten_length * 3 * sizeof(double));
-  particle_distributions = (double *)malloc(distributions_flatten_length * sizeof(double));
-
   prev_3 = (double *)malloc(NX * sizeof(double));
   prev_7 = (double *)malloc(NX * sizeof(double));
   prev_9 = (double *)malloc(NX * sizeof(double));
   prev_12 = (double *)malloc(NX * sizeof(double));
   prev_13 = (double *)malloc(NX * sizeof(double));
 
-  for (int i = 0; i < NX * NY * NZ; i++) {
-    density_field[i] = 1.0;
-  }
+  particle_distributions = (double *)malloc(distributions_flatten_length * sizeof(double));
 
+  for (int i = 0; i < NX * NY * NZ; i++) {
+    density_field[i] = 1;
+  }
   for (int z = 0; z < NZ; z++) {
     for (int y = 0; y < NY; y++) {
       for (int x = 0; x < NX; x++) {
 
         for (int i = 0; i < DS; i++) {
           //   previous_particle_distributions[scalar_index(x, y, z, i)] = weights[i];
-          if (i == 0)
-            particle_distributions[scalar_index(x, y, z, i)] = weights_29;
-          else if (i < 7)
-            particle_distributions[scalar_index(x, y, z, i)] = weights_19;
-          else
-            particle_distributions[scalar_index(x, y, z, i)] = weights_172;
+          particle_distributions[scalar_index(x, y, z, i)] = weights[i];
         }
       }
     }
@@ -93,6 +92,46 @@ void initialise() {
 #define c_s_4_inv (1 / c_s_4)
 #define c_s_2_inv_2 (1 / (2 * c_s_2))
 #define c_s_2_inv_02 (c_s_2_inv * 0.2)
+
+void set_velocity_set() {
+  // Allocate memory for an array of vector_3_int structs
+  directions = (vector_3_int *)malloc(15 * sizeof(vector_3_int));
+
+  // Initialize each element of the array
+  directions[0] = {0, 0, 0};
+  directions[1] = {1, 0, 0};
+  directions[2] = {-1, 0, 0};
+  directions[3] = {0, 1, 0};
+  directions[4] = {0, -1, 0};
+  directions[5] = {0, 0, 1};
+  directions[6] = {0, 0, -1};
+  directions[7] = {1, 1, 1};
+  directions[8] = {-1, -1, -1};
+  directions[9] = {1, 1, -1};
+  directions[10] = {-1, -1, 1};
+  directions[11] = {1, -1, 1};
+  directions[12] = {-1, 1, -1};
+  directions[13] = {-1, 1, 1};
+  directions[14] = {1, -1, -1};
+
+  weights = (double *)malloc(15 * sizeof(double));
+  // Initialize each element of the array
+  weights[0] = 2.0 / 9.0;
+  weights[1] = 1.0 / 9.0;
+  weights[2] = 1.0 / 9.0;
+  weights[3] = 1.0 / 9.0;
+  weights[4] = 1.0 / 9.0;
+  weights[5] = 1.0 / 9.0;
+  weights[6] = 1.0 / 9.0;
+  weights[7] = 1.0 / 72.0;
+  weights[8] = 1.0 / 72.0;
+  weights[9] = 1.0 / 72.0;
+  weights[10] = 1.0 / 72.0;
+  weights[11] = 1.0 / 72.0;
+  weights[12] = 1.0 / 72.0;
+  weights[13] = 1.0 / 72.0;
+  weights[14] = 1.0 / 72.0;
+}
 
 int box_length = NX * NY * NZ;
 void compute_density_momentum_moment() {
@@ -168,8 +207,8 @@ void collision() {
       particle_distributions[scalar_index(x, y, z, 5)] = omtauinv * particle_distributions[scalar_index(x, y, z, 5)] + feq_5;
 
       // 7
-      double dot_product_6 = velocity_field[index * 3 + 2];
-      double feq_6 = density_field_19 * (dot_product_6 * (-c_s_2_inv + dot_product_6 * c_s_4_inv) + norm_square_cs2);
+      double dot_product_6 = -velocity_field[index * 3 + 2];
+      double feq_6 = density_field_19 * (dot_product_6 * (c_s_2_inv + dot_product_6 * c_s_4_inv) + norm_square_cs2);
       particle_distributions[scalar_index(x, y, z, 6)] = omtauinv * particle_distributions[scalar_index(x, y, z, 6)] + feq_6;
     }
 
@@ -187,15 +226,18 @@ void collision() {
         double feq_0 = density_field_29 * norm_square_cs2;
         particle_distributions[scalar_index(x, y, z, 0)] = omtauinv * particle_distributions[scalar_index(x, y, z, 0)] + feq_0;
         // 7
-        double feq_1 = density_field_19 * (velocity_field[index * 3] * (c_s_2_inv + velocity_field[index * 3] * c_s_4_inv) + norm_square_cs2);
+        double dot_product_1 = velocity_field[index * 3];
+        double feq_1 = density_field_19 * (dot_product_1 * (c_s_2_inv + dot_product_1 * c_s_4_inv) + norm_square_cs2);
         particle_distributions[scalar_index(x, y, z, 1)] = omtauinv * particle_distributions[scalar_index(x, y, z, 1)] + feq_1;
 
         // 7
-        double feq_2 = density_field_19 * (velocity_field[index * 3] * (-c_s_2_inv + velocity_field[index * 3] * c_s_4_inv) + norm_square_cs2);
+        double dot_product_2 = -velocity_field[index * 3];
+        double feq_2 = density_field_19 * (dot_product_2 * (c_s_2_inv + dot_product_2 * c_s_4_inv) + norm_square_cs2);
         particle_distributions[scalar_index(x, y, z, 2)] = omtauinv * particle_distributions[scalar_index(x, y, z, 2)] + feq_2;
 
         // 7
-        double feq_3 = density_field_19 * (velocity_field[index * 3 + 1] * (c_s_2_inv + velocity_field[index * 3 + 1] * c_s_4_inv) + norm_square_cs2);
+        double dot_product_3 = velocity_field[index * 3 + 1];
+        double feq_3 = density_field_19 * (dot_product_3 * (c_s_2_inv + dot_product_3 * c_s_4_inv) + norm_square_cs2);
         double curr_3 = omtauinv * particle_distributions[scalar_index(x, y, z, 3)] + feq_3;
         particle_distributions[scalar_index(x, y, z, 3)] = prev_3[x];
         prev_3[x] = curr_3;
@@ -226,7 +268,6 @@ void collision() {
         // 9
         double dot_product_8 = -velocity_field[index * 3] - velocity_field[index * 3 + 1] - velocity_field[index * 3 + 2];
         double feq_8 = density_field_172 * (dot_product_8 * (c_s_2_inv + dot_product_8 * c_s_4_inv) + norm_square_cs2);
-        // TODO: this type of thing can def be rewrtitten somehow for sure
         particle_distributions[scalar_index(x, y - 1, z, 8)] = omtauinv * particle_distributions[scalar_index(x, y, z, 8)] + feq_8;
 
         // 9
@@ -392,6 +433,7 @@ int main(int argc, char const *argv[]) {
 #endif
 
   // setup LBM
+  set_velocity_set();
   initialise();
 
   double viscosity = c_s * c_s * (tau - 0.5);

@@ -72,7 +72,7 @@ def make_roofline_plot(PEAK_SCALAR, MEM_BW, SIMD_LEN_BITS):
     plt.yscale("log", base=2)
     
     #  Memory bound
-    x = np.linspace(XMIN, XMAX, 100)
+    x = np.linspace(XMIN, XMAX, 120)
     memory_line, = plt.plot((XMIN, XMAX), (MEM_BW*XMIN, MEM_BW*XMAX), color=PLT_BOUND_COLOR, linestyle='--', linewidth=1.4)
     
     ### No SIMD bounds
