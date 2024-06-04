@@ -80,7 +80,7 @@ bool *cylinder;
 int *collision_shape;
 double *ux;
 double *uy;
-double *temp;
+double *F_temp;
 int *x_coords;
 int *y_coords;
 int bndryF_size = 0;
@@ -141,7 +141,7 @@ void initialize() {
   cylinder = (bool *)aligned_alloc(32, Ny * Nx * sizeof(bool));
   ux = (double *)aligned_alloc(32, Ny * Nx * sizeof(double));
   uy = (double *)aligned_alloc(32, Ny * Nx * sizeof(double));
-  temp = (double *)aligned_alloc(32, Ny * Nx * sizeof(double));
+  F_temp = (double *)aligned_alloc(32, Ny * Nx * NL * sizeof(double));
   x_coords = (int *)aligned_alloc(32, Ny * Nx * sizeof(int));
   y_coords = (int *)aligned_alloc(32, Ny * Nx * sizeof(int));
 
@@ -219,91 +219,18 @@ void initialize() {
 void do_drift() {
   // # Drift
   // flops = 0
-  for (int y = 0; y < Ny; y++) {
-    for (int x = 0; x < Nx; x++) {
-      temp[scalar_index(y, (x + 1) % Nx)] = F[scalar_index(y, 1, x)];
-    }
-  }
-  for (int y = 0; y < Ny; y++) {
-    for (int x = 0; x < Nx; x++) {
-      F[scalar_index(y, 1, x)] = temp[scalar_index(y, x)];
-    }
-  }
+  memcpy(F_temp, F, Nx * Ny * NL * sizeof(double));
 
   for (int y = 0; y < Ny; y++) {
     for (int x = 0; x < Nx; x++) {
-      temp[scalar_index((y + 1) % Ny, (x + 1) % Nx)] = F[scalar_index(y, 2, x)];
-    }
-  }
-  for (int y = 0; y < Ny; y++) {
-    for (int x = 0; x < Nx; x++) {
-      F[scalar_index(y, 2, x)] = temp[scalar_index(y, x)];
-    }
-  }
-
-  for (int y = 0; y < Ny; y++) {
-    for (int x = 0; x < Nx; x++) {
-      temp[scalar_index((y + 1) % Ny, x)] = F[scalar_index(y, 3, x)];
-    }
-  }
-  for (int y = 0; y < Ny; y++) {
-    for (int x = 0; x < Nx; x++) {
-      F[scalar_index(y, 3, x)] = temp[scalar_index(y, x)];
-    }
-  }
-
-  for (int y = 0; y < Ny; y++) {
-    for (int x = 0; x < Nx; x++) {
-      temp[scalar_index(((y + 1) % Ny), ((x - 1 + Nx) % Nx))] = F[scalar_index(y, 4, x)];
-    }
-  }
-  for (int y = 0; y < Ny; y++) {
-    for (int x = 0; x < Nx; x++) {
-      F[scalar_index(y, 4, x)] = temp[scalar_index(y, x)];
-    }
-  }
-
-  for (int y = 0; y < Ny; y++) {
-    for (int x = 0; x < Nx; x++) {
-      temp[scalar_index(((y + Ny) % Ny), ((x - 1 + Nx) % Nx))] = F[scalar_index(y, 5, x)];
-    }
-  }
-  for (int y = 0; y < Ny; y++) {
-    for (int x = 0; x < Nx; x++) {
-      F[scalar_index(y, 5, x)] = temp[scalar_index(y, x)];
-    }
-  }
-
-  for (int y = 0; y < Ny; y++) {
-    for (int x = 0; x < Nx; x++) {
-      temp[scalar_index(((y - 1 + Ny) % Ny), ((x - 1 + Nx) % Nx))] = F[scalar_index(y, 6, x)];
-    }
-  }
-  for (int y = 0; y < Ny; y++) {
-    for (int x = 0; x < Nx; x++) {
-      F[scalar_index(y, 6, x)] = temp[scalar_index(y, x)];
-    }
-  }
-
-  for (int y = 0; y < Ny; y++) {
-    for (int x = 0; x < Nx; x++) {
-      temp[scalar_index(((y - 1 + Ny) % Ny), ((x + Nx) % Nx))] = F[scalar_index(y, 7, x)];
-    }
-  }
-  for (int y = 0; y < Ny; y++) {
-    for (int x = 0; x < Nx; x++) {
-      F[scalar_index(y, 7, x)] = temp[scalar_index(y, x)];
-    }
-  }
-
-  for (int y = 0; y < Ny; y++) {
-    for (int x = 0; x < Nx; x++) {
-      temp[scalar_index(((y - 1 + Ny) % Ny), ((x + 1) % Nx))] = F[scalar_index(y, 8, x)];
-    }
-  }
-  for (int y = 0; y < Ny; y++) {
-    for (int x = 0; x < Nx; x++) {
-      F[scalar_index(y, 8, x)] = temp[scalar_index(y, x)];
+      F[scalar_index(y, 1, (x + 1) % Nx)] = F_temp[scalar_index(y, 1, x)];
+      F[scalar_index((y + 1) % Ny, 2, (x + 1) % Nx)] = F_temp[scalar_index(y, 2, x)];
+      F[scalar_index((y + 1) % Ny, 3, x)] = F_temp[scalar_index(y, 3, x)];
+      F[scalar_index(((y + 1) % Ny), 4, ((x - 1 + Nx) % Nx))] = F_temp[scalar_index(y, 4, x)];
+      F[scalar_index(((y + Ny) % Ny), 5, ((x - 1 + Nx) % Nx))] = F_temp[scalar_index(y, 5, x)];
+      F[scalar_index(((y - 1 + Ny) % Ny), 6, ((x - 1 + Nx) % Nx))] = F_temp[scalar_index(y, 6, x)];
+      F[scalar_index(((y - 1 + Ny) % Ny), 7, ((x + Nx) % Nx))] = F_temp[scalar_index(y, 7, x)];
+      F[scalar_index(((y - 1 + Ny) % Ny), 8, ((x + 1) % Nx))] = F_temp[scalar_index(y, 8, x)];
     }
   }
 
@@ -671,7 +598,7 @@ inline int run() {
   free(y_coords);
   free(rho);
   free(cylinder);
-  free(temp);
+  free(F_temp);
 
 #ifdef DEBUG
   char timestamp_filename[100];
