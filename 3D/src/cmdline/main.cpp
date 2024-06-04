@@ -46,6 +46,7 @@ double *prev_12;
 double *prev_13;
 
 inline int scalar_index(int x, int y, int z) { return (z * NX * NY) + (y * NX) + x; }
+
 inline int scalar_index(int x, int y, int z, int w) { return (x + y * NX + z * NX * NY + w * NX * NY * NZ); }
 
 void initialise() {
@@ -265,6 +266,28 @@ void collision() {
         double dot_product_14 = velocity_field[index * 3] - velocity_field[index * 3 + 1] - velocity_field[index * 3 + 2];
         double feq_14 = density_field_172 * (dot_product_14 * (c_s_2_inv + dot_product_14 * c_s_4_inv) + norm_square_cs2);
         particle_distributions[scalar_index(x, y - 1, z, 14)] = omtauinv * particle_distributions[scalar_index(x, y, z, 14)] + feq_14;
+        double new_density = particle_distributions[scalar_index(x, y, z, 0)] + particle_distributions[scalar_index(x, y, z, 1)] + particle_distributions[scalar_index(x, y, z, 2)] + particle_distributions[scalar_index(x, y, z, 3)] +
+                             particle_distributions[scalar_index(x, y, z, 4)] + particle_distributions[scalar_index(x, y, z, 5)] + particle_distributions[scalar_index(x, y, z, 6)] + particle_distributions[scalar_index(x, y, z, 7)] +
+                             particle_distributions[scalar_index(x, y, z, 8)] + particle_distributions[scalar_index(x, y, z, 9)] + particle_distributions[scalar_index(x, y, z, 10)] + particle_distributions[scalar_index(x, y, z, 11)] +
+                             particle_distributions[scalar_index(x, y, z, 12)] + particle_distributions[scalar_index(x, y, z, 13)] + particle_distributions[scalar_index(x, y, z, 14)];
+
+        double x_sum = particle_distributions[scalar_index(x, y, z, 1)] - particle_distributions[scalar_index(x, y, z, 2)] + particle_distributions[scalar_index(x, y, z, 7)] - particle_distributions[scalar_index(x, y, z, 8)] +
+                       particle_distributions[scalar_index(x, y, z, 9)] - particle_distributions[scalar_index(x, y, z, 10)] + particle_distributions[scalar_index(x, y, z, 11)] - particle_distributions[scalar_index(x, y, z, 12)] -
+                       particle_distributions[scalar_index(x, y, z, 13)] + particle_distributions[scalar_index(x, y, z, 14)];
+
+        double y_sum = particle_distributions[scalar_index(x, y, z, 3)] - particle_distributions[scalar_index(x, y, z, 4)] + particle_distributions[scalar_index(x, y, z, 7)] - particle_distributions[scalar_index(x, y, z, 8)] +
+                       particle_distributions[scalar_index(x, y, z, 9)] - particle_distributions[scalar_index(x, y, z, 10)] - particle_distributions[scalar_index(x, y, z, 11)] + particle_distributions[scalar_index(x, y, z, 12)] +
+                       particle_distributions[scalar_index(x, y, z, 13)] - particle_distributions[scalar_index(x, y, z, 14)];
+
+        double z_sum = particle_distributions[scalar_index(x, y, z, 5)] - particle_distributions[scalar_index(x, y, z, 6)] + particle_distributions[scalar_index(x, y, z, 7)] - particle_distributions[scalar_index(x, y, z, 8)] -
+                       particle_distributions[scalar_index(x, y, z, 9)] + particle_distributions[scalar_index(x, y, z, 10)] + particle_distributions[scalar_index(x, y, z, 11)] - particle_distributions[scalar_index(x, y, z, 12)] +
+                       particle_distributions[scalar_index(x, y, z, 13)] - particle_distributions[scalar_index(x, y, z, 14)];
+
+        double dens_inv = 1 / new_density;
+        density_field[scalar_index(x, y, z)] = new_density;
+        velocity_field[(scalar_index(x, y, z)) * 3] = x_sum * dens_inv;
+        velocity_field[(scalar_index(x, y, z)) * 3 + 1] = y_sum * dens_inv;
+        velocity_field[(scalar_index(x, y, z)) * 3 + 2] = z_sum * dens_inv;
       }
     }
     y = NY - 1;
