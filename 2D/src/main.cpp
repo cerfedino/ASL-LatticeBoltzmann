@@ -254,7 +254,7 @@ void do_drift() {
   F[scalar_index(Ny - 1, 7, Nx - 1)] = F_temp[scalar_index(0, 7, Nx - 1)];
   F[scalar_index(Ny - 1, 8, 0)] = F_temp[scalar_index(0, 8, Nx - 1)];
 
-  for (int y = 1; y < Ny; y++) {
+  for (int y = 1; y < Ny - 1; y++) {
     // x = 0
     F[scalar_index(y, 1, 1)] = F_temp[scalar_index(y, 1, 0)];
     F[scalar_index((y + 1) % Ny, 2, 1)] = F_temp[scalar_index(y, 2, 0)];
@@ -287,6 +287,39 @@ void do_drift() {
     F[scalar_index(((y - 1 + Ny) % Ny), 7, Nx - 1)] = F_temp[scalar_index(y, 7, Nx - 1)];
     F[scalar_index(((y - 1 + Ny) % Ny), 8, 0)] = F_temp[scalar_index(y, 8, Nx - 1)];
   }
+
+  // y = Ny - 1
+  // x = 0
+  F[scalar_index(Ny - 1, 1, 1)] = F_temp[scalar_index(Ny - 1, 1, 0)];
+  F[scalar_index(0, 2, 1)] = F_temp[scalar_index(Ny - 1, 2, 0)];
+  F[scalar_index(0, 3, 0)] = F_temp[scalar_index(Ny - 1, 3, 0)];
+  F[scalar_index(0, 4, Nx - 1)] = F_temp[scalar_index(Ny - 1, 4, 0)];
+  F[scalar_index(Ny - 1, 5, Nx - 1)] = F_temp[scalar_index(Ny - 1, 5, 0)];
+  F[scalar_index(Ny - 2, 6, Nx - 1)] = F_temp[scalar_index(Ny - 1, 6, 0)];
+  F[scalar_index(Ny - 2, 7, 0)] = F_temp[scalar_index(Ny - 1, 7, 0)];
+  F[scalar_index(Ny - 2, 8, 1)] = F_temp[scalar_index(Ny - 1, 8, 0)];
+
+  // x = [1, Nx - 2]
+  for (int x = 1; x < Nx - 1; x++) {
+    F[scalar_index(Ny - 1, 1, x + 1)] = F_temp[scalar_index(Ny - 1, 1, x)];
+    F[scalar_index(0, 2, x + 1)] = F_temp[scalar_index(Ny - 1, 2, x)];
+    F[scalar_index(0, 3, x)] = F_temp[scalar_index(Ny - 1, 3, x)];
+    F[scalar_index(0, 4, x - 1)] = F_temp[scalar_index(Ny - 1, 4, x)];
+    F[scalar_index(Ny - 1, 5, x - 1)] = F_temp[scalar_index(Ny - 1, 5, x)];
+    F[scalar_index(Ny - 2, 6, x - 1)] = F_temp[scalar_index(Ny - 1, 6, x)];
+    F[scalar_index(Ny - 2, 7, x)] = F_temp[scalar_index(Ny - 1, 7, x)];
+    F[scalar_index(Ny - 2, 8, x + 1)] = F_temp[scalar_index(Ny - 1, 8, x)];
+  }
+
+  // x = Nx - 1
+  F[scalar_index(Ny - 1, 1, 0)] = F_temp[scalar_index(Ny - 1, 1, Nx - 1)];
+  F[scalar_index(0, 2, 0)] = F_temp[scalar_index(Ny - 1, 2, Nx - 1)];
+  F[scalar_index(0, 3, Nx - 1)] = F_temp[scalar_index(Ny - 1, 3, Nx - 1)];
+  F[scalar_index(0, 4, Nx - 2)] = F_temp[scalar_index(Ny - 1, 4, Nx - 1)];
+  F[scalar_index(Ny - 1, 5, Nx - 2)] = F_temp[scalar_index(Ny - 1, 5, Nx - 1)];
+  F[scalar_index(Ny - 2, 6, Nx - 2)] = F_temp[scalar_index(Ny - 1, 6, Nx - 1)];
+  F[scalar_index(Ny - 2, 7, Nx - 1)] = F_temp[scalar_index(Ny - 1, 7, Nx - 1)];
+  F[scalar_index(Ny - 2, 8, 0)] = F_temp[scalar_index(Ny - 1, 8, Nx - 1)];
 
   // bndryF = F[cylinder,:]
   // flops = 0
