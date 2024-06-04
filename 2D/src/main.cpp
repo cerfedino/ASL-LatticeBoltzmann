@@ -257,35 +257,35 @@ void do_drift() {
   for (int y = 1; y < Ny - 1; y++) {
     // x = 0
     F[scalar_index(y, 1, 1)] = F_temp[scalar_index(y, 1, 0)];
-    F[scalar_index((y + 1) % Ny, 2, 1)] = F_temp[scalar_index(y, 2, 0)];
-    F[scalar_index((y + 1) % Ny, 3, 0)] = F_temp[scalar_index(y, 3, 0)];
-    F[scalar_index(((y + 1) % Ny), 4, Nx - 1)] = F_temp[scalar_index(y, 4, 0)];
-    F[scalar_index(((y + Ny) % Ny), 5, Nx - 1)] = F_temp[scalar_index(y, 5, 0)];
-    F[scalar_index(((y - 1 + Ny) % Ny), 6, Nx - 1)] = F_temp[scalar_index(y, 6, 0)];
-    F[scalar_index(((y - 1 + Ny) % Ny), 7, 0)] = F_temp[scalar_index(y, 7, 0)];
-    F[scalar_index(((y - 1 + Ny) % Ny), 8, 1)] = F_temp[scalar_index(y, 8, 0)];
+    F[scalar_index(y + 1, 2, 1)] = F_temp[scalar_index(y, 2, 0)];
+    F[scalar_index(y + 1, 3, 0)] = F_temp[scalar_index(y, 3, 0)];
+    F[scalar_index(y + 1, 4, Nx - 1)] = F_temp[scalar_index(y, 4, 0)];
+    F[scalar_index(y, 5, Nx - 1)] = F_temp[scalar_index(y, 5, 0)];
+    F[scalar_index(y - 1, 6, Nx - 1)] = F_temp[scalar_index(y, 6, 0)];
+    F[scalar_index(y - 1, 7, 0)] = F_temp[scalar_index(y, 7, 0)];
+    F[scalar_index(y - 1, 8, 1)] = F_temp[scalar_index(y, 8, 0)];
 
     // x = [1, Nx - 2]
     for (int x = 1; x < Nx - 1; x++) {
       F[scalar_index(y, 1, x + 1)] = F_temp[scalar_index(y, 1, x)];
-      F[scalar_index((y + 1) % Ny, 2, x + 1)] = F_temp[scalar_index(y, 2, x)];
-      F[scalar_index((y + 1) % Ny, 3, x)] = F_temp[scalar_index(y, 3, x)];
-      F[scalar_index(((y + 1) % Ny), 4, x - 1)] = F_temp[scalar_index(y, 4, x)];
-      F[scalar_index(((y + Ny) % Ny), 5, x - 1)] = F_temp[scalar_index(y, 5, x)];
-      F[scalar_index(((y - 1 + Ny) % Ny), 6, x - 1)] = F_temp[scalar_index(y, 6, x)];
-      F[scalar_index(((y - 1 + Ny) % Ny), 7, x)] = F_temp[scalar_index(y, 7, x)];
-      F[scalar_index(((y - 1 + Ny) % Ny), 8, x + 1)] = F_temp[scalar_index(y, 8, x)];
+      F[scalar_index(y + 1, 2, x + 1)] = F_temp[scalar_index(y, 2, x)];
+      F[scalar_index(y + 1, 3, x)] = F_temp[scalar_index(y, 3, x)];
+      F[scalar_index(y + 1, 4, x - 1)] = F_temp[scalar_index(y, 4, x)];
+      F[scalar_index(y, 5, x - 1)] = F_temp[scalar_index(y, 5, x)];
+      F[scalar_index(y - 1, 6, x - 1)] = F_temp[scalar_index(y, 6, x)];
+      F[scalar_index(y - 1, 7, x)] = F_temp[scalar_index(y, 7, x)];
+      F[scalar_index(y - 1, 8, x + 1)] = F_temp[scalar_index(y, 8, x)];
     }
 
     // x = Nx - 1
     F[scalar_index(y, 1, 0)] = F_temp[scalar_index(y, 1, Nx - 1)];
-    F[scalar_index((y + 1) % Ny, 2, 0)] = F_temp[scalar_index(y, 2, Nx - 1)];
-    F[scalar_index((y + 1) % Ny, 3, Nx - 1)] = F_temp[scalar_index(y, 3, Nx - 1)];
-    F[scalar_index(((y + 1) % Ny), 4, Nx - 2)] = F_temp[scalar_index(y, 4, Nx - 1)];
-    F[scalar_index(((y + Ny) % Ny), 5, Nx - 2)] = F_temp[scalar_index(y, 5, Nx - 1)];
-    F[scalar_index(((y - 1 + Ny) % Ny), 6, Nx - 2)] = F_temp[scalar_index(y, 6, Nx - 1)];
-    F[scalar_index(((y - 1 + Ny) % Ny), 7, Nx - 1)] = F_temp[scalar_index(y, 7, Nx - 1)];
-    F[scalar_index(((y - 1 + Ny) % Ny), 8, 0)] = F_temp[scalar_index(y, 8, Nx - 1)];
+    F[scalar_index(y + 1, 2, 0)] = F_temp[scalar_index(y, 2, Nx - 1)];
+    F[scalar_index(y + 1, 3, Nx - 1)] = F_temp[scalar_index(y, 3, Nx - 1)];
+    F[scalar_index(y + 1, 4, Nx - 2)] = F_temp[scalar_index(y, 4, Nx - 1)];
+    F[scalar_index(y, 5, Nx - 2)] = F_temp[scalar_index(y, 5, Nx - 1)];
+    F[scalar_index(y - 1, 6, Nx - 2)] = F_temp[scalar_index(y, 6, Nx - 1)];
+    F[scalar_index(y - 1, 7, Nx - 1)] = F_temp[scalar_index(y, 7, Nx - 1)];
+    F[scalar_index(y - 1, 8, 0)] = F_temp[scalar_index(y, 8, Nx - 1)];
   }
 
   // y = Ny - 1
