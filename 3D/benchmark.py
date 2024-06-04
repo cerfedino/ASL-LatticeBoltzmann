@@ -2,26 +2,36 @@ import os
 import subprocess
 import re
 import math
+import time
 import numpy as np
 import pandas as pd
 from dotenv import load_dotenv, dotenv_values
 import matplotlib.pyplot as plt
 from sympy import symbols, evalf, sympify
 import sys
+from adjustText import adjust_text
+from matplotlib.colors import hsv_to_rgb
 
 
 PREVIOUS_VERSIONS_PATH = os.path.join(os.path.dirname(__file__), 'previous_versions/')
 OUTPUT_FOLDER = os.path.join(os.path.dirname(__file__),'artifacts/')
 
+MNx = 30
+MNy = 50
+MNz = 10
+MNt = 500
 
 if len(sys.argv) != 5:
-    print("Usage: python3 benchmark.py <Nx> <Ny> <Nz> <Nt>")
-    exit(1)
+    print("Usage: python3 benchmark.py <Nx> <Ny> <Nz> <Nt> taking default values")
+    time.sleep(0.1)
 
-MNx = int(sys.argv[1])
-MNy = int(sys.argv[2])
-MNz = int(sys.argv[3])
-MNt = int(sys.argv[4])
+    #exit(1)
+else:
+    MNx = int(sys.argv[1])
+    MNy = int(sys.argv[2])
+    MNz = int(sys.argv[3])
+    MNt = int(sys.argv[4])
+
 
 Nx, Ny, Nz, Nt, NL = symbols('Nx Ny Nz Nt NL')
 NX, NY, NZ, NT, NL = symbols('NX NY NZ NT NL')
@@ -100,13 +110,16 @@ def make_roofline_plot(PEAK_SCALAR, MEM_BW, SIMD_LEN_BITS):
 
     # Plot bounds
     plt.xlim(np.min(x), XMAX)
+    #plt.ylim(1, 2**10)
     
     
     return fig
 
-def plot_roofline(plt, label, perf, intensity, simd=False):
-    plt.gca().plot(intensity, perf, 'ro', label=label)
-    plt.gca().text(intensity * 1.15, perf, f"{label} ({perf:.2f} iops/cycle)", fontsize=12, ha='left', color='red')
+def plot_roofline(plt, label, perf, intensity, color, name=None):
+    print(f"Plotting {name} with performance {perf} and intensity {intensity}")
+    plt.gca().plot(intensity, perf, 'ro', label=label, color=color)
+    texts = plt.gca().text(intensity * 1.15, perf, f"{label} ({perf:.2f} iops/cycle)", fontsize=12, ha='left', color=color)
+    #adjust_text(texts)
     return plt
 
 def run_executable_and_get_output(executable_path, args):
@@ -156,6 +169,10 @@ def main():
     min_performance_density_momentum  = math.inf
     min_performance_collision  = math.inf
     min_performance_stream    = math.inf
+    
+    colorrange = (0, 90)
+    value_factor = 0.7  # Adjust this factor to make yellows darker
+    
 
     version_labels = []
     loop_cycles = {
@@ -166,6 +183,7 @@ def main():
   
     for path in previous_versions:
         print("=========")
+        v_idx = previous_versions.index(path)
         
         conf = dotenv_values(path+"/.env")
         VERSION = conf["VERSION"]
@@ -176,7 +194,7 @@ def main():
         WORK = conf["WORK"]
         DATA_MOVEMENT = conf["DATA_MOV"]
 
-        version_labels.append(f"{TITLE}\n{DESC}")
+        version_labels.append(f"v{VERSION}")
 
         print("\nVERSION: ", VERSION)
         print("Path: ", PATH)
@@ -196,6 +214,11 @@ def main():
             executable = f"{path}/src/main_optimized_profile.o"
             
         output = run_executable_and_get_output(executable, [f"{PARAMS[Nx]}", f"{PARAMS[Ny]}", f"{PARAMS[Nz]}", f"{PARAMS[Nt]}"])
+        
+        print("########################################")
+        print("Output:")
+        print(output)
+        print("########################################")
         print("done")
         try:
             runs = int(re.search(r"Run (\d+)/\d+ done\nProfiling results:", output).group(1))
@@ -234,9 +257,9 @@ def main():
         
         min_performance = min(min_performance, PERFORMANCE)
 
-        min_performance_density_momentum  = min(min_performance_density_momentum , performance_density_momentum )
-        min_performance_collision  = min(min_performance_collision , performance_collision )
-        min_performance_stream    = min(min_performance_stream   , performance_stream   )
+        min_performance_density_momentum  = min(min_performance_density_momentum, performance_density_momentum)
+        min_performance_collision  = min(min_performance_collision, performance_collision)
+        min_performance_stream    = min(min_performance_stream, performance_stream)
         
         print()
         print("Work: ", WORK, "= " + str(WORK_eval))
@@ -244,11 +267,23 @@ def main():
         print("Operational Intensity: ", INTENSITY)
         print("Performance: ", PERFORMANCE)
         
-        plt_all = plot_roofline(plt_all, TITLE, PERFORMANCE, INTENSITY, simd=True)
+        temp_title = "v" + VERSION
+        
+        curcolor = hsv_to_rgb([[(colorrange[0]+((colorrange[1]-colorrange[0])*((v_idx+1)/len(previous_versions))))/360,  1, value_factor]])[0]
+        
+        plt_all = plot_roofline(plt_all, temp_title, PERFORMANCE, INTENSITY, curcolor, "All")
 
-        plt_density_momentum  = plot_roofline(plt_density_momentum , TITLE, performance_density_momentum , intensity_density_momentum , simd=True)
-        plt_collision  = plot_roofline(plt_collision , TITLE, performance_collision , intensity_collision , simd=True)
-        plt_stream    = plot_roofline(plt_stream   , TITLE, performance_stream   , intensity_stream   , simd=True)
+        plt_density_momentum  = plot_roofline(plt_density_momentum, temp_title, performance_density_momentum, intensity_density_momentum, curcolor, "Density Momentum")
+        plt_collision  = plot_roofline(plt_collision, temp_title, performance_collision, intensity_collision, curcolor, "Collision")
+        plt_stream    = plot_roofline(plt_stream, temp_title, performance_stream, intensity_stream, curcolor, "Stream")
+
+    # gets texts of plt_all and adjusts them
+    expand_text = (1, 0)
+    lim = 20
+    adjust_text(plt_all.gca().texts, expand_text=expand_text, lim=lim)
+    adjust_text(plt_density_momentum.gca().texts, expand_text=expand_text, lim=lim)
+    adjust_text(plt_collision.gca().texts, expand_text=expand_text, lim=lim)
+    adjust_text(plt_stream.gca().texts, expand_text=expand_text, lim=lim)
 
     plt_all.gca().set_ylim(min(min_performance, PEAK_SCALAR)/2.5, 2.5 * PEAK_simd)
 
@@ -263,7 +298,7 @@ def main():
     bottom = np.zeros(len(version_labels))
     for col in normalized_df.columns:
         p = bar_fig.gca().bar(version_labels, normalized_df[col], 0.5, label=col, bottom=bottom)
-        bar_fig.gca().bar_label(p, fmt=col.upper(), label_type='center', size='x-large')
+        #bar_fig.gca().bar_label(p, fmt=col.upper(), label_type='center', size='x-large')
         bottom += normalized_df[col]
     bar_fig.gca().legend(loc="upper right", fontsize='large')
     bar_fig.gca().tick_params(labelsize='x-large')
@@ -271,9 +306,16 @@ def main():
     plt_all.savefig(f"{OUTPUT_FOLDER}/roofline_plot.out.pdf")
     plt_density_momentum.savefig(f"{OUTPUT_FOLDER}/roofline_plot_density_momentum.out.pdf")
     plt_collision.savefig(f"{OUTPUT_FOLDER}/roofline_plot_collision.out.pdf")
-    #plt_stream.savefig(f"{OUTPUT_FOLDER}/roofline_plot_stream.out.pdf")
+    plt_stream.savefig(f"{OUTPUT_FOLDER}/roofline_plot_stream.out.pdf")
     bar_fig.savefig(f"{OUTPUT_FOLDER}/bar_plot.out.pdf")
-
+    
+    # create one plot with all plots in one big 
+    #fig, axs = plt.subplots(2, 2, figsize=(20, 12), facecolor="white")
+    #fig.suptitle("Roofline Plots", fontsize=16)
+    #axs[0, 0] = plt_density_momentum
+    
+    
+    
     plt.show()
 
         
