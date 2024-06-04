@@ -26,7 +26,7 @@ build: $(CURRENT_VERSION_OBJ) $(BASE_VERSION_OBJ) $(PAST_VERSIONS_OBJ)
 
 # Recipe for building any version
 %/cmdline/main_$(RUN_PARAMS_ESCAPED).o: %/cmdline/main.cpp
-	cd $(dir $<); pwd; cmake $(RUN_PARAMS_DEFINITIONS) ../; make 
+	cd $(dir $<); pwd; cmake $(RUN_PARAMS_DEFINITIONS) ../ -B.; make
 # Recipe for producing results for any version
 %/cmdline/output/timestamp_$(RUN_PARAMS_ESCAPED).txt: %/cmdline/main_$(RUN_PARAMS_ESCAPED).o
 	cd $(dir $<); ./main_$(RUN_PARAMS_ESCAPED).o $(RUN_PARAMS)
@@ -37,6 +37,5 @@ test: previous_versions/v0/src/cmdline/output/timestamp_$(RUN_PARAMS_ESCAPED).tx
 
 benchmark: $(PAST_VERSIONS_OBJ)
 	mkdir -p artifacts/; python3 benchmark.py $(RUN_PARAMS);
-
-profile: $(CURRENT_VERSION_OBJ) $(BASE_VERSION_OBJ) $(PAST_VERSIONS_OBJ) 
+profile: $(CURRENT_VERSION_OBJ)
 	cd $(dir $<); ./main_$(RUN_PARAMS_ESCAPED)_profiler.o $(RUN_PARAMS)
