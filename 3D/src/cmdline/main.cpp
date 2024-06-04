@@ -100,26 +100,7 @@ void initialise() {
   stream_profiler = init_profiler(NZ * 8, 15 * 2 * NZ * NY * NX + NZ * 10 + NZ * 18);
 
 #ifdef BENCHMARK
-  if (PAPI_library_init(PAPI_VER_CURRENT) != PAPI_VER_CURRENT) {
-    fprintf(stderr, "PAPI library init error!\n");
-    exit(1);
-  }
-
-  if (PAPI_create_eventset(&papi_event_set) != PAPI_OK) {
-    fprintf(stderr, "PAPI create event set error!\n");
-    exit(1);
-  }
-
-  // Register memory event
-  if (PAPI_add_named_event(papi_event_set, "ANY_DATA_CACHE_FILLS_FROM_SYSTEM:MEM_IO_LCL") != PAPI_OK) {
-    fprintf(stderr, "Couldn't add memory event to PAPI!\n");
-    exit(1);
-  }
-  // Register flops event
-  if (PAPI_add_event(papi_event_set, PAPI_FP_OPS) != PAPI_OK) {
-    fprintf(stderr, "Couldn't add flop event to PAPI\n");
-    exit(1);
-  }
+  papi_init(&papi_event_set);
 #endif
 }
 
