@@ -3,7 +3,10 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <vector>
+
+#ifdef BENCHMARK
 #include <papi.h>
+#endif
 
 #ifdef MNx
 #define Nx (MNx)
@@ -134,6 +137,7 @@ void make_latest_output(std::string folder) {
 #endif
 
 
+#ifdef BENCHMARK
 
 std::string papi_error_code_to_string(int code) {
   switch (code)
@@ -243,3 +247,4 @@ void papi_init(int *papi_event_set) {
   }
 }
 
+#endif
