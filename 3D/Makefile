@@ -39,3 +39,5 @@ benchmark: $(PAST_VERSIONS_OBJ)
 	mkdir -p artifacts/; python3 benchmark.py $(RUN_PARAMS);
 profile: $(CURRENT_VERSION_OBJ)
 	cd $(dir $<); ./main_$(RUN_PARAMS_ESCAPED)_profiler.o $(RUN_PARAMS)
+benchmark_cur: $(CURRENT_VERSION_OBJ)
+	./src/cmdline/main_$(RUN_PARAMS_ESCAPED)_benchmark.o
