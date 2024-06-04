@@ -155,7 +155,7 @@ void initialize() {
     for (int j = 0; j < Nx; j++) {
       for (int k = 0; k < NL; k++) {
         double rand_val = ((double)rand() / (RAND_MAX)) + 1;
-        F[i * (Nx * NL) + k * Nx + j] = 1 + 0.01 * rand_val;
+        F[scalar_index(i, k, j)] = 1 + 0.01 * rand_val;
       }
     }
   }
@@ -166,7 +166,7 @@ void initialize() {
   // flops = Ny*Nx( 2 add + 5 mult + 1 cos + 1 div )
   for (int i = 0; i < Ny; i++) {
     for (int j = 0; j < Nx; j++) {
-      F[i * (Nx * NL) + Nx + j] += 2.0 * (1.0 + 0.2 * cos(2.0 * M_PI * (double)x_coords[i * Nx + j] / (double)Nx * 4.0));
+      F[scalar_index(i, 1, j)] += 2.0 * (1.0 + 0.2 * cos(2.0 * M_PI * (double)x_coords[i * Nx + j] / (double)Nx * 4.0));
     }
   }
 
@@ -176,7 +176,7 @@ void initialize() {
     for (int j = 0; j < Nx; j++) {
       res = 0;
       for (int k = 0; k < NL; k++) {
-        res += F[i * (Nx * NL) + k * Nx + j];
+        res += F[scalar_index(i, k, j)];
       }
       rho[i * Nx + j] = res;
     }
@@ -187,7 +187,7 @@ void initialize() {
   for (int j = 0; j < Ny; j++) {
     for (int k = 0; k < Nx; k++) {
       for (int i = 0; i < NL; i++) {
-        F[j * (Nx * NL) + i * Nx + k] *= rho0 * rho[j * Nx + k];
+        F[scalar_index(j, i, k)] *= rho0 * rho[j * Nx + k];
       }
     }
   }
