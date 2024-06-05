@@ -43,7 +43,13 @@ npy_files = [file for file in files if file.startswith("vorticity_")]
 
 npy_files.sort()
 
-cylinder = np.load(folder + "/cylinder.npy") # todo store cylinder numpy array in the output folder
+cylinder_file = folder + "/cylinder.npy"
+print(f"Loading cylinder from: {cylinder_file}")
+# if file doesnt exist check if it is in the output folder
+if not os.path.exists(cylinder_file):
+    cylinder_file = "output/cylinder.npy"
+ 
+cylinder = np.load(cylinder_file) # todo store cylinder numpy array in the output folder
 print(f"Shape of cylinder: {cylinder.shape}")
 
 #convert cylinder to bool values
