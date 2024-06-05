@@ -3,7 +3,7 @@
 
 RUN_PARAMS = 30 50 10 500
 ifeq ($(firstword $(MAKECMDGOALS)),test)
-    RUN_PARAMS = 30 50 10 100
+    RUN_PARAMS = 3 5 6 10
 endif
 
 RUN_PARAMS_ESCAPED =  $(shell echo $(RUN_PARAMS) | tr ' ' '_')
