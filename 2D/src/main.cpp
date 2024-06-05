@@ -375,7 +375,7 @@ void do_rho() {
       __m256d res1_sum_2_vec = _mm256_add_pd(res1_sum_1_vec, f_2_vec);
       __m256d res1_sum_3_vec = _mm256_add_pd(res1_sum_2_vec, f_5_vec);
       __m256d res1_sum_4_vec = _mm256_add_pd(res1_sum_3_vec, f_6_vec);
-      __m256d res1_sum_5_vec = _mm256_add_pd(res1_sum_4_vec, f_7_vec);
+      __m256d rho_vec = _mm256_add_pd(res1_sum_4_vec, f_7_vec);
 
       __m256d res2_sum0_vec = _mm256_add_pd(f_2_minu_6_vec, f_3_plus_4_vec);
       __m256d res2_sum1_vec = _mm256_sub_pd(res2_sum0_vec, f_7_vec);
@@ -386,33 +386,21 @@ void do_rho() {
       __m256d res3_sum2_vec = _mm256_sub_pd(res3_sum1_vec, f_5_vec);
 
       // Idunno if there's a better way maybe?
-      __m256d res1_inv_vec = _mm256_div_pd(const_vec_1, res1_sum_5_vec);
+      __m256d res1_inv_vec = _mm256_div_pd(const_vec_1, rho_vec);
 
-      __m256d res2_mul_inv = _mm256_mul_pd(res1_inv_vec, res2_sum2_vec);
-      __m256d res3_mul_inv = _mm256_mul_pd(res1_inv_vec, res3_sum2_vec);
+      __m256d ux_vec = _mm256_mul_pd(res1_inv_vec, res2_sum2_vec);
+      __m256d uy_vec = _mm256_mul_pd(res1_inv_vec, res3_sum2_vec);
 
-      _mm256_store_pd(&rho[scalar_index(y, x)], res1_sum_5_vec);
-      _mm256_store_pd(&ux[scalar_index(y, x)], res2_mul_inv);
-      _mm256_store_pd(&uy[scalar_index(y, x)], res3_mul_inv);
-    }
-  }
-}
+      _mm256_store_pd(&ux[scalar_index(y, x)], ux_vec);
+      _mm256_store_pd(&uy[scalar_index(y, x)], uy_vec);
 
-void do_feq() {
-  // flops = Ny*Nx*67
-  // bytes =
-  for (int y = 0; y < Ny; y++) {
-    for (int x = 0; x < Nx; x += 4) {
       // ux and uy stuff
-      __m256d ux_vec = _mm256_load_pd(&ux[y * Nx + x]);                  // ux[x,y]
       __m256d ux_pow_vec = _mm256_mul_pd(ux_vec, ux_vec);                // ux[x,y] ** 2
-      __m256d uy_vec = _mm256_load_pd(&uy[y * Nx + x]);                  // uy[x,y]
       __m256d uy_pow_vec = _mm256_mul_pd(uy_vec, uy_vec);                // uy[x,y] ** 2
       __m256d ux_4_5_pow_vec = _mm256_mul_pd(const_vec_4_5, ux_pow_vec); // 4.5 * ux[x,y] ** 2
       __m256d uy_4_5_pow_vec = _mm256_mul_pd(const_vec_4_5, uy_pow_vec); // 4.5 * uy[x,y] ** 2
 
       // rho stuff
-      __m256d rho_vec = _mm256_load_pd(&rho[scalar_index(y, x)]);            // rho[x,y]
       __m256d rho_mul_tau_1_9 = _mm256_mul_pd(rho_vec, const_vec_tau_1_9);   // rho * tau_1_9
       __m256d rho_mul_tau_1_36 = _mm256_mul_pd(rho_vec, const_vec_tau_1_36); // rho * tau_1_36
 
@@ -496,6 +484,8 @@ void do_feq() {
     }
   }
 }
+
+void do_feq() {}
 
 void do_f() {}
 
