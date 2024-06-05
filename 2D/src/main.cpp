@@ -91,6 +91,8 @@ profiler *f_profiler = init_profiler(2 * Nx * Ny * NL, 8 * 3 * Nx * Ny * NL);
 profiler *vort_profiler = init_profiler(3 * Nx * Ny, 8 * 6 * Nx * Ny);
 profiler *drift_profiler = init_profiler(0, Nx *Ny * 9 * 2 * 8);
 
+__m256d const_tau_plus_1_vec = _mm256_set1_pd(tau_plus_1);
+
 __m256d const_vec_neg_0 = _mm256_set1_pd(-0.0);
 __m256d const_vec_1 = _mm256_set1_pd(1.0);
 __m256d const_vec_3 = _mm256_set1_pd(3);
@@ -465,10 +467,53 @@ void do_feq() {
 
 void do_f() {
   for (int y = 0; y < Ny; y++) {
-    for (int l = 0; l < NL; l++) {
-      for (int x = 0; x < Nx; x++) {
-        F[scalar_index(y, l, x)] = tau_plus_1 * F[scalar_index(y, l, x)] - Feq[scalar_index(y, l, x)];
-      }
+    for (int x = 0; x < Nx; x += 4) {
+      __m256d vec_f_0 = _mm256_load_pd(&F[scalar_index(y, 0, x)]);
+      __m256d vec_feq_0 = _mm256_load_pd(&Feq[scalar_index(y, 0, x)]);
+
+      __m256d vec_f_1 = _mm256_load_pd(&F[scalar_index(y, 1, x)]);
+      __m256d vec_feq_1 = _mm256_load_pd(&Feq[scalar_index(y, 1, x)]);
+
+      __m256d vec_f_2 = _mm256_load_pd(&F[scalar_index(y, 2, x)]);
+      __m256d vec_feq_2 = _mm256_load_pd(&Feq[scalar_index(y, 2, x)]);
+
+      __m256d vec_f_3 = _mm256_load_pd(&F[scalar_index(y, 3, x)]);
+      __m256d vec_feq_3 = _mm256_load_pd(&Feq[scalar_index(y, 3, x)]);
+
+      __m256d vec_f_4 = _mm256_load_pd(&F[scalar_index(y, 4, x)]);
+      __m256d vec_feq_4 = _mm256_load_pd(&Feq[scalar_index(y, 4, x)]);
+
+      __m256d vec_f_5 = _mm256_load_pd(&F[scalar_index(y, 5, x)]);
+      __m256d vec_feq_5 = _mm256_load_pd(&Feq[scalar_index(y, 5, x)]);
+
+      __m256d vec_f_6 = _mm256_load_pd(&F[scalar_index(y, 6, x)]);
+      __m256d vec_feq_6 = _mm256_load_pd(&Feq[scalar_index(y, 6, x)]);
+
+      __m256d vec_f_7 = _mm256_load_pd(&F[scalar_index(y, 7, x)]);
+      __m256d vec_feq_7 = _mm256_load_pd(&Feq[scalar_index(y, 7, x)]);
+
+      __m256d vec_f_8 = _mm256_load_pd(&F[scalar_index(y, 8, x)]);
+      __m256d vec_feq_8 = _mm256_load_pd(&Feq[scalar_index(y, 8, x)]);
+
+      __m256d sum_vec_0 = _mm256_fmsub_pd(const_tau_plus_1_vec, vec_f_0, vec_feq_0);
+      __m256d sum_vec_1 = _mm256_fmsub_pd(const_tau_plus_1_vec, vec_f_1, vec_feq_1);
+      __m256d sum_vec_2 = _mm256_fmsub_pd(const_tau_plus_1_vec, vec_f_2, vec_feq_2);
+      __m256d sum_vec_3 = _mm256_fmsub_pd(const_tau_plus_1_vec, vec_f_3, vec_feq_3);
+      __m256d sum_vec_4 = _mm256_fmsub_pd(const_tau_plus_1_vec, vec_f_4, vec_feq_4);
+      __m256d sum_vec_5 = _mm256_fmsub_pd(const_tau_plus_1_vec, vec_f_5, vec_feq_5);
+      __m256d sum_vec_6 = _mm256_fmsub_pd(const_tau_plus_1_vec, vec_f_6, vec_feq_6);
+      __m256d sum_vec_7 = _mm256_fmsub_pd(const_tau_plus_1_vec, vec_f_7, vec_feq_7);
+      __m256d sum_vec_8 = _mm256_fmsub_pd(const_tau_plus_1_vec, vec_f_8, vec_feq_8);
+
+      _mm256_store_pd(&F[scalar_index(y, 0, x)], sum_vec_0);
+      _mm256_store_pd(&F[scalar_index(y, 1, x)], sum_vec_1);
+      _mm256_store_pd(&F[scalar_index(y, 2, x)], sum_vec_2);
+      _mm256_store_pd(&F[scalar_index(y, 3, x)], sum_vec_3);
+      _mm256_store_pd(&F[scalar_index(y, 4, x)], sum_vec_4);
+      _mm256_store_pd(&F[scalar_index(y, 5, x)], sum_vec_5);
+      _mm256_store_pd(&F[scalar_index(y, 6, x)], sum_vec_6);
+      _mm256_store_pd(&F[scalar_index(y, 7, x)], sum_vec_7);
+      _mm256_store_pd(&F[scalar_index(y, 8, x)], sum_vec_8);
     }
   }
 }
