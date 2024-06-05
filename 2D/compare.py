@@ -69,13 +69,13 @@ def is_equal(name):
     else:
         diff = np.std(ref_arr - arr)
         if diff < TOLERANCE:
-            output+=f"\n\t[+] Matrices are equal within tolerance {TOLERANCE}"
+            output+=f"\n\t[+] Matrices are equal within tolerance {TOLERANCE}, diff: {diff}"
         else:
-            output+=f"\n\t{bcolors.FAIL}[ERROR] Matrices are not equal within tolerance {TOLERANCE}{bcolors.ENDC}"
+            output+=f"\n\t{bcolors.FAIL}[ERROR] Matrices are not equal within tolerance {TOLERANCE}{bcolors.ENDC}, diff: {diff}"
             equal = False
 
-    if not equal:
-        print(output)
+    #if not equal:
+    print(output)
     return equal
 
 

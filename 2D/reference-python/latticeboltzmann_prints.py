@@ -88,7 +88,7 @@ def main(Nx, Ny, Nt):
     cylinder = (X - Nx/4)**2 + (Y - Ny/2)**2 < (Ny/4)**2
 
     # np.save("output/reference/cylinder_start.npy", cylinder)
-    # np.save("output/reference/cylinder.npy", cylinder)
+    np.save("output/cylinder.npy", cylinder)
 
     # print first 10 elements of X and Y
     # print("Line: " + str(currentframe().f_lineno) + " X: ", str(X[:10]))
