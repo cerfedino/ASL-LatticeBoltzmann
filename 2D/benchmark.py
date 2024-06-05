@@ -126,8 +126,9 @@ def main():
         print("No previous versions found, stopping...")
         exit(0)
         
-    previous_versions.sort()
-    
+    # Get sorted indexes of previous_versions
+    previous_versions.sort(key=lambda x: os.path.basename(x).lstrip("_"))
+        
     # Init empty roofline plot
     plt_all = make_roofline_plot(PEAK_SCALAR, MEM_BW, SIMD_LEN_BITS)
 
@@ -245,7 +246,8 @@ def main():
         print("Operational Intensity: ", INTENSITY)
         print("Performance: ", PERFORMANCE)
         
-        plt_all = plot_roofline(plt_all, TITLE, PERFORMANCE, INTENSITY, simd=True)
+        if not os.path.basename(path).startswith("_"):
+          plt_all = plot_roofline(plt_all, TITLE, PERFORMANCE, INTENSITY, simd=True)
 
         plt_rho  = plot_roofline(plt_rho , TITLE, performance_rho , intensity_rho , simd=True)
         plt_feq  = plot_roofline(plt_feq , TITLE, performance_feq , intensity_feq , simd=True)
@@ -260,7 +262,7 @@ def main():
     plt_f.gca().set_ylim(min(min_performance_f, PEAK_SCALAR)/2.5, 2.5 * PEAK_simd)
     plt_vort.gca().set_ylim(min(min_performance_vort, PEAK_SCALAR)/2.5, 2.5 * PEAK_simd)
 
-    bar_fig = plt.figure("bar", figsize=(20, 12), facecolor="white")
+    bar_fig = plt.figure("bar", figsize=(40, 12), facecolor="white")
     df = pd.DataFrame.from_dict(loop_cycles, columns=version_labels, orient='index')
     normalized_df = df/df.sum()
     normalized_df = normalized_df.transpose()
@@ -269,8 +271,12 @@ def main():
         p = bar_fig.gca().bar(version_labels, normalized_df[col], 0.5, label=col, bottom=bottom)
         bar_fig.gca().bar_label(p, fmt=col.upper(), label_type='center', size='x-large')
         bottom += normalized_df[col]
-    bar_fig.gca().legend(loc="upper right", fontsize='large')
-    bar_fig.gca().tick_params(labelsize='x-large')
+    bar_fig.gca().legend(loc="upper right", fontsize='large') 
+    bar_fig.gca().tick_params(labelsize='large')
+    
+    x_ticks = range(len(version_labels))
+    x_labels = version_labels
+    plt.xticks(x_ticks, x_labels, rotation=0, horizontalalignment='center')
 
     plt_all.savefig(f"{OUTPUT_FOLDER}/roofline_plot.out.pdf")
     plt_rho.savefig(f"{OUTPUT_FOLDER}/roofline_plot_rho.out.pdf")

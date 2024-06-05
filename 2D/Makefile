@@ -48,7 +48,7 @@ endef
 
 ./previous_versions/v1/src/main_%.o: ./previous_versions/v1/src/main.cpp src/include/utils.c src/include/profile.c
 	$(call PREPROCESS,$@)
-	g++ $(CFLAGS)									-DMNx=$(MNx) -DMNy=$(MNy) -DMNt=$(MNt) $(DDEBUG) $(DPROFILE) $(DBENCHMARK) $< src/include/utils.c src/include/profile.c -o $@ 
+	g++ $(CFLAGS)									-DMNx=$(MNx) -DMNy=$(MNy) -DMNt=$(MNt) $(DDEBUG) $(DPROFILE) $< src/include/utils.c src/include/profile.c $(DBENCHMARK)  -o $@ 
 
 %.o: $$(dir $$@)main.cpp src/include/utils.c src/include/profile.c
 	$(call PREPROCESS,$@)
