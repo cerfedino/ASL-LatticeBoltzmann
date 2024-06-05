@@ -154,11 +154,6 @@ def main():
     Thus we would have (14*4+1+3)/28 = 2.14 flops/cycle
     '''
     plt_density_momentum  = make_roofline_plot(2.14, MEM_BW, SIMD_LEN_BITS); plt_density_momentum.suptitle("Compute density momentum moment")
- 
-    '''
-    We got only 2 FMAs... Its kinda sad
-    '''
-    plt_stream  = make_roofline_plot(4, MEM_BW, SIMD_LEN_BITS); plt_stream.suptitle("Stream")
     
     '''
     We can do 2 FMAs and 2 Adds, and those are the only ops we do in the whole for-loops basically, so in the best case we would start one at every cycle at every port
@@ -169,7 +164,6 @@ def main():
 
     min_performance_density_momentum  = math.inf
     min_performance_collision  = math.inf
-    min_performance_stream    = math.inf
     
     colorrange = (0, 90)
     value_factor = 0.7  # Adjust this factor to make yellows darker
@@ -178,7 +172,6 @@ def main():
     version_labels = []
     loop_cycles = {
         "density_momentum": [],
-        "stream": [],
         "collision": [],
     }
   
@@ -222,12 +215,9 @@ def main():
             cycles_collision  = re.search(r".*collision\s*Calculation: .* (\d+) cycles.*", output)
             cycles_collision = int(cycles_collision.group(1)) if cycles_collision is not None and int(cycles_collision.group(1)) > 1000 else 1
             
-            cycles_stream    = re.search(r".*stream\s*Calculation: .* (\d+) cycles.*", output)
-            cycles_stream = int(cycles_stream.group(1)) if cycles_stream is not None and int(cycles_stream.group(1)) > 1000 else 1
-            
-            cycles = cycles_density_momentum + cycles_collision + cycles_stream
+            cycles = cycles_density_momentum + cycles_collision
 
-            loop_cycles["density_momentum"].append(cycles_density_momentum); loop_cycles["collision"].append(cycles_collision); loop_cycles["stream"].append(cycles_stream); 
+            loop_cycles["density_momentum"].append(cycles_density_momentum); loop_cycles["collision"].append(cycles_collision);
         except AttributeError as e:
             print("Couldn't match regex to output:\n")
             print(output)
@@ -238,9 +228,6 @@ def main():
           print(f"Compute density cycles: {cycles_density_momentum }")
         if cycles_collision > 1:
           print(f"Compute collision cycles: {cycles_collision }")
-        if cycles_stream > 1:
-          print(f"Compute stream cycles: {cycles_stream }")
-          print(f"Total Number of Cycles: {cycles}")
         
         
         # Run the benchmark executable in order to read PAPI measurements
@@ -262,13 +249,6 @@ def main():
               mem_collision, flops_collision, intensity_collision = float(stats_collision[0]), float(stats_collision[1]), float(stats_collision[2])
             else:
               mem_collision, flops_collision, intensity_collision = 1, 1, 1
-            
-            stats_stream = re.search(r".*Stream Mem Transfer: ([\d|\.]*).*Stream Floating point operations: ([\d|\.]*).*Stream Arithmetic Intensity: ([\d|\.]*).*", output, re.DOTALL)
-            if stats_stream is not None and stats_stream.groups()[2] != "":
-              stats_stream = stats_stream.groups()
-              mem_stream, flops_stream, intensity_stream = float(stats_stream[0]), float(stats_stream[1]), float(stats_stream[2])
-            else: 
-              mem_stream, flops_stream, intensity_stream = 1, 1, 1
 
         except AttributeError as e:
             print("Couldn't match regex to output:\n")
@@ -277,21 +257,19 @@ def main():
             exit(1)
             
         
-        WORK_eval = flops_density_momentum + flops_collision + flops_stream
+        WORK_eval = flops_density_momentum + flops_collision
 
-        DATA_eval = mem_density_momentum + mem_collision + mem_stream
+        DATA_eval = mem_density_momentum + mem_collision
         INTENSITY = WORK_eval / DATA_eval
         PERFORMANCE = WORK_eval / cycles
         
         performance_density_momentum = flops_density_momentum / cycles_density_momentum
         performance_collision = flops_collision / cycles_collision
-        performance_stream = flops_stream / cycles_stream
         
         min_performance = min(min_performance, PERFORMANCE)
 
         min_performance_density_momentum  = min(min_performance_density_momentum, performance_density_momentum)
         min_performance_collision  = min(min_performance_collision, performance_collision)
-        min_performance_stream    = min(min_performance_stream, performance_stream)
         
         print()
         print("Work: ", WORK_eval, "= " + str(WORK_eval))
@@ -301,7 +279,6 @@ def main():
         
         print("Flops Density Momentum: ", flops_density_momentum)
         print("Flops Collision: ", flops_collision)
-        print("Flops Stream: ", flops_stream)
         
         
         temp_title = "v" + VERSION
@@ -313,7 +290,6 @@ def main():
 
         plt_density_momentum  = plot_roofline(plt_density_momentum, temp_title, performance_density_momentum, intensity_density_momentum, curcolor, "Density Momentum")
         plt_collision  = plot_roofline(plt_collision, temp_title, performance_collision, intensity_collision, curcolor, "Collision")
-        plt_stream    = plot_roofline(plt_stream, temp_title, performance_stream, intensity_stream, curcolor, "Stream")
 
     # gets texts of plt_all and adjusts them
     expand_text = (1, 0)
@@ -321,13 +297,11 @@ def main():
     # text(plt_all.gca().texts, expand_text=expand_text, lim=lim)
     # adjust_text(plt_density_momentum.gca().texts, expand_text=expand_text, lim=lim)
     # adjust_text(plt_collision.gca().texts, expand_text=expand_text, lim=lim)
-    # adjust_text(plt_stream.gca().texts, expand_text=expand_text, lim=lim)adjust_
 
     plt_all.gca().set_ylim(min(min_performance, PEAK_SCALAR)/2.5, 2.5 * PEAK_simd)
 
     plt_density_momentum.gca().set_ylim(min(min_performance_density_momentum, PEAK_SCALAR)/2.5, 2.5 * PEAK_simd)
     plt_collision.gca().set_ylim(min(min_performance_collision, PEAK_SCALAR)/2.5, 2.5 * PEAK_simd)
-    plt_stream.gca().set_ylim(min(min_performance_stream, PEAK_SCALAR)/2.5, 2.5 * PEAK_simd)
 
     bar_fig = plt.figure("bar", figsize=(20, 12), facecolor="white")
     print(version_labels)
@@ -346,11 +320,10 @@ def main():
 
     plt_all.legend(loc="upper right", fontsize='large')
     
-    plt_all.savefig(f"{OUTPUT_FOLDER}/roofline_plot.out.pdf")
-    plt_density_momentum.savefig(f"{OUTPUT_FOLDER}/roofline_plot_density_momentum.out.pdf")
-    plt_collision.savefig(f"{OUTPUT_FOLDER}/roofline_plot_collision.out.pdf")
-    plt_stream.savefig(f"{OUTPUT_FOLDER}/roofline_plot_stream.out.pdf")
-    bar_fig.savefig(f"{OUTPUT_FOLDER}/bar_plot.out.pdf")
+    plt_all.savefig(f"{OUTPUT_FOLDER}/nostream_roofline_plot.out.pdf")
+    plt_density_momentum.savefig(f"{OUTPUT_FOLDER}/nostream_roofline_plot_density_momentum.out.pdf")
+    plt_collision.savefig(f"{OUTPUT_FOLDER}/nostream_roofline_plot_collision.out.pdf")
+    bar_fig.savefig(f"{OUTPUT_FOLDER}/nostream_bar_plot.out.pdf")
     
     # create one plot with all plots in one big 
     #fig, axs = plt.subplots(2, 2, figsize=(20, 12), facecolor="white")

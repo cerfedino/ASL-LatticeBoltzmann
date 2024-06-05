@@ -205,9 +205,7 @@ def main():
         output = run_executable_and_get_output(executable, [f"{PARAMS[Nx]}", f"{PARAMS[Ny]}", f"{PARAMS[Nt]}"])
         
         try:
-            cycles_drift = re.search(r".*Drift\s*Calculation: .* (\d+) cycles.*", output)
-            cycles_drift = int(cycles_drift.group(1)) if cycles_drift is not None and int(cycles_drift.group(1)) > 1000 else 1
-            
+                      
             cycles_rho  = re.search(r".*Rho\s*Calculation: .* (\d+) cycles.*", output)
             cycles_rho  = int(cycles_rho.group(1)) if cycles_rho is not None and int(cycles_rho.group(1)) > 1000 else 1
             
@@ -220,7 +218,7 @@ def main():
             cycles_vort = re.search(r".*Vort\s*Calculation: .* (\d+) cycles.*", output)
             cycles_vort = int(cycles_vort.group(1)) if cycles_vort is not None and int(cycles_vort.group(1)) > 1000 else 1
             
-            cycles = cycles_drift + cycles_rho + cycles_feq + cycles_f + cycles_vort
+            cycles =  cycles_rho + cycles_feq + cycles_f + cycles_vort
 
             loop_cycles["rho"].append(cycles_rho); loop_cycles["feq"].append(cycles_feq); loop_cycles["f"].append(cycles_f); loop_cycles["vort"].append(cycles_vort)
         except AttributeError as e:
@@ -230,8 +228,6 @@ def main():
             exit(1)
 
         print()
-        if cycles_drift > 1:
-          print(f"Drift cycles: {cycles_drift}")
         if cycles_rho > 1:
           print(f"Rho  cycles: {cycles_rho }")
         if cycles_feq > 1:
@@ -248,12 +244,6 @@ def main():
         output = run_executable_and_get_output(executable, [f"{PARAMS[Nx]}", f"{PARAMS[Ny]}", f"{PARAMS[Nt]}"])
         
         try:
-            stats_drift = re.search(r".*Drift Mem Transfer: ([\d|\.]*).*Drift Floating point operations: ([\d|\.]*).*Drift Arithmetic Intensity: ([\d|\.]*).*", output, re.DOTALL)
-            if stats_drift is not None and stats_drift.groups()[2] != "":
-              stats_drift = stats_drift.groups()
-              mem_drift, flops_drift, intensity_drift = float(stats_drift[0]), float(stats_drift[1]), float(stats_drift[2])
-            else:
-              mem_drift, flops_drift, intensity_drift = 1, 1, 1
             
             stats_rho = re.search(r".*Rho Mem Transfer: ([\d|\.]*).*Rho Floating point operations: ([\d|\.]*).*Rho Arithmetic Intensity: ([\d|\.]*).*", output, re.DOTALL)
             if stats_rho is not None and stats_rho.groups()[2] != "":
@@ -347,12 +337,12 @@ def main():
     plt.xticks(x_ticks, x_labels, rotation=0, horizontalalignment='center')
 
     plt_all.legend(loc="upper right", fontsize='large')
-    plt_all.savefig(f"{OUTPUT_FOLDER}/roofline_plot.out.pdf")
-    plt_rho.savefig(f"{OUTPUT_FOLDER}/roofline_plot_rho.out.pdf")
-    plt_feq.savefig(f"{OUTPUT_FOLDER}/roofline_plot_feq.out.pdf")
-    plt_f.savefig(f"{OUTPUT_FOLDER}/roofline_plot_f.out.pdf")
-    plt_vort.savefig(f"{OUTPUT_FOLDER}/roofline_plot_vort.out.pdf")
-    bar_fig.savefig(f"{OUTPUT_FOLDER}/bar_plot.out.pdf")
+    plt_all.savefig(f"{OUTPUT_FOLDER}/nodrift_roofline_plot.out.pdf")
+    plt_rho.savefig(f"{OUTPUT_FOLDER}/nodrift_roofline_plot_rho.out.pdf")
+    plt_feq.savefig(f"{OUTPUT_FOLDER}/nodrift_roofline_plot_feq.out.pdf")
+    plt_f.savefig(f"{OUTPUT_FOLDER}/nodrift_roofline_plot_f.out.pdf")
+    plt_vort.savefig(f"{OUTPUT_FOLDER}/nodrift_roofline_plot_vort.out.pdf")
+    bar_fig.savefig(f"{OUTPUT_FOLDER}/nodrift_bar_plot.out.pdf")
 
     plt.show()
 
