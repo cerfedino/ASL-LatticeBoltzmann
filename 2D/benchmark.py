@@ -56,7 +56,7 @@ fig_index = 0
 def make_roofline_plot(PEAK_SCALAR, MEM_BW, SIMD_LEN_BITS):
     global fig_index
     XMIN = 1E-5
-    XMAX = 2**4
+    XMAX = 2**6
     
     PLT_FACECOLOR="#E4E4E4"
     PLT_BOUND_COLOR="#55575C"
@@ -176,6 +176,10 @@ def main():
         print("=========")
         v_idx = previous_versions.index(path)
         
+        if not os.path.exists(path+"/.env"):
+            print(f"The .env file for {path} does not exist, skipping")
+            exit(1)
+        
         conf = dotenv_values(path+"/.env")
         VERSION = conf["VERSION"]
         PATH = path
@@ -195,52 +199,107 @@ def main():
         print("WORK: ", WORK)
         print("DATA_MOV: ", DATA_MOVEMENT)
         
-        # Execute executable file in subprocess and read stdout
-        # If there is a specific executable for the current configuration, use it instead
-        if os.path.exists(f"{path}/src/main_optimized_profile_{MNx}_{MNy}_{MNt}.o"):
-            executable = f"{path}/src/main_optimized_profile_{MNx}_{MNy}_{MNt}.o"
-        else:
-            executable = f"{path}/src/main_optimized_profile.o"
+        # Run the profiling executable in order to read cycles measurements
+        executable = f"{path}/src/main_optimized_profile_{MNx}_{MNy}_{MNt}.o"
             
         output = run_executable_and_get_output(executable, [f"{PARAMS[Nx]}", f"{PARAMS[Ny]}", f"{PARAMS[Nt]}"])
         
         try:
-            runs = int(re.search(r"Run (\d+)/\d+ done\nProfiling results:", output).group(1))
-
-            stats_rho  = re.search(r".*Rho\s*Calculation: ([\d|\\.]*) Flops/Cycle.*Arithmetic intensity: ([\d|\\.]*)", output).groups()
-            performance_rho, intensity_rho = float(stats_rho[0]), float(stats_rho[1])
-            stats_feq  = re.search(r".*FEQ\s*Calculation: ([\d|\\.]*) Flops/Cycle.*Arithmetic intensity: ([\d|\\.]*)", output).groups()
-            performance_feq, intensity_feq = float(stats_feq[0]), float(stats_feq[1])
-            stats_f    = re.search(r".*F\s*Calculation: ([\d|\\.]*) Flops/Cycle.*Arithmetic intensity: ([\d|\\.]*)", output).groups()
-            performance_f, intensity_f = float(stats_f[0]), float(stats_f[1])
-            stats_vort = re.search(r".*Vort\s*Calculation: ([\d|\\.]*) Flops/Cycle.*Arithmetic intensity: ([\d|\\.]*)", output).groups()
-            performance_vort, intensity_vort = float(stats_vort[0]), float(stats_vort[1])
-
-            cycles_rho  = int(re.search(r".*Rho\s*Calculation: .* (\d+) cycles.*", output).group(1))
-            cycles_feq  = int(re.search(r".*FEQ\s*Calculation: .* (\d+) cycles.*", output).group(1))
-            cycles_f    = int(re.search(r".*F\s*Calculation: .* (\d+) cycles.*", output).group(1))
-            cycles_vort = int(re.search(r".*Vort\s*Calculation: .* (\d+) cycles.*", output).group(1))
-            cycles = cycles_rho + cycles_feq + cycles_f + cycles_vort
+            cycles_drift = re.search(r".*Drift\s*Calculation: .* (\d+) cycles.*", output)
+            cycles_drift = int(cycles_drift.group(1)) if cycles_drift is not None and int(cycles_drift.group(1)) > 1000 else 1
+            
+            cycles_rho  = re.search(r".*Rho\s*Calculation: .* (\d+) cycles.*", output)
+            cycles_rho  = int(cycles_rho.group(1)) if cycles_rho is not None and int(cycles_rho.group(1)) > 1000 else 1
+            
+            cycles_feq  = re.search(r".*FEQ\s*Calculation: .* (\d+) cycles.*", output)
+            cycles_feq  = int(cycles_feq.group(1)) if cycles_feq is not None and int(cycles_feq.group(1)) > 1000 else 1
+            
+            cycles_f    = re.search(r".*F\s*Calculation: .* (\d+) cycles.*", output)
+            cycles_f    = int(cycles_f.group(1)) if cycles_f is not None and int(cycles_f.group(1)) > 1000 else 1
+            
+            cycles_vort = re.search(r".*Vort\s*Calculation: .* (\d+) cycles.*", output)
+            cycles_vort = int(cycles_vort.group(1)) if cycles_vort is not None and int(cycles_vort.group(1)) > 1000 else 1
+            
+            cycles = cycles_drift + cycles_rho + cycles_feq + cycles_f + cycles_vort
 
             loop_cycles["rho"].append(cycles_rho); loop_cycles["feq"].append(cycles_feq); loop_cycles["f"].append(cycles_f); loop_cycles["vort"].append(cycles_vort)
         except AttributeError as e:
             print("Couldn't match regex to output:\n")
             print(output)
             print("\n\nException: ", e)
+            exit(1)
 
         print()
-        print(f"Rho  cycles: {cycles_rho }")
-        print(f"FEQ  cycles: {cycles_feq }")
-        print(f"F    cycles: {cycles_f   }")
-        print(f"Vort cycles: {cycles_vort}")
-        print(f"Total Number of Cycles: {cycles}")
+        if cycles_drift > 1:
+          print(f"Drift cycles: {cycles_drift}")
+        if cycles_rho > 1:
+          print(f"Rho  cycles: {cycles_rho }")
+        if cycles_feq > 1:
+          print(f"FEQ  cycles: {cycles_feq }")
+        if cycles_f > 1:
+          print(f"F    cycles: {cycles_f   }")
+        if cycles_vort > 1:
+          print(f"Vort cycles: {cycles_vort}")
+          print(f"Total Number of Cycles: {cycles}")
         
-        WORK_eval = int(sympify(WORK).subs(PARAMS).evalf())
-        DATA_eval = int(sympify(DATA_MOVEMENT).subs(PARAMS).evalf())
+        # Run the benchmark executable in order to read PAPI measurements
+        executable = f"{path}/src/main_optimized_benchmark_{MNx}_{MNy}_{MNt}.o"
+            
+        output = run_executable_and_get_output(executable, [f"{PARAMS[Nx]}", f"{PARAMS[Ny]}", f"{PARAMS[Nt]}"])
+        
+        try:
+            stats_drift = re.search(r".*Drift Mem Transfer: ([\d|\.]*).*Drift Floating point operations: ([\d|\.]*).*Drift Arithmetic Intensity: ([\d|\.]*).*", output, re.DOTALL)
+            if stats_drift is not None and stats_drift.groups()[2] != "":
+              stats_drift = stats_drift.groups()
+              mem_drift, flops_drift, intensity_drift = float(stats_drift[0]), float(stats_drift[1]), float(stats_drift[2])
+            else:
+              mem_drift, flops_drift, intensity_drift = 1, 1, 1
+            
+            stats_rho = re.search(r".*Rho Mem Transfer: ([\d|\.]*).*Rho Floating point operations: ([\d|\.]*).*Rho Arithmetic Intensity: ([\d|\.]*).*", output, re.DOTALL)
+            if stats_rho is not None and stats_rho.groups()[2] != "":
+              stats_rho = stats_rho.groups()
+              mem_rho, flops_rho, intensity_rho = float(stats_rho[0]), float(stats_rho[1]), float(stats_rho[2])
+            else:
+              mem_rho, flops_rho, intensity_rho = 1, 1, 1
+            
+            stats_feq = re.search(r".*FEQ Mem Transfer: ([\d|\.]*).*FEQ Floating point operations: ([\d|\.]*).*FEQ Arithmetic Intensity: ([\d|\.]*).*", output, re.DOTALL)
+            if stats_feq is not None and stats_feq.groups()[2] != "":
+              stats_feq = stats_feq.groups()
+              mem_feq, flops_feq, intensity_feq = float(stats_feq[0]), float(stats_feq[1]), float(stats_feq[2])
+            else:
+              mem_feq, flops_feq, intensity_feq = 1, 1, 1
+            stats_f    = re.search(r".*F Mem Transfer: ([\d|\.]*).*F Floating point operations: ([\d|\.]*).*F Arithmetic Intensity: ([\d|\.]*).*", output, re.DOTALL)
+            if stats_f is not None and stats_f.groups()[2] != "":
+              stats_f = stats_f.groups()
+              mem_f, flops_f, intensity_f = float(stats_f[0]), float(stats_f[1]), float(stats_f[2])
+            else:
+              mem_f, flops_f, intensity_f = 1, 1, 1
+            
+            stats_vort = re.search(r".*Vort Mem Transfer: ([\d|\.]*).*Vort Floating point operations: ([\d|\.]*).*Vort Arithmetic Intensity: ([\d|\.]*).*", output, re.DOTALL)
+            if stats_vort is not None and stats_vort.groups()[2] != "":
+              stats_vort = stats_vort.groups()
+              mem_vort, flops_vort, intensity_vort = float(stats_vort[0]), float(stats_vort[1]), float(stats_vort[2])
+            else:
+              mem_vort, flops_vort, intensity_vort = 1, 1, 1
+
+        except AttributeError as e:
+            print("Couldn't match regex to output:\n")
+            print(output)
+            print("\n\nException: ", e)
+            exit(1)
+        
+        WORK_eval = flops_rho + flops_feq + flops_f + flops_vort
+        DATA_eval = mem_rho + mem_feq + mem_f + mem_vort
         INTENSITY = WORK_eval / DATA_eval
         PERFORMANCE = WORK_eval / cycles
 
         min_performance = min(min_performance, PERFORMANCE)
+        
+        performance_rho = flops_rho / cycles_rho
+        performance_feq = flops_feq / cycles_feq
+        performance_f   = flops_f   / cycles_f
+        performance_vort= flops_vort/ cycles_vort
+        
 
         min_performance_rho  = min(min_performance_rho , performance_rho )
         min_performance_feq  = min(min_performance_feq , performance_feq )

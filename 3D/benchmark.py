@@ -69,7 +69,7 @@ fig_index = 0
 def make_roofline_plot(PEAK_SCALAR, MEM_BW, SIMD_LEN_BITS):
     global fig_index
     XMIN = 1E-5
-    XMAX = 2**4
+    XMAX = 2**14
     
     PLT_FACECOLOR="#E4E4E4"
     PLT_BOUND_COLOR="#55575C"
@@ -110,7 +110,7 @@ def make_roofline_plot(PEAK_SCALAR, MEM_BW, SIMD_LEN_BITS):
 
     # Plot bounds
     plt.xlim(np.min(x), XMAX)
-    #plt.ylim(1, 2**10)
+    plt.ylim(0.25, 2**5)
     
     
     return fig
@@ -205,14 +205,8 @@ def main():
         print("WORK: ", WORK)
         print("DATA_MOV: ", DATA_MOVEMENT)
         
-        # Execute executable file in subprocess and read stdout
-        # If there is a specific executable for the current configuration, use it instead
-        if os.path.exists(f"{path}/src/cmdline/main_{MNx}_{MNy}_{MNz}_{MNt}_profiler.o"):
-            executable = f"{path}/src/cmdline/main_{MNx}_{MNy}_{MNz}_{MNt}_profiler.o"
-        else:
-            print(f"Didn't find profiler for this path: {PATH}")
-            exit(1)
-            executable = f"{path}/src/main_optimized_profile.o"
+        # Run the profiling executable in order to read cycles measurements
+        executable = f"{path}/src/cmdline/main_{MNx}_{MNy}_{MNz}_{MNt}_profiler.o"
             
         output = run_executable_and_get_output(executable, [f"{PARAMS[Nx]}", f"{PARAMS[Ny]}", f"{PARAMS[Nz]}", f"{PARAMS[Nt]}"])
         
@@ -222,18 +216,14 @@ def main():
         print("########################################")
         print("done")
         try:
-            runs = int(re.search(r"Run (\d+)/\d+ done\nProfiling results:", output).group(1))
-
-            stats_density_momentum  = re.search(r".Compute density\s*Calculation: ([\d|\\.]*) Flops/Cycle.*Arithmetic intensity: ([\d|\\.]*)", output).groups()
-            performance_density_momentum, intensity_density_momentum = float(stats_density_momentum[0]), float(stats_density_momentum[1])
-            stats_collision  = re.search(r".*Compute collision\s*Calculation: ([\d|\\.]*) Flops/Cycle.*Arithmetic intensity: ([\d|\\.]*)", output).groups()
-            performance_collision, intensity_collision = float(stats_collision[0]), float(stats_collision[1])
-            stats_stream    = re.search(r".*Compute stream\s*Calculation: ([\d|\\.]*) Flops/Cycle.*Arithmetic intensity: ([\d|\\.]*)", output).groups()
-            performance_stream, intensity_stream = float(stats_stream[0]), float(stats_stream[1])
-
-            cycles_density_momentum  = int(re.search(r".*Compute density\s*Calculation: .* (\d+) cycles.*", output).group(1))
-            cycles_collision  = int(re.search(r".*Compute collision\s*Calculation: .* (\d+) cycles.*", output).group(1))
-            cycles_stream    = int(re.search(r".*Compute stream\s*Calculation: .* (\d+) cycles.*", output).group(1))
+            cycles_density_momentum  = re.search(r".*density\s*Calculation: .* (\d+) cycles.*", output)
+            cycles_density_momentum = int(cycles_density_momentum.group(1)) if cycles_density_momentum is not None and int(cycles_density_momentum.group(1)) > 1000 else 1
+            
+            cycles_collision  = re.search(r".*collision\s*Calculation: .* (\d+) cycles.*", output)
+            cycles_collision = int(cycles_collision.group(1)) if cycles_collision is not None and int(cycles_collision.group(1)) > 1000 else 1
+            
+            cycles_stream    = re.search(r".*stream\s*Calculation: .* (\d+) cycles.*", output)
+            cycles_stream = int(cycles_stream.group(1)) if cycles_stream is not None and int(cycles_stream.group(1)) > 1000 else 1
             
             cycles = cycles_density_momentum + cycles_collision + cycles_stream
 
@@ -243,18 +233,59 @@ def main():
             print(output)
             print("\n\nException: ", e)
         print()
-        print(f"Compute density cycles: {cycles_density_momentum }")
-        print(f"Compute collision cycles: {cycles_collision }")
-        print(f"Compute stream cycles: {cycles_stream }")
-        print(f"Total Number of Cycles: {cycles}")
         
-        work_string = sympify(WORK).subs(PARAMS).subs(PARAMS2).evalf()
-        print(work_string)
-        WORK_eval = int(work_string)
+        if cycles_density_momentum > 1:
+          print(f"Compute density cycles: {cycles_density_momentum }")
+        if cycles_collision > 1:
+          print(f"Compute collision cycles: {cycles_collision }")
+        if cycles_stream > 1:
+          print(f"Compute stream cycles: {cycles_stream }")
+          print(f"Total Number of Cycles: {cycles}")
+        
+        
+        # Run the benchmark executable in order to read PAPI measurements
+        executable = f"{path}/src/cmdline/main_{MNx}_{MNy}_{MNz}_{MNt}_benchmark.o"
+            
+        output = run_executable_and_get_output(executable, [f"{PARAMS[Nx]}", f"{PARAMS[Ny]}", f"{PARAMS[Nz]}", f"{PARAMS[Nt]}"])
+        
+        try:
+            stats_density_momentum = re.search(r".*Density Momentum Moment Mem Transfer: ([\d|\.]*).*Density Momentum Moment Floating point operations: ([\d|\.]*).*Density Momentum Moment Arithmetic Intensity: ([\d|\.]*).*", output, re.DOTALL)
+            if stats_density_momentum is not None and stats_density_momentum.groups()[2] != "":
+              stats_density_momentum = stats_density_momentum.groups()
+              mem_density_momentum, flops_density_momentum, intensity_density_momentum = float(stats_density_momentum[0]), float(stats_density_momentum[1]), float(stats_density_momentum[2])
+            else:
+              mem_density_momentum, flops_density_momentum, intensity_density_momentum = 1, 1, 1
+            
+            stats_collision = re.search(r".*Collision Mem Transfer: ([\d|\.]*).*Collision Floating point operations: ([\d|\.]*).*Collision Arithmetic Intensity: ([\d|\.]*).*", output, re.DOTALL)
+            if stats_collision is not None and stats_collision.groups()[2] != "":
+              stats_collision = stats_collision.groups()
+              mem_collision, flops_collision, intensity_collision = float(stats_collision[0]), float(stats_collision[1]), float(stats_collision[2])
+            else:
+              mem_collision, flops_collision, intensity_collision = 1, 1, 1
+            
+            stats_stream = re.search(r".*Stream Mem Transfer: ([\d|\.]*).*Stream Floating point operations: ([\d|\.]*).*Stream Arithmetic Intensity: ([\d|\.]*).*", output, re.DOTALL)
+            if stats_stream is not None and stats_stream.groups()[2] != "":
+              stats_stream = stats_stream.groups()
+              mem_stream, flops_stream, intensity_stream = float(stats_stream[0]), float(stats_stream[1]), float(stats_stream[2])
+            else: 
+              mem_stream, flops_stream, intensity_stream = 1, 1, 1
 
-        DATA_eval = int(sympify(DATA_MOVEMENT).subs(PARAMS).subs(PARAMS2).evalf())
+        except AttributeError as e:
+            print("Couldn't match regex to output:\n")
+            print(output)
+            print("\n\nException: ", e)
+            exit(1)
+            
+        
+        WORK_eval = flops_density_momentum + flops_collision + flops_stream
+
+        DATA_eval = mem_density_momentum + mem_collision + mem_stream
         INTENSITY = WORK_eval / DATA_eval
         PERFORMANCE = WORK_eval / cycles
+        
+        performance_density_momentum = flops_density_momentum / cycles_density_momentum
+        performance_collision = flops_collision / cycles_collision
+        performance_stream = flops_stream / cycles_stream
         
         min_performance = min(min_performance, PERFORMANCE)
 
@@ -263,10 +294,15 @@ def main():
         min_performance_stream    = min(min_performance_stream, performance_stream)
         
         print()
-        print("Work: ", WORK, "= " + str(WORK_eval))
+        print("Work: ", WORK_eval, "= " + str(WORK_eval))
         print("Data Movement: ", DATA_MOVEMENT, "= " + str(DATA_eval))
         print("Operational Intensity: ", INTENSITY)
         print("Performance: ", PERFORMANCE)
+        
+        print("Flops Density Momentum: ", flops_density_momentum)
+        print("Flops Collision: ", flops_collision)
+        print("Flops Stream: ", flops_stream)
+        
         
         temp_title = "v" + VERSION
         
