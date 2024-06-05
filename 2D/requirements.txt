@@ -3,3 +3,4 @@ numpy
 sympy
 python-dotenv
 pandas
+adjustText

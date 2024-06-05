@@ -9,7 +9,7 @@ from dotenv import load_dotenv, dotenv_values
 import matplotlib.pyplot as plt
 from sympy import symbols, evalf, sympify
 import sys
-from adjustText import adjust_text
+# from adjustText import adjust_text
 from matplotlib.colors import hsv_to_rgb
 
 
@@ -89,7 +89,7 @@ def make_roofline_plot(PEAK_SCALAR, MEM_BW, SIMD_LEN_BITS):
     # Compute bound
     y_comp_scalar = [PEAK_SCALAR for i in x]
     plt.plot(x, y_comp_scalar, color=PLT_BOUND_COLOR, linestyle='--', linewidth=1.4)
-    plt.text(0.04,y_comp_scalar[0], f"Peak $\\pi$ scalar ({y_comp_scalar[0]} iops/cycle)", fontweight="bold", fontsize=12, va='bottom', ha='left', color=PLT_BOUND_COLOR) 
+    plt.text(0.04,y_comp_scalar[0], f"Peak $\\pi$ scalar ({y_comp_scalar[0]} flops/cycle)", fontweight="bold", fontsize=12, va='bottom', ha='left', color=PLT_BOUND_COLOR) 
 
     ax = plt.gca()
     memory_coords = memory_line.get_data()
@@ -102,11 +102,11 @@ def make_roofline_plot(PEAK_SCALAR, MEM_BW, SIMD_LEN_BITS):
     # Compute bound
     y_comp_simd = [PEAK_SCALAR * SIMD_LEN_BITS / 64 for i in x]
     plt.plot(x, y_comp_simd, color=PLT_BOUND_COLOR, linestyle='--', linewidth=1.4)
-    plt.text(0.04,y_comp_simd[0], f"Peak $\\pi$ SIMD ({y_comp_simd[0]} iops/cycle)", fontweight="bold", fontsize=12, va='bottom', ha='left', color=PLT_BOUND_COLOR)
+    plt.text(0.04,y_comp_simd[0], f"Peak $\\pi$ SIMD ({y_comp_simd[0]} flops/cycle)", fontweight="bold", fontsize=12, va='bottom', ha='left', color=PLT_BOUND_COLOR)
 
     plt.gca().yaxis.grid(True, which='major', color='w', linestyle='-', linewidth=1.5)
-    plt.xlabel("Operational Intensity I(n) [iops/byte]", fontsize=14, rotation=0, labelpad=5, ha='center')
-    plt.ylabel("Performance P(n) [iops/cycle]", fontsize=14, rotation=0, ha='left', labelpad=-15, position=(1,1))
+    plt.xlabel("Operational Intensity I(n) [flops/byte]", fontsize=14, rotation=0, labelpad=5, ha='center')
+    plt.ylabel("Performance P(n) [flops/cycle]", fontsize=14, rotation=0, ha='left', labelpad=-15, position=(1,1))
 
     # Plot bounds
     plt.xlim(np.min(x), XMAX)
@@ -117,8 +117,8 @@ def make_roofline_plot(PEAK_SCALAR, MEM_BW, SIMD_LEN_BITS):
 
 def plot_roofline(plt, label, perf, intensity, color, name=None):
     print(f"Plotting {name} with performance {perf} and intensity {intensity}")
-    plt.gca().plot(intensity, perf, 'ro', label=label, color=color)
-    texts = plt.gca().text(intensity * 1.15, perf, f"{label} ({perf:.2f} iops/cycle)", fontsize=12, ha='left', color=color)
+    plt.gca().plot(intensity, perf, 'ro', label=f"{label} ({perf:.2f} flops/cycle)", color=color)
+    texts = plt.gca().text(intensity * 1.05, perf, label, fontsize=12, va='center', ha='left', color=color)
     #adjust_text(texts)
     return plt
 
@@ -140,7 +140,8 @@ def main():
         print("No previous versions found, stopping...")
         exit(0)
     
-    previous_versions.sort()
+    # Get sorted indexes of previous_versions
+    previous_versions.sort(key=lambda x: int(os.path.basename(x).lstrip("_").lstrip("v")))
 
     # Init empty roofline plot
     plt_all = make_roofline_plot(PEAK_SCALAR, MEM_BW, SIMD_LEN_BITS)
@@ -271,7 +272,8 @@ def main():
         
         curcolor = hsv_to_rgb([[(colorrange[0]+((colorrange[1]-colorrange[0])*((v_idx+1)/len(previous_versions))))/360,  1, value_factor]])[0]
         
-        plt_all = plot_roofline(plt_all, temp_title, PERFORMANCE, INTENSITY, curcolor, "All")
+        if not os.path.basename(path).startswith("_"):
+          plt_all = plot_roofline(plt_all, temp_title, PERFORMANCE, INTENSITY, curcolor, "All")
 
         plt_density_momentum  = plot_roofline(plt_density_momentum, temp_title, performance_density_momentum, intensity_density_momentum, curcolor, "Density Momentum")
         plt_collision  = plot_roofline(plt_collision, temp_title, performance_collision, intensity_collision, curcolor, "Collision")
@@ -280,10 +282,10 @@ def main():
     # gets texts of plt_all and adjusts them
     expand_text = (1, 0)
     lim = 20
-    adjust_text(plt_all.gca().texts, expand_text=expand_text, lim=lim)
-    adjust_text(plt_density_momentum.gca().texts, expand_text=expand_text, lim=lim)
-    adjust_text(plt_collision.gca().texts, expand_text=expand_text, lim=lim)
-    adjust_text(plt_stream.gca().texts, expand_text=expand_text, lim=lim)
+    # text(plt_all.gca().texts, expand_text=expand_text, lim=lim)
+    # adjust_text(plt_density_momentum.gca().texts, expand_text=expand_text, lim=lim)
+    # adjust_text(plt_collision.gca().texts, expand_text=expand_text, lim=lim)
+    # adjust_text(plt_stream.gca().texts, expand_text=expand_text, lim=lim)adjust_
 
     plt_all.gca().set_ylim(min(min_performance, PEAK_SCALAR)/2.5, 2.5 * PEAK_simd)
 
@@ -292,6 +294,9 @@ def main():
     plt_stream.gca().set_ylim(min(min_performance_stream, PEAK_SCALAR)/2.5, 2.5 * PEAK_simd)
 
     bar_fig = plt.figure("bar", figsize=(20, 12), facecolor="white")
+    print(version_labels)
+    print("---")
+    print(loop_cycles)
     df = pd.DataFrame.from_dict(loop_cycles, columns=version_labels, orient='index')
     normalized_df = df/df.sum()
     normalized_df = normalized_df.transpose()
@@ -303,6 +308,8 @@ def main():
     bar_fig.gca().legend(loc="upper right", fontsize='large')
     bar_fig.gca().tick_params(labelsize='x-large')
 
+    plt_all.legend(loc="upper right", fontsize='large')
+    
     plt_all.savefig(f"{OUTPUT_FOLDER}/roofline_plot.out.pdf")
     plt_density_momentum.savefig(f"{OUTPUT_FOLDER}/roofline_plot_density_momentum.out.pdf")
     plt_collision.savefig(f"{OUTPUT_FOLDER}/roofline_plot_collision.out.pdf")

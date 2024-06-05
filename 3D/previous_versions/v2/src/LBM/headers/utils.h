@@ -48,4 +48,6 @@ void output_velocity();
 void output_indices_file();
 void output_lbm_data(std::string filename, bool header);
 void output_f_array(double *f_array, int z_index);
+
+void papi_init(int *papi_event_set);
 #endif

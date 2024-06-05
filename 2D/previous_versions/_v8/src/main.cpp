@@ -54,6 +54,18 @@ using namespace std;
 #define tau -1.66666667 // reciprocal collision timescale (1/0.6)
 #define tau_plus_1 (tau + 1)
 
+#ifdef BENCHMARK
+int papi_event_set = PAPI_NULL;
+
+long long papi_values[2];
+
+long long papi_drift_values[2] = {0, 0};
+long long papi_rho_values[2] = {0, 0};
+long long papi_feq_values[2] = {0, 0};
+long long papi_f_values[2] = {0, 0};
+long long papi_vort_values[2] = {0, 0};
+#endif
+
 // Lattice speeds / weights
 #define NL 9
 
@@ -80,7 +92,7 @@ bool *cylinder;
 int *collision_shape;
 double *ux;
 double *uy;
-double *F_temp;
+double *temp;
 int *x_coords;
 int *y_coords;
 int bndryF_size = 0;
@@ -92,18 +104,6 @@ profiler *vort_profiler = init_profiler(3 * Nx * Ny, 8 * 6 * Nx * Ny);
 profiler *drift_profiler = init_profiler(0, Nx *Ny * 9 * 2 * 8);
 
 string folder_name;
-
-#ifdef BENCHMARK
-int papi_event_set = PAPI_NULL;
-
-long long papi_values[2];
-
-long long papi_drift_values[2] = {0, 0};
-long long papi_rho_values[2] = {0, 0};
-long long papi_feq_values[2] = {0, 0};
-long long papi_f_values[2] = {0, 0};
-long long papi_vort_values[2] = {0, 0};
-#endif
 
 void initialize() {
   folder_name = make_output_folder(); // TODO delete empty folders
@@ -122,7 +122,7 @@ void initialize() {
   cylinder = (bool *)aligned_alloc(32, Ny * Nx * sizeof(bool));
   ux = (double *)aligned_alloc(32, Ny * Nx * sizeof(double));
   uy = (double *)aligned_alloc(32, Ny * Nx * sizeof(double));
-  F_temp = (double *)aligned_alloc(32, Ny * Nx * NL * sizeof(double));
+  temp = (double *)aligned_alloc(32, Ny * Nx * sizeof(double));
   x_coords = (int *)aligned_alloc(32, Ny * Nx * sizeof(int));
   y_coords = (int *)aligned_alloc(32, Ny * Nx * sizeof(int));
 
@@ -136,7 +136,7 @@ void initialize() {
     for (int j = 0; j < Nx; j++) {
       for (int k = 0; k < NL; k++) {
         double rand_val = ((double)rand() / (RAND_MAX)) + 1;
-        F[scalar_index(i, k, j)] = 1 + 0.01 * rand_val;
+        F[i * (Nx * NL) + k * Nx + j] = 1 + 0.01 * rand_val;
       }
     }
   }
@@ -147,7 +147,7 @@ void initialize() {
   // flops = Ny*Nx( 2 add + 5 mult + 1 cos + 1 div )
   for (int i = 0; i < Ny; i++) {
     for (int j = 0; j < Nx; j++) {
-      F[scalar_index(i, 1, j)] += 2.0 * (1.0 + 0.2 * cos(2.0 * M_PI * (double)x_coords[i * Nx + j] / (double)Nx * 4.0));
+      F[i * (Nx * NL) + Nx + j] += 2.0 * (1.0 + 0.2 * cos(2.0 * M_PI * (double)x_coords[i * Nx + j] / (double)Nx * 4.0));
     }
   }
 
@@ -157,7 +157,7 @@ void initialize() {
     for (int j = 0; j < Nx; j++) {
       res = 0;
       for (int k = 0; k < NL; k++) {
-        res += F[scalar_index(i, k, j)];
+        res += F[i * (Nx * NL) + k * Nx + j];
       }
       rho[i * Nx + j] = res;
     }
@@ -168,7 +168,7 @@ void initialize() {
   for (int j = 0; j < Ny; j++) {
     for (int k = 0; k < Nx; k++) {
       for (int i = 0; i < NL; i++) {
-        F[scalar_index(j, i, k)] *= rho0 * rho[j * Nx + k];
+        F[j * (Nx * NL) + i * Nx + k] *= rho0 * rho[j * Nx + k];
       }
     }
   }
@@ -200,107 +200,93 @@ void initialize() {
 void do_drift() {
   // # Drift
   // flops = 0
-  memcpy(F_temp, F, Nx * Ny * NL * sizeof(double));
-
-  // y = 0
-  // x = 0
-  F[scalar_index(0, 1, 1)] = F_temp[scalar_index(0, 1, 0)];
-  F[scalar_index(1, 2, 1)] = F_temp[scalar_index(0, 2, 0)];
-  F[scalar_index(1, 3, 0)] = F_temp[scalar_index(0, 3, 0)];
-  F[scalar_index(1, 4, Nx - 1)] = F_temp[scalar_index(0, 4, 0)];
-  F[scalar_index(0, 5, Nx - 1)] = F_temp[scalar_index(0, 5, 0)];
-  F[scalar_index(Ny - 1, 6, Nx - 1)] = F_temp[scalar_index(0, 6, 0)];
-  F[scalar_index(Ny - 1, 7, 0)] = F_temp[scalar_index(0, 7, 0)];
-  F[scalar_index(Ny - 1, 8, 1)] = F_temp[scalar_index(0, 8, 0)];
-
-  // x = [1, Nx - 2]
-  for (int x = 1; x < Nx - 1; x++) {
-    F[scalar_index(0, 1, x + 1)] = F_temp[scalar_index(0, 1, x)];
-    F[scalar_index(1, 2, x + 1)] = F_temp[scalar_index(0, 2, x)];
-    F[scalar_index(1, 3, x)] = F_temp[scalar_index(0, 3, x)];
-    F[scalar_index(1, 4, x - 1)] = F_temp[scalar_index(0, 4, x)];
-    F[scalar_index(0, 5, x - 1)] = F_temp[scalar_index(0, 5, x)];
-    F[scalar_index(Ny - 1, 6, x - 1)] = F_temp[scalar_index(0, 6, x)];
-    F[scalar_index(Ny - 1, 7, x)] = F_temp[scalar_index(0, 7, x)];
-    F[scalar_index(Ny - 1, 8, x + 1)] = F_temp[scalar_index(0, 8, x)];
-  }
-
-  // x = Nx - 1
-  F[scalar_index(0, 1, 0)] = F_temp[scalar_index(0, 1, Nx - 1)];
-  F[scalar_index(1, 2, 0)] = F_temp[scalar_index(0, 2, Nx - 1)];
-  F[scalar_index(1, 3, Nx - 1)] = F_temp[scalar_index(0, 3, Nx - 1)];
-  F[scalar_index(1, 4, Nx - 2)] = F_temp[scalar_index(0, 4, Nx - 1)];
-  F[scalar_index(0, 5, Nx - 2)] = F_temp[scalar_index(0, 5, Nx - 1)];
-  F[scalar_index(Ny - 1, 6, Nx - 2)] = F_temp[scalar_index(0, 6, Nx - 1)];
-  F[scalar_index(Ny - 1, 7, Nx - 1)] = F_temp[scalar_index(0, 7, Nx - 1)];
-  F[scalar_index(Ny - 1, 8, 0)] = F_temp[scalar_index(0, 8, Nx - 1)];
-
-  for (int y = 1; y < Ny - 1; y++) {
-    // x = 0
-    F[scalar_index(y, 1, 1)] = F_temp[scalar_index(y, 1, 0)];
-    F[scalar_index(y + 1, 2, 1)] = F_temp[scalar_index(y, 2, 0)];
-    F[scalar_index(y + 1, 3, 0)] = F_temp[scalar_index(y, 3, 0)];
-    F[scalar_index(y + 1, 4, Nx - 1)] = F_temp[scalar_index(y, 4, 0)];
-    F[scalar_index(y, 5, Nx - 1)] = F_temp[scalar_index(y, 5, 0)];
-    F[scalar_index(y - 1, 6, Nx - 1)] = F_temp[scalar_index(y, 6, 0)];
-    F[scalar_index(y - 1, 7, 0)] = F_temp[scalar_index(y, 7, 0)];
-    F[scalar_index(y - 1, 8, 1)] = F_temp[scalar_index(y, 8, 0)];
-
-    // x = [1, Nx - 2]
-    for (int x = 1; x < Nx - 1; x++) {
-      F[scalar_index(y, 1, x + 1)] = F_temp[scalar_index(y, 1, x)];
-      F[scalar_index(y + 1, 2, x + 1)] = F_temp[scalar_index(y, 2, x)];
-      F[scalar_index(y + 1, 3, x)] = F_temp[scalar_index(y, 3, x)];
-      F[scalar_index(y + 1, 4, x - 1)] = F_temp[scalar_index(y, 4, x)];
-      F[scalar_index(y, 5, x - 1)] = F_temp[scalar_index(y, 5, x)];
-      F[scalar_index(y - 1, 6, x - 1)] = F_temp[scalar_index(y, 6, x)];
-      F[scalar_index(y - 1, 7, x)] = F_temp[scalar_index(y, 7, x)];
-      F[scalar_index(y - 1, 8, x + 1)] = F_temp[scalar_index(y, 8, x)];
+  for (int y = 0; y < Ny; y++) {
+    for (int x = 0; x < Nx; x++) {
+      temp[scalar_index(y, (x + 1) % Nx)] = F[scalar_index(y, 1, x)];
     }
-
-    // x = Nx - 1
-    F[scalar_index(y, 1, 0)] = F_temp[scalar_index(y, 1, Nx - 1)];
-    F[scalar_index(y + 1, 2, 0)] = F_temp[scalar_index(y, 2, Nx - 1)];
-    F[scalar_index(y + 1, 3, Nx - 1)] = F_temp[scalar_index(y, 3, Nx - 1)];
-    F[scalar_index(y + 1, 4, Nx - 2)] = F_temp[scalar_index(y, 4, Nx - 1)];
-    F[scalar_index(y, 5, Nx - 2)] = F_temp[scalar_index(y, 5, Nx - 1)];
-    F[scalar_index(y - 1, 6, Nx - 2)] = F_temp[scalar_index(y, 6, Nx - 1)];
-    F[scalar_index(y - 1, 7, Nx - 1)] = F_temp[scalar_index(y, 7, Nx - 1)];
-    F[scalar_index(y - 1, 8, 0)] = F_temp[scalar_index(y, 8, Nx - 1)];
+  }
+  for (int y = 0; y < Ny; y++) {
+    for (int x = 0; x < Nx; x++) {
+      F[scalar_index(y, 1, x)] = temp[scalar_index(y, x)];
+    }
   }
 
-  // y = Ny - 1
-  // x = 0
-  F[scalar_index(Ny - 1, 1, 1)] = F_temp[scalar_index(Ny - 1, 1, 0)];
-  F[scalar_index(0, 2, 1)] = F_temp[scalar_index(Ny - 1, 2, 0)];
-  F[scalar_index(0, 3, 0)] = F_temp[scalar_index(Ny - 1, 3, 0)];
-  F[scalar_index(0, 4, Nx - 1)] = F_temp[scalar_index(Ny - 1, 4, 0)];
-  F[scalar_index(Ny - 1, 5, Nx - 1)] = F_temp[scalar_index(Ny - 1, 5, 0)];
-  F[scalar_index(Ny - 2, 6, Nx - 1)] = F_temp[scalar_index(Ny - 1, 6, 0)];
-  F[scalar_index(Ny - 2, 7, 0)] = F_temp[scalar_index(Ny - 1, 7, 0)];
-  F[scalar_index(Ny - 2, 8, 1)] = F_temp[scalar_index(Ny - 1, 8, 0)];
-
-  // x = [1, Nx - 2]
-  for (int x = 1; x < Nx - 1; x++) {
-    F[scalar_index(Ny - 1, 1, x + 1)] = F_temp[scalar_index(Ny - 1, 1, x)];
-    F[scalar_index(0, 2, x + 1)] = F_temp[scalar_index(Ny - 1, 2, x)];
-    F[scalar_index(0, 3, x)] = F_temp[scalar_index(Ny - 1, 3, x)];
-    F[scalar_index(0, 4, x - 1)] = F_temp[scalar_index(Ny - 1, 4, x)];
-    F[scalar_index(Ny - 1, 5, x - 1)] = F_temp[scalar_index(Ny - 1, 5, x)];
-    F[scalar_index(Ny - 2, 6, x - 1)] = F_temp[scalar_index(Ny - 1, 6, x)];
-    F[scalar_index(Ny - 2, 7, x)] = F_temp[scalar_index(Ny - 1, 7, x)];
-    F[scalar_index(Ny - 2, 8, x + 1)] = F_temp[scalar_index(Ny - 1, 8, x)];
+  for (int y = 0; y < Ny; y++) {
+    for (int x = 0; x < Nx; x++) {
+      temp[scalar_index((y + 1) % Ny, (x + 1) % Nx)] = F[scalar_index(y, 2, x)];
+    }
+  }
+  for (int y = 0; y < Ny; y++) {
+    for (int x = 0; x < Nx; x++) {
+      F[scalar_index(y, 2, x)] = temp[scalar_index(y, x)];
+    }
   }
 
-  // x = Nx - 1
-  F[scalar_index(Ny - 1, 1, 0)] = F_temp[scalar_index(Ny - 1, 1, Nx - 1)];
-  F[scalar_index(0, 2, 0)] = F_temp[scalar_index(Ny - 1, 2, Nx - 1)];
-  F[scalar_index(0, 3, Nx - 1)] = F_temp[scalar_index(Ny - 1, 3, Nx - 1)];
-  F[scalar_index(0, 4, Nx - 2)] = F_temp[scalar_index(Ny - 1, 4, Nx - 1)];
-  F[scalar_index(Ny - 1, 5, Nx - 2)] = F_temp[scalar_index(Ny - 1, 5, Nx - 1)];
-  F[scalar_index(Ny - 2, 6, Nx - 2)] = F_temp[scalar_index(Ny - 1, 6, Nx - 1)];
-  F[scalar_index(Ny - 2, 7, Nx - 1)] = F_temp[scalar_index(Ny - 1, 7, Nx - 1)];
-  F[scalar_index(Ny - 2, 8, 0)] = F_temp[scalar_index(Ny - 1, 8, Nx - 1)];
+  for (int y = 0; y < Ny; y++) {
+    for (int x = 0; x < Nx; x++) {
+      temp[scalar_index((y + 1) % Ny, x)] = F[scalar_index(y, 3, x)];
+    }
+  }
+  for (int y = 0; y < Ny; y++) {
+    for (int x = 0; x < Nx; x++) {
+      F[scalar_index(y, 3, x)] = temp[scalar_index(y, x)];
+    }
+  }
+
+  for (int y = 0; y < Ny; y++) {
+    for (int x = 0; x < Nx; x++) {
+      temp[scalar_index(((y + 1) % Ny), ((x - 1 + Nx) % Nx))] = F[scalar_index(y, 4, x)];
+    }
+  }
+  for (int y = 0; y < Ny; y++) {
+    for (int x = 0; x < Nx; x++) {
+      F[scalar_index(y, 4, x)] = temp[scalar_index(y, x)];
+    }
+  }
+
+  for (int y = 0; y < Ny; y++) {
+    for (int x = 0; x < Nx; x++) {
+      temp[scalar_index(((y + Ny) % Ny), ((x - 1 + Nx) % Nx))] = F[scalar_index(y, 5, x)];
+    }
+  }
+  for (int y = 0; y < Ny; y++) {
+    for (int x = 0; x < Nx; x++) {
+      F[scalar_index(y, 5, x)] = temp[scalar_index(y, x)];
+    }
+  }
+
+  for (int y = 0; y < Ny; y++) {
+    for (int x = 0; x < Nx; x++) {
+      temp[scalar_index(((y - 1 + Ny) % Ny), ((x - 1 + Nx) % Nx))] = F[scalar_index(y, 6, x)];
+    }
+  }
+  for (int y = 0; y < Ny; y++) {
+    for (int x = 0; x < Nx; x++) {
+      F[scalar_index(y, 6, x)] = temp[scalar_index(y, x)];
+    }
+  }
+
+  for (int y = 0; y < Ny; y++) {
+    for (int x = 0; x < Nx; x++) {
+      temp[scalar_index(((y - 1 + Ny) % Ny), ((x + Nx) % Nx))] = F[scalar_index(y, 7, x)];
+    }
+  }
+  for (int y = 0; y < Ny; y++) {
+    for (int x = 0; x < Nx; x++) {
+      F[scalar_index(y, 7, x)] = temp[scalar_index(y, x)];
+    }
+  }
+
+  for (int y = 0; y < Ny; y++) {
+    for (int x = 0; x < Nx; x++) {
+      temp[scalar_index(((y - 1 + Ny) % Ny), ((x + 1) % Nx))] = F[scalar_index(y, 8, x)];
+    }
+  }
+  for (int y = 0; y < Ny; y++) {
+    for (int x = 0; x < Nx; x++) {
+      F[scalar_index(y, 8, x)] = temp[scalar_index(y, x)];
+    }
+  }
 
   // bndryF = F[cylinder,:]
   // flops = 0
@@ -484,7 +470,6 @@ void do_vort() {
   vorticity[scalar_index(Ny - 1, Nx - 1)] = cylinder[scalar_index(Ny - 1, Nx - 1)] == 1 ? 0 : ux_roll - uy_roll;
 }
 void do_timestep() {
-// ----------------- DRIFT -----------------
 #ifdef BENCHMARK
   if (PAPI_start(papi_event_set) != PAPI_OK) {
     fprintf(stderr, "PAPI start error!\n");
@@ -503,7 +488,6 @@ void do_timestep() {
   papi_drift_values[1] += papi_values[1];
 #endif
 
-// ----------------- RHO -----------------
 #ifdef BENCHMARK
   if (PAPI_start(papi_event_set) != PAPI_OK) {
     fprintf(stderr, "PAPI start error!\n");
@@ -522,7 +506,6 @@ void do_timestep() {
   papi_rho_values[1] += papi_values[1];
 #endif
 
-// ----------------- FEQ -----------------
 #ifdef BENCHMARK
   if (PAPI_start(papi_event_set) != PAPI_OK) {
     fprintf(stderr, "PAPI start error!\n");
@@ -541,7 +524,6 @@ void do_timestep() {
   papi_feq_values[1] += papi_values[1];
 #endif
 
-// ----------------- F -----------------
 #ifdef BENCHMARK
   if (PAPI_start(papi_event_set) != PAPI_OK) {
     fprintf(stderr, "PAPI start error!\n");
@@ -560,7 +542,6 @@ void do_timestep() {
   papi_f_values[1] += papi_values[1];
 #endif
 
-// ----------------- VORT -----------------
 #ifdef BENCHMARK
   if (PAPI_start(papi_event_set) != PAPI_OK) {
     fprintf(stderr, "PAPI start error!\n");
@@ -666,7 +647,7 @@ inline int run() {
   free(y_coords);
   free(rho);
   free(cylinder);
-  free(F_temp);
+  free(temp);
 
 #ifdef DEBUG
   char timestamp_filename[100];
