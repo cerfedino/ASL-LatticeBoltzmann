@@ -5,15 +5,15 @@
 #define c_s 0.577350269
 #define velocity_set "D3Q15"
 #define nu 0.16666666666
-#define tau 1
+#define tau 0.6
 #define gamma_dot 0.01
 #define boundary_conditions "couette"
 #define tauinv (1.0 / tau)
 #define omtauinv (1.0 - tauinv)
 
 #define weights_29 (2.0 / 9.0)
-#define weights_19 (1.0/9.0)
-#define weights_172 (1.0/72.0)
+#define weights_19 (1.0 / 9.0)
+#define weights_172 (1.0 / 72.0)
 
 #include <string>
 
