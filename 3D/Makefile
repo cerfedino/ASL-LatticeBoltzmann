@@ -15,7 +15,7 @@ CURRENT_VERSION_OBJ = src/cmdline/main_$(RUN_PARAMS_ESCAPED).o
 PAST_VERSIONS_OBJ = $(foreach file,$(wildcard previous_versions/*/src/cmdline/main.cpp),$(file:.cpp=_$(RUN_PARAMS_ESCAPED).o))
 
 
-all: build test benchmark profile
+all: build test profile
 
 clean:
 	@find . \( -iname '*.o' -o -iname 'timestamp.txt' \) -print -delete

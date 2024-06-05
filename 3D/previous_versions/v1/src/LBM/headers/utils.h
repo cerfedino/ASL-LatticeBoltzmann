@@ -5,7 +5,7 @@
 #define c_s 0.577350269
 #define velocity_set "D3Q15"
 #define nu 0.16666666666
-#define tau 1
+#define tau 0.6
 #define gamma_dot 0.01
 #define boundary_conditions "couette"
 
