@@ -354,17 +354,17 @@ void do_rho() {
   // flops = Ny*Nx*21
   // bytes = Ny*Nx*8*2+Ny*Nx*8*9
 
-  for (int j = 0; j < Ny; j++) {
-    for (int k = 0; k < Nx; k += 4) {
-      __m256d f_0_vec = _mm256_load_pd(&F[scalar_index(j, 0, k)]);
-      __m256d f_1_vec = _mm256_load_pd(&F[scalar_index(j, 1, k)]);
-      __m256d f_2_vec = _mm256_load_pd(&F[scalar_index(j, 2, k)]);
-      __m256d f_3_vec = _mm256_load_pd(&F[scalar_index(j, 3, k)]);
-      __m256d f_4_vec = _mm256_load_pd(&F[scalar_index(j, 4, k)]);
-      __m256d f_5_vec = _mm256_load_pd(&F[scalar_index(j, 5, k)]);
-      __m256d f_6_vec = _mm256_load_pd(&F[scalar_index(j, 6, k)]);
-      __m256d f_7_vec = _mm256_load_pd(&F[scalar_index(j, 7, k)]);
-      __m256d f_8_vec = _mm256_load_pd(&F[scalar_index(j, 8, k)]);
+  for (int y = 0; y < Ny; y++) {
+    for (int x = 0; x < Nx; x += 4) {
+      __m256d f_0_vec = _mm256_load_pd(&F[scalar_index(y, 0, x)]);
+      __m256d f_1_vec = _mm256_load_pd(&F[scalar_index(y, 1, x)]);
+      __m256d f_2_vec = _mm256_load_pd(&F[scalar_index(y, 2, x)]);
+      __m256d f_3_vec = _mm256_load_pd(&F[scalar_index(y, 3, x)]);
+      __m256d f_4_vec = _mm256_load_pd(&F[scalar_index(y, 4, x)]);
+      __m256d f_5_vec = _mm256_load_pd(&F[scalar_index(y, 5, x)]);
+      __m256d f_6_vec = _mm256_load_pd(&F[scalar_index(y, 6, x)]);
+      __m256d f_7_vec = _mm256_load_pd(&F[scalar_index(y, 7, x)]);
+      __m256d f_8_vec = _mm256_load_pd(&F[scalar_index(y, 8, x)]);
 
       __m256d f_3_plus_4_vec = _mm256_add_pd(f_3_vec, f_4_vec);
       __m256d f_1_plus_8_vec = _mm256_add_pd(f_1_vec, f_8_vec);
@@ -391,9 +391,9 @@ void do_rho() {
       __m256d res2_mul_inv = _mm256_mul_pd(res1_inv_vec, res2_sum2_vec);
       __m256d res3_mul_inv = _mm256_mul_pd(res1_inv_vec, res3_sum2_vec);
 
-      _mm256_store_pd(&rho[scalar_index(j, k)], res1_sum_5_vec);
-      _mm256_store_pd(&ux[scalar_index(j, k)], res2_mul_inv);
-      _mm256_store_pd(&uy[scalar_index(j, k)], res3_mul_inv);
+      _mm256_store_pd(&rho[scalar_index(y, x)], res1_sum_5_vec);
+      _mm256_store_pd(&ux[scalar_index(y, x)], res2_mul_inv);
+      _mm256_store_pd(&uy[scalar_index(y, x)], res3_mul_inv);
     }
   }
 }
