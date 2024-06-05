@@ -9,6 +9,10 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#ifdef BENCHMARK
+#include <papi.h>
+#endif
+
 // the variables are in utils.h
 using namespace std;
 
@@ -35,6 +39,15 @@ int time_lbm = 0;
 
 // Direction Size
 #define DS 15
+
+#ifdef BENCHMARK
+int papi_event_set = PAPI_NULL;
+
+long long papi_values[2];
+
+long long papi_density_values[2] = {0, 0};
+long long papi_collision_values[2] = {0, 0};
+#endif
 
 double *density_field;
 double *velocity_field;
@@ -85,6 +98,10 @@ void initialise() {
   compute_density_momentum_profiler = init_profiler(NZ * NY * NX * (14 * 4 + 2), NX * NY * NZ * 8 * 19);
   collision_profiler = init_profiler(NZ * NY * NX * 130, NX * NY * NZ * 8 * (3 + 3 + 15 + 15) + 15 * 8);
   stream_profiler = init_profiler(NZ * 8, 15 * 2 * NZ * NY * NX + NZ * 10 + NZ * 18);
+
+#ifdef BENCHMARK
+  papi_init(&papi_event_set);
+#endif
 }
 
 #define c_s_4 (2 * c_s * c_s * c_s * c_s)
@@ -362,13 +379,43 @@ void collision() {
 void perform_timestep() {
   time_lbm++;
 
+// ----------------- DENSITY_MOMENTUM_MOMENT -----------------
+#ifdef BENCHMARK
+  if (PAPI_start(papi_event_set) != PAPI_OK) {
+    fprintf(stderr, "PAPI start error!\n");
+    exit(1);
+  }
+#endif
   start_run(compute_density_momentum_profiler);
   compute_density_momentum_moment();
   end_run(compute_density_momentum_profiler);
+#ifdef BENCHMARK
+  if (PAPI_stop(papi_event_set, papi_values) != PAPI_OK) {
+    fprintf(stderr, "PAPI stop error!\n");
+    exit(1);
+  }
+  papi_density_values[0] += 64 * papi_values[0];
+  papi_density_values[1] += papi_values[1];
+#endif
 
+// ----------------- COLLISION -----------------
+#ifdef BENCHMARK
+  if (PAPI_start(papi_event_set) != PAPI_OK) {
+    fprintf(stderr, "PAPI start error!\n");
+    exit(1);
+  }
+#endif
   start_run(collision_profiler);
   collision();
   end_run(collision_profiler);
+#ifdef BENCHMARK
+  if (PAPI_stop(papi_event_set, papi_values) != PAPI_OK) {
+    fprintf(stderr, "PAPI stop error!\n");
+    exit(1);
+  }
+  papi_collision_values[0] += 64 * papi_values[0];
+  papi_collision_values[1] += papi_values[1];
+#endif
 
   // start_run(stream_profiler);
   // stream();
@@ -421,7 +468,7 @@ int main(int argc, char const *argv[]) {
 #ifndef TIMING
 #ifdef OUTPUT
       if ((i + 1) % save_every == 0) {
-        double percentage = (double)(i + 1) / (double)(runs)*100.0;
+        double percentage = (double)(i + 1) / (double)(runs) * 100.0;
         std::cout << "Saving data - " << (i + 1) << "/" << runs << " (" << percentage << "%)" << '\n';
         output_lbm_data("output/" + std::to_string(i + 1) + ".csv", true);
       }
@@ -462,5 +509,19 @@ int main(int argc, char const *argv[]) {
          "Arithmetic intensity: %4.2f\n",
          stream_stats.performance, 0, stream_stats.runs, stream_stats.arithmetic_intensity);
 #endif
+
+#ifdef BENCHMARK
+  printf("Density Momentum Moment Mem Transfer: %lld\n", papi_density_values[0] / NT);
+  printf("Density Momentum Moment Floating point operations: %lld\n", papi_density_values[1] / NT);
+  printf("Density Momentum Moment Arithmetic Intensity: %f\n", (double)papi_density_values[1] / (double)papi_density_values[0]);
+
+  printf("Collision Mem Transfer: %lld\n", papi_collision_values[0] / NT);
+  printf("Collision Floating point operations: %lld\n", papi_collision_values[1] / NT);
+  printf("Collision Arithmetic Intensity: %f\n", (double)papi_collision_values[1] / (double)papi_collision_values[0]);
+
+  // Cleanup PAPI
+  PAPI_shutdown();
+#endif
+
   return 0;
 }
