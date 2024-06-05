@@ -14,16 +14,17 @@ OUTPUT_FOLDER = f"{os.path.dirname(__file__)}/artifacts/"
 
 
 if len(sys.argv) <= 5:
-    print("Usage: python3 sizevscyclesplot.py <Nx> <Ny> <Nt> < i0, i1 .. values")
+    print("Usage: python3 sizevscyclesplot.py <Nx> <Ny> <Nz> <Nt> < i0, i1 .. values")
     exit(1)
 
 Nx = int(sys.argv[1])
 Ny = int(sys.argv[2])
-Nt = int(sys.argv[3])
-i = [int(x) for x in sys.argv[4:]]
+Nz = int(sys.argv[3])
+Nt = int(sys.argv[4])
+i = [int(x) for x in sys.argv[5:]]
 
 
-print(f"Nx: {Nx}, Ny: {Ny}, Nt: {Nt}, i: {i}")
+print(f"Nx: {Nx}, Ny: {Ny}, Nz: {Nz} Nt: {Nt}, i: {i}")
 
 # Read from environment variables, otherwise from .env file, otherwise display error message
 try:
@@ -129,46 +130,50 @@ def main():
       
       MNx = Nx * multiplier
       MNy = Ny * multiplier
+      MNz = Nz * multiplier
       MNt = Nt
       
-      print(f"[{idx+1}/{len(i)}] Running {VERSION} with {MNx}x{MNy} ...")
+      print(f"[{idx+1}/{len(i)}] Running {VERSION} with {MNx}x{MNy}x{MNz} ...")
       
-      memsize_bytes = MNy * MNx * 9 * 8 +  MNy * MNx * 9 * 8 + MNy * MNx * 8 + MNy * MNx * 8 + MNy * MNx * 8 + MNy * MNx * 8 + MNy * MNx * 8; + MNy * MNx * 8 + MNy * MNx * 4 + MNy * MNx * 4;
-    
+      memsize_bytes = MNx * MNy * MNz * 8 + MNx * MNy * MNz * 3 * 8 + MNx * MNy * MNz * 15 * 8 + MNx * 8 + MNx * 8; + MNx * 8 + MNx * 8 + MNx * 8;
+      
+          
       # Execute executable file in subprocess and read stdout
       # If there is a specific executable for the current configuration, use it instead
-      if os.path.exists(f"{path}/src/main_optimized_profile_{MNx}_{MNy}_{MNt}.o"):
-        executable = f"{path}/src/main_optimized_profile_{MNx}_{MNy}_{MNt}.o"
-      else:
-        executable = f"{path}/src/main_optimized_profile.o"
+      executable = f"{path}/src/cmdline/main_{MNx}_{MNy}_{MNz}_{MNt}_profiler.o"
           
-      output = run_executable_and_get_output(executable, [str(MNx), str(MNy), str(MNt)])
+      output = run_executable_and_get_output(executable, [str(MNx), str(MNy), str(MNz), str(MNt)])
       # print(output)
       
       try:
-        runs = int(re.search(r"Run (\d+)/\d+ done\nProfiling results:", output).group(1))
+        # runs = int(re.search(r"Run (\d+)/\d+ done\nProfiling results:", output).group(1))
 
-        cycles_rho  = int(re.search(r".*Rho\s*Calculation: .* (\d+) cycles.*", output).group(1))
-        cycles_feq  = int(re.search(r".*FEQ\s*Calculation: .* (\d+) cycles.*", output).group(1))
-        cycles_f    = int(re.search(r".*F\s*Calculation: .* (\d+) cycles.*", output).group(1))
-        cycles_vort = int(re.search(r".*Vort\s*Calculation: .* (\d+) cycles.*", output).group(1))
-        cycles = cycles_rho + cycles_feq + cycles_f + cycles_vort
+        cycles_density_momentum  = int(re.search(r".*Compute density\s*Calculation: .* (\d+) cycles.*", output).group(1))
+        cycles_collision  = int(re.search(r".*Compute collision\s*Calculation: .* (\d+) cycles.*", output).group(1))
+        
+        cycles_reg = re.search(r".*Compute stream\s*Calculation: .* (\d+) cycles.*", output)
+        if cycles_reg is None or int(cycles_reg.group(1)) <= 0:
+          cycles_stream = 0
+        else:
+          cycles_stream    = int(cycles_reg.group(1))
+        
+        cycles = cycles_density_momentum + cycles_collision + cycles_stream
       except AttributeError as e:
         print("Couldn't match regex to output:\n")
-        print(output)
+        print("OUTPUT\n", output)
         print("\n\nException: ", e)
 
-      print(f"Rho  cycles: {cycles_rho }")
-      print(f"FEQ  cycles: {cycles_feq }")
-      print(f"F    cycles: {cycles_f   }")
-      print(f"Vort cycles: {cycles_vort}")
+      print()
+      print(f"Compute density cycles: {cycles_density_momentum }")
+      print(f"Compute collision cycles: {cycles_collision }")
+      print(f"Compute stream cycles: {cycles_stream }")
       print(f"Total Number of Cycles: {cycles}")
       
       input_sizes.append(memsize_bytes)
       total_cycles.append(cycles)
     
     colorrange = (0, 90)
-    curcolor = hsv_to_rgb([[(colorrange[0]+((colorrange[1]-colorrange[0])*((v_idx+1)/len(previous_versions))))/360,  1, 1]])[0]
+    curcolor = hsv_to_rgb([[(colorrange[0]+((colorrange[1]-colorrange[0])*((v_idx+1)/len(previous_versions))))/360,  1, 0.7]])[0]
     plt.gca().plot(input_sizes, total_cycles, '-ro', label=TITLE, color=curcolor)
     
     YMAX = max(YMAX, max(total_cycles))
@@ -184,7 +189,6 @@ def main():
   plt.axvline(x=(L1_SIZE_BYTES+L2_SIZE_BYTES+L3_SIZE_BYTES), color='gray', linestyle='--', label=f"L3 Cache Size: {int(L3_SIZE_BYTES)} bytes")
   plt.text((L1_SIZE_BYTES+L2_SIZE_BYTES+L3_SIZE_BYTES), YMAX*0.99, f"L3", va='top', ha='right')
 
-  # Set plot title
   plt.title(f"Size vs Cycles ({Nt} iterations)", fontsize=20, pad=20)
   plt.gca().get_yaxis().get_major_formatter().set_scientific(False)  # Disable scientific notation
   plt.yscale('log')
