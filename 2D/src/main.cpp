@@ -355,16 +355,45 @@ void do_rho() {
   // bytes = Ny*Nx*8*2+Ny*Nx*8*9
 
   for (int j = 0; j < Ny; j++) {
-    for (int k = 0; k < Nx; k++) {
-      double res1 =
-          F[scalar_index(j, 0, k)] + F[scalar_index(j, 1, k)] + F[scalar_index(j, 2, k)] + F[scalar_index(j, 3, k)] + F[scalar_index(j, 4, k)] + F[scalar_index(j, 5, k)] + F[scalar_index(j, 6, k)] + F[scalar_index(j, 7, k)] + F[scalar_index(j, 8, k)];
-      double res2 = F[scalar_index(j, 2, k)] + F[scalar_index(j, 3, k)] + F[scalar_index(j, 4, k)] - F[scalar_index(j, 6, k)] - F[scalar_index(j, 7, k)] - F[scalar_index(j, 8, k)];
-      double res3 = F[scalar_index(j, 1, k)] + F[scalar_index(j, 2, k)] - F[scalar_index(j, 4, k)] - F[scalar_index(j, 5, k)] - F[scalar_index(j, 6, k)] + F[scalar_index(j, 8, k)];
+    for (int k = 0; k < Nx; k += 4) {
+      __m256d f_0_vec = _mm256_load_pd(&F[scalar_index(j, 0, k)]);
+      __m256d f_1_vec = _mm256_load_pd(&F[scalar_index(j, 1, k)]);
+      __m256d f_2_vec = _mm256_load_pd(&F[scalar_index(j, 2, k)]);
+      __m256d f_3_vec = _mm256_load_pd(&F[scalar_index(j, 3, k)]);
+      __m256d f_4_vec = _mm256_load_pd(&F[scalar_index(j, 4, k)]);
+      __m256d f_5_vec = _mm256_load_pd(&F[scalar_index(j, 5, k)]);
+      __m256d f_6_vec = _mm256_load_pd(&F[scalar_index(j, 6, k)]);
+      __m256d f_7_vec = _mm256_load_pd(&F[scalar_index(j, 7, k)]);
+      __m256d f_8_vec = _mm256_load_pd(&F[scalar_index(j, 8, k)]);
 
-      double inv = 1 / res1;
-      rho[scalar_index(j, k)] = res1;
-      ux[scalar_index(j, k)] = res2 * inv;
-      uy[scalar_index(j, k)] = res3 * inv;
+      __m256d f_3_plus_4_vec = _mm256_add_pd(f_3_vec, f_4_vec);
+      __m256d f_1_plus_8_vec = _mm256_add_pd(f_1_vec, f_8_vec);
+      __m256d f_2_minu_6_vec = _mm256_sub_pd(f_2_vec, f_6_vec);
+
+      __m256d res1_sum_0_vec = _mm256_add_pd(f_0_vec, f_1_plus_8_vec);
+      __m256d res1_sum_1_vec = _mm256_add_pd(res1_sum_0_vec, f_3_plus_4_vec);
+      __m256d res1_sum_2_vec = _mm256_add_pd(res1_sum_1_vec, f_2_vec);
+      __m256d res1_sum_3_vec = _mm256_add_pd(res1_sum_2_vec, f_5_vec);
+      __m256d res1_sum_4_vec = _mm256_add_pd(res1_sum_3_vec, f_6_vec);
+      __m256d res1_sum_5_vec = _mm256_add_pd(res1_sum_4_vec, f_7_vec);
+
+      __m256d res2_sum0_vec = _mm256_add_pd(f_2_minu_6_vec, f_3_plus_4_vec);
+      __m256d res2_sum1_vec = _mm256_sub_pd(res2_sum0_vec, f_7_vec);
+      __m256d res2_sum2_vec = _mm256_sub_pd(res2_sum1_vec, f_8_vec);
+
+      __m256d res3_sum0_vec = _mm256_add_pd(f_1_plus_8_vec, f_2_minu_6_vec);
+      __m256d res3_sum1_vec = _mm256_sub_pd(res3_sum0_vec, f_4_vec);
+      __m256d res3_sum2_vec = _mm256_sub_pd(res3_sum1_vec, f_5_vec);
+
+      // Idunno if there's a better way maybe?
+      __m256d res1_inv_vec = _mm256_div_pd(const_vec_1, res1_sum_5_vec);
+
+      __m256d res2_mul_inv = _mm256_mul_pd(res1_inv_vec, res2_sum2_vec);
+      __m256d res3_mul_inv = _mm256_mul_pd(res1_inv_vec, res3_sum2_vec);
+
+      _mm256_store_pd(&rho[scalar_index(j, k)], res1_sum_5_vec);
+      _mm256_store_pd(&ux[scalar_index(j, k)], res2_mul_inv);
+      _mm256_store_pd(&uy[scalar_index(j, k)], res3_mul_inv);
     }
   }
 }
