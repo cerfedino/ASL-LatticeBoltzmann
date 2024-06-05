@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 from dotenv import load_dotenv, dotenv_values
 import matplotlib.pyplot as plt
+from matplotlib.colors import hsv_to_rgb
 from sympy import symbols, evalf, sympify
 import sys
 
@@ -100,11 +101,12 @@ def make_roofline_plot(PEAK_SCALAR, MEM_BW, SIMD_LEN_BITS):
     
     return fig
 
-def plot_roofline(plt, label, perf, intensity, simd=False):
-    plt.gca().plot(intensity, perf, 'ro', label=label)
-    plt.gca().text(intensity * 1.15, perf, f"{label} ({perf:.2f} iops/cycle)", fontsize=12, ha='left', color='red')
+def plot_roofline(plt, label, perf, intensity, color, name=None):
+    print(f"Plotting {name} with performance {perf} and intensity {intensity}")
+    plt.gca().plot(intensity, perf, 'ro', label=f"{label} ({perf:.2f} flops/cycle)", color=color)
+    texts = plt.gca().text(intensity * 1.05, perf, label, fontsize=12, va='center', ha='left', color=color)
+    #adjust_text(texts)
     return plt
-
 
 
 def run_executable_and_get_output(executable_path, args):
@@ -126,8 +128,9 @@ def main():
         print("No previous versions found, stopping...")
         exit(0)
         
-    previous_versions.sort()
-    
+    # Get sorted indexes of previous_versions
+    previous_versions.sort(key=lambda x: int(os.path.basename(x).lstrip("_").lstrip("v")))
+        
     # Init empty roofline plot
     plt_all = make_roofline_plot(PEAK_SCALAR, MEM_BW, SIMD_LEN_BITS)
 
@@ -157,6 +160,10 @@ def main():
     min_performance_f    = math.inf
     min_performance_vort = math.inf
 
+  
+    colorrange = (0, 90)
+    value_factor = 0.7  # Adjust this factor to make yellows darker
+
     version_labels = []
     loop_cycles = {
         "rho": [],
@@ -167,6 +174,7 @@ def main():
     
     for path in previous_versions:
         print("=========")
+        v_idx = previous_versions.index(path)
         
         conf = dotenv_values(path+"/.env")
         VERSION = conf["VERSION"]
@@ -245,12 +253,15 @@ def main():
         print("Operational Intensity: ", INTENSITY)
         print("Performance: ", PERFORMANCE)
         
-        plt_all = plot_roofline(plt_all, TITLE, PERFORMANCE, INTENSITY, simd=True)
+        curcolor = hsv_to_rgb([[(colorrange[0]+((colorrange[1]-colorrange[0])*((v_idx+1)/len(previous_versions))))/360,  1, value_factor]])[0]
 
-        plt_rho  = plot_roofline(plt_rho , TITLE, performance_rho , intensity_rho , simd=True)
-        plt_feq  = plot_roofline(plt_feq , TITLE, performance_feq , intensity_feq , simd=True)
-        plt_f    = plot_roofline(plt_f   , TITLE, performance_f   , intensity_f   , simd=True)
-        plt_vort = plot_roofline(plt_vort, TITLE, performance_vort, intensity_vort, simd=True)
+        if not os.path.basename(path).startswith("_"):
+          plt_all = plot_roofline(plt_all, TITLE, PERFORMANCE, INTENSITY, curcolor)
+
+        plt_rho  = plot_roofline(plt_rho , TITLE, performance_rho , intensity_rho, curcolor)
+        plt_feq  = plot_roofline(plt_feq , TITLE, performance_feq , intensity_feq, curcolor)
+        plt_f    = plot_roofline(plt_f   , TITLE, performance_f   , intensity_f, curcolor)
+        plt_vort = plot_roofline(plt_vort, TITLE, performance_vort, intensity_vort, curcolor)
 
 
     plt_all.gca().set_ylim(min(min_performance, PEAK_SCALAR)/2.5, 2.5 * PEAK_simd)
@@ -260,7 +271,7 @@ def main():
     plt_f.gca().set_ylim(min(min_performance_f, PEAK_SCALAR)/2.5, 2.5 * PEAK_simd)
     plt_vort.gca().set_ylim(min(min_performance_vort, PEAK_SCALAR)/2.5, 2.5 * PEAK_simd)
 
-    bar_fig = plt.figure("bar", figsize=(20, 12), facecolor="white")
+    bar_fig = plt.figure("bar", figsize=(40, 12), facecolor="white")
     df = pd.DataFrame.from_dict(loop_cycles, columns=version_labels, orient='index')
     normalized_df = df/df.sum()
     normalized_df = normalized_df.transpose()
@@ -269,9 +280,14 @@ def main():
         p = bar_fig.gca().bar(version_labels, normalized_df[col], 0.5, label=col, bottom=bottom)
         bar_fig.gca().bar_label(p, fmt=col.upper(), label_type='center', size='x-large')
         bottom += normalized_df[col]
-    bar_fig.gca().legend(loc="upper right", fontsize='large')
-    bar_fig.gca().tick_params(labelsize='x-large')
+    bar_fig.gca().legend(loc="upper right", fontsize='large') 
+    bar_fig.gca().tick_params(labelsize='large')
+    
+    x_ticks = range(len(version_labels))
+    x_labels = version_labels
+    plt.xticks(x_ticks, x_labels, rotation=0, horizontalalignment='center')
 
+    plt_all.legend(loc="upper right", fontsize='large')
     plt_all.savefig(f"{OUTPUT_FOLDER}/roofline_plot.out.pdf")
     plt_rho.savefig(f"{OUTPUT_FOLDER}/roofline_plot_rho.out.pdf")
     plt_feq.savefig(f"{OUTPUT_FOLDER}/roofline_plot_feq.out.pdf")
