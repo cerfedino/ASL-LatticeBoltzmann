@@ -395,7 +395,8 @@ void do_feq() {
       // FEQ l=0
       __m256d feq_0_mul_vec = _mm256_mul_pd(rho_vec, const_vec_tau_4_9);
       __m256d feq_0_res_vec = _mm256_mul_pd(feq_0_mul_vec, third_vec);
-      _mm256_store_pd(&Feq[scalar_index(y, 0, x)], feq_0_res_vec);
+      __m256d sum_vec_0 = _mm256_fmsub_pd(const_tau_plus_1_vec, _mm256_load_pd(&F[scalar_index(y, 0, x)]), feq_0_res_vec);
+      _mm256_store_pd(&F[scalar_index(y, 0, x)], sum_vec_0);
 
       // ------------- CALCULATE L ODD -------------
       // Calculating repeated occurences of uy and third
@@ -403,22 +404,26 @@ void do_feq() {
       // FEQ l=1
       __m256d feq_1_fma_vec = _mm256_fmadd_pd(const_vec_3, uy_vec, uy_4_5_pow_plus_third_vec); // (3 * uy[scalar_index(y, x)] + 4.5 * uy[scalar_index(y, x)] * uy[scalar_index(y, x)] + third)
       __m256d feq_1_res_vec = _mm256_mul_pd(rho_mul_tau_1_9, feq_1_fma_vec);                   // rho[scalar_index(y, x)] * tau_1_9 * (3 * uy[scalar_index(y, x)] + 4.5 * uy[scalar_index(y, x)] * uy[scalar_index(y, x)] + third)
-      _mm256_store_pd(&Feq[scalar_index(y, 1, x)], feq_1_res_vec);
+      __m256d sum_vec_1 = _mm256_fmsub_pd(const_tau_plus_1_vec, _mm256_load_pd(&F[scalar_index(y, 1, x)]), feq_1_res_vec);
+      _mm256_store_pd(&F[scalar_index(y, 1, x)], sum_vec_1);
       // FEQ l=5
       __m256d feq_5_fma_vec = _mm256_fmadd_pd(const_vec_neg_3, uy_vec, uy_4_5_pow_plus_third_vec); // (-3 * uy[scalar_index(y, x)] + 4.5 * uy[scalar_index(y, x)] * uy[scalar_index(y, x)] + third)
       __m256d feq_5_res_vec = _mm256_mul_pd(rho_mul_tau_1_9, feq_5_fma_vec);                       // rho[scalar_index(y, x)] * tau_1_9 * (-3 * uy[scalar_index(y, x)] + 4.5 * uy[scalar_index(y, x)] * uy[scalar_index(y, x)] + third)
-      _mm256_store_pd(&Feq[scalar_index(y, 5, x)], feq_5_res_vec);
+      __m256d sum_vec_5 = _mm256_fmsub_pd(const_tau_plus_1_vec, _mm256_load_pd(&F[scalar_index(y, 5, x)]), feq_5_res_vec);
+      _mm256_store_pd(&F[scalar_index(y, 5, x)], sum_vec_5);
 
       // Calculating repeated occurence of ux and third
       __m256d ux_4_5_pow_plus_third_vec = _mm256_add_pd(ux_4_5_pow_vec, third_vec); // 4.5 * ux[scalar_index(y, x)] * ux[scalar_index(y, x)] + third
       // FEQ l=3
       __m256d feq_3_fma_vec = _mm256_fmadd_pd(const_vec_3, ux_vec, ux_4_5_pow_plus_third_vec); // (3 * ux[scalar_index(y, x)] + 4.5 * ux[scalar_index(y, x)] * ux[scalar_index(y, x)] + third)
       __m256d feq_3_res_vec = _mm256_mul_pd(rho_mul_tau_1_9, feq_3_fma_vec);                   // rho[scalar_index(y, x)] * tau_1_9 * (3 * ux[scalar_index(y, x)] + 4.5 * ux[scalar_index(y, x)] * ux[scalar_index(y, x)] + third)
-      _mm256_store_pd(&Feq[scalar_index(y, 3, x)], feq_3_res_vec);
+      __m256d sum_vec_3 = _mm256_fmsub_pd(const_tau_plus_1_vec, _mm256_load_pd(&F[scalar_index(y, 3, x)]), feq_3_res_vec);
+      _mm256_store_pd(&F[scalar_index(y, 3, x)], sum_vec_3);
       // FEQ l=7
       __m256d feq_7_fma_vec = _mm256_fmadd_pd(const_vec_neg_3, ux_vec, ux_4_5_pow_plus_third_vec); // (-3 * ux[scalar_index(y, x)] + 4.5 * ux[scalar_index(y, x)] * ux[scalar_index(y, x)] + third)
       __m256d feq_7_res_vec = _mm256_mul_pd(rho_mul_tau_1_9, feq_7_fma_vec);                       // rho[scalar_index(y, x)] * tau_1_9 * (-3 * uy[scalar_index(y, x)] + 4.5 * uy[scalar_index(y, x)] * uy[scalar_index(y, x)] + third)
-      _mm256_store_pd(&Feq[scalar_index(y, 7, x)], feq_7_res_vec);
+      __m256d sum_vec_7 = _mm256_fmsub_pd(const_tau_plus_1_vec, _mm256_load_pd(&F[scalar_index(y, 7, x)]), feq_7_res_vec);
+      _mm256_store_pd(&F[scalar_index(y, 7, x)], sum_vec_7);
 
       // ------------- CALCULATE L EVEN -------------
       // Calculating repeated occurences of products between rho_1_36 and `third`
@@ -431,14 +436,16 @@ void do_feq() {
       __m256d feq_2_curr_square_vec = _mm256_mul_pd(ux_uy_sum_vec, ux_uy_sum_vec);                                // curr * curr
       __m256d feq_2_fma_1_vec = _mm256_fmadd_pd(const_vec_4_5, feq_2_curr_square_vec, feq_2_3_cur_vec);           // 3 * curr + 4.5 * curr * curr
       __m256d feq_2_res_vec = _mm256_fmadd_pd(rho_mul_tau_1_36, feq_2_fma_1_vec, rho_mul_tau_1_36_mul_third_vec); // rho[scalar_index(y, x)] * tau_1_36 * (3 * curr + 4.5 * curr * curr + third)
-      _mm256_store_pd(&Feq[scalar_index(y, 2, x)], feq_2_res_vec);
+      __m256d sum_vec_2 = _mm256_fmsub_pd(const_tau_plus_1_vec, _mm256_load_pd(&F[scalar_index(y, 2, x)]), feq_2_res_vec);
+      _mm256_store_pd(&F[scalar_index(y, 2, x)], sum_vec_2);
       // FEQ l=6 (curr = -ux[x, y] - uy[x, y])
       __m256d feq_6_curr_vec = _mm256_xor_pd(ux_uy_sum_vec, const_vec_neg_0);                                     // -ux[x, y] - uy[x, y]
       __m256d feq_6_3_cur_vec = _mm256_mul_pd(const_vec_3, feq_6_curr_vec);                                       // 3 * curr
       __m256d feq_6_cur_square_vec = _mm256_mul_pd(feq_6_curr_vec, feq_6_curr_vec);                               // curr * curr
       __m256d feq_6_fma_1_vec = _mm256_fmadd_pd(const_vec_4_5, feq_6_cur_square_vec, feq_6_3_cur_vec);            // 3 * curr + 4.5 * curr * curr
       __m256d feq_6_res_vec = _mm256_fmadd_pd(rho_mul_tau_1_36, feq_6_fma_1_vec, rho_mul_tau_1_36_mul_third_vec); // rho[scalar_index(y, x)] * tau_1_36 * (3 * curr + 4.5 * curr * curr + third)
-      _mm256_store_pd(&Feq[scalar_index(y, 6, x)], feq_6_res_vec);
+      __m256d sum_vec_6 = _mm256_fmsub_pd(const_tau_plus_1_vec, _mm256_load_pd(&F[scalar_index(y, 6, x)]), feq_6_res_vec);
+      _mm256_store_pd(&F[scalar_index(y, 6, x)], sum_vec_6);
 
       // Reusable difference of ux and uy
       __m256d ux_sub_uy_vec = _mm256_sub_pd(ux_vec, uy_vec); // ux[x, y] - uy[x, y]
@@ -447,70 +454,21 @@ void do_feq() {
       __m256d feq_4_cur_square_vec = _mm256_mul_pd(ux_sub_uy_vec, ux_sub_uy_vec);                                 // curr * curr
       __m256d feq_4_fma_1_vec = _mm256_fmadd_pd(const_vec_4_5, feq_4_cur_square_vec, feq_4_3_cur_vec);            // 3 * curr + 4.5 * curr * curr
       __m256d feq_4_res_vec = _mm256_fmadd_pd(rho_mul_tau_1_36, feq_4_fma_1_vec, rho_mul_tau_1_36_mul_third_vec); // rho[scalar_index(y, x)] * tau_1_36 * (3 * curr + 4.5 * curr * curr + third)
-      _mm256_store_pd(&Feq[scalar_index(y, 4, x)], feq_4_res_vec);
+      __m256d sum_vec_4 = _mm256_fmsub_pd(const_tau_plus_1_vec, _mm256_load_pd(&F[scalar_index(y, 4, x)]), feq_4_res_vec);
+      _mm256_store_pd(&F[scalar_index(y, 4, x)], sum_vec_4);
       // FEQ l=8 (curr = uy[x, y] - ux[x, y])
       __m256d feq_8_curr_vec = _mm256_xor_pd(ux_sub_uy_vec, const_vec_neg_0);                                     // uy[x, y] - ux[x, y]
       __m256d feq_8_3_cur_vec = _mm256_mul_pd(const_vec_3, feq_8_curr_vec);                                       // 3 * curr
       __m256d feq_8_cur_square_vec = _mm256_mul_pd(feq_8_curr_vec, feq_8_curr_vec);                               // curr * curr
       __m256d feq_8_fma_1_vec = _mm256_fmadd_pd(const_vec_4_5, feq_8_cur_square_vec, feq_8_3_cur_vec);            // 3 * curr + 4.5 * curr * curr
       __m256d feq_8_res_vec = _mm256_fmadd_pd(rho_mul_tau_1_36, feq_8_fma_1_vec, rho_mul_tau_1_36_mul_third_vec); // rho[scalar_index(y, x)] * tau_1_36 * (3 * curr + 4.5 * curr * curr + third)
-      _mm256_store_pd(&Feq[scalar_index(y, 8, x)], feq_8_res_vec);
-    }
-  }
-}
-
-void do_f() {
-  for (int y = 0; y < Ny; y++) {
-    for (int x = 0; x < Nx; x += 4) {
-      __m256d vec_f_0 = _mm256_load_pd(&F[scalar_index(y, 0, x)]);
-      __m256d vec_feq_0 = _mm256_load_pd(&Feq[scalar_index(y, 0, x)]);
-
-      __m256d vec_f_1 = _mm256_load_pd(&F[scalar_index(y, 1, x)]);
-      __m256d vec_feq_1 = _mm256_load_pd(&Feq[scalar_index(y, 1, x)]);
-
-      __m256d vec_f_2 = _mm256_load_pd(&F[scalar_index(y, 2, x)]);
-      __m256d vec_feq_2 = _mm256_load_pd(&Feq[scalar_index(y, 2, x)]);
-
-      __m256d vec_f_3 = _mm256_load_pd(&F[scalar_index(y, 3, x)]);
-      __m256d vec_feq_3 = _mm256_load_pd(&Feq[scalar_index(y, 3, x)]);
-
-      __m256d vec_f_4 = _mm256_load_pd(&F[scalar_index(y, 4, x)]);
-      __m256d vec_feq_4 = _mm256_load_pd(&Feq[scalar_index(y, 4, x)]);
-
-      __m256d vec_f_5 = _mm256_load_pd(&F[scalar_index(y, 5, x)]);
-      __m256d vec_feq_5 = _mm256_load_pd(&Feq[scalar_index(y, 5, x)]);
-
-      __m256d vec_f_6 = _mm256_load_pd(&F[scalar_index(y, 6, x)]);
-      __m256d vec_feq_6 = _mm256_load_pd(&Feq[scalar_index(y, 6, x)]);
-
-      __m256d vec_f_7 = _mm256_load_pd(&F[scalar_index(y, 7, x)]);
-      __m256d vec_feq_7 = _mm256_load_pd(&Feq[scalar_index(y, 7, x)]);
-
-      __m256d vec_f_8 = _mm256_load_pd(&F[scalar_index(y, 8, x)]);
-      __m256d vec_feq_8 = _mm256_load_pd(&Feq[scalar_index(y, 8, x)]);
-
-      __m256d sum_vec_0 = _mm256_fmsub_pd(const_tau_plus_1_vec, vec_f_0, vec_feq_0);
-      __m256d sum_vec_1 = _mm256_fmsub_pd(const_tau_plus_1_vec, vec_f_1, vec_feq_1);
-      __m256d sum_vec_2 = _mm256_fmsub_pd(const_tau_plus_1_vec, vec_f_2, vec_feq_2);
-      __m256d sum_vec_3 = _mm256_fmsub_pd(const_tau_plus_1_vec, vec_f_3, vec_feq_3);
-      __m256d sum_vec_4 = _mm256_fmsub_pd(const_tau_plus_1_vec, vec_f_4, vec_feq_4);
-      __m256d sum_vec_5 = _mm256_fmsub_pd(const_tau_plus_1_vec, vec_f_5, vec_feq_5);
-      __m256d sum_vec_6 = _mm256_fmsub_pd(const_tau_plus_1_vec, vec_f_6, vec_feq_6);
-      __m256d sum_vec_7 = _mm256_fmsub_pd(const_tau_plus_1_vec, vec_f_7, vec_feq_7);
-      __m256d sum_vec_8 = _mm256_fmsub_pd(const_tau_plus_1_vec, vec_f_8, vec_feq_8);
-
-      _mm256_store_pd(&F[scalar_index(y, 0, x)], sum_vec_0);
-      _mm256_store_pd(&F[scalar_index(y, 1, x)], sum_vec_1);
-      _mm256_store_pd(&F[scalar_index(y, 2, x)], sum_vec_2);
-      _mm256_store_pd(&F[scalar_index(y, 3, x)], sum_vec_3);
-      _mm256_store_pd(&F[scalar_index(y, 4, x)], sum_vec_4);
-      _mm256_store_pd(&F[scalar_index(y, 5, x)], sum_vec_5);
-      _mm256_store_pd(&F[scalar_index(y, 6, x)], sum_vec_6);
-      _mm256_store_pd(&F[scalar_index(y, 7, x)], sum_vec_7);
+      __m256d sum_vec_8 = _mm256_fmsub_pd(const_tau_plus_1_vec, _mm256_load_pd(&F[scalar_index(y, 8, x)]), feq_8_res_vec);
       _mm256_store_pd(&F[scalar_index(y, 8, x)], sum_vec_8);
     }
   }
 }
+
+void do_f() {}
 
 void do_vort() {
 
