@@ -9,7 +9,7 @@ ifeq ($(firstword $(MAKECMDGOALS)),benchmark)
 else ifeq ($(firstword $(MAKECMDGOALS)),profile)
     RUN_PARAMS = 80 40 300
 else ifeq ($(firstword $(MAKECMDGOALS)),sizevscyclesplot)
-    RUN_PARAMS = 16 8 100
+    RUN_PARAMS = 16 8 50
 else
 	# $(info 'USING DEFAULT RUN_PARAMS')
 	RUN_PARAMS = 400 200 300

@@ -92,7 +92,8 @@ def main():
     print("No previous versions found, stopping...")
     exit(0)
       
-  previous_versions.sort()
+  # Get sorted indexes of previous_versions
+  previous_versions.sort(key=lambda x: int(os.path.basename(x).lstrip("_").lstrip("v")))
   
   fig = init_plot()
   
@@ -183,6 +184,8 @@ def main():
   plt.axvline(x=(L1_SIZE_BYTES+L2_SIZE_BYTES+L3_SIZE_BYTES), color='gray', linestyle='--', label=f"L3 Cache Size: {int(L3_SIZE_BYTES)} bytes")
   plt.text((L1_SIZE_BYTES+L2_SIZE_BYTES+L3_SIZE_BYTES), YMAX*0.99, f"L3", va='top', ha='right')
 
+  # Set plot title
+  plt.title(f"Size vs Cycles ({Nt} iterations)", fontsize=20, pad=20)
   plt.gca().get_yaxis().get_major_formatter().set_scientific(False)  # Disable scientific notation
   plt.yscale('log')
   plt.xlim(0, XMAX)

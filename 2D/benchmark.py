@@ -76,7 +76,7 @@ def make_roofline_plot(PEAK_SCALAR, MEM_BW, SIMD_LEN_BITS):
     # Compute bound
     y_comp_scalar = [PEAK_SCALAR for i in x]
     plt.plot(x, y_comp_scalar, color=PLT_BOUND_COLOR, linestyle='--', linewidth=1.4)
-    plt.text(0.04,y_comp_scalar[0], f"Peak $\\pi$ scalar ({y_comp_scalar[0]} iops/cycle)", fontweight="bold", fontsize=12, va='bottom', ha='left', color=PLT_BOUND_COLOR) 
+    plt.text(0.04,y_comp_scalar[0], f"Peak $\\pi$ scalar ({y_comp_scalar[0]} flops/cycle)", fontweight="bold", fontsize=12, va='bottom', ha='left', color=PLT_BOUND_COLOR) 
 
     ax = plt.gca()
     memory_coords = memory_line.get_data()
@@ -89,11 +89,11 @@ def make_roofline_plot(PEAK_SCALAR, MEM_BW, SIMD_LEN_BITS):
     # Compute bound
     y_comp_simd = [PEAK_SCALAR * SIMD_LEN_BITS / 64 for i in x]
     plt.plot(x, y_comp_simd, color=PLT_BOUND_COLOR, linestyle='--', linewidth=1.4)
-    plt.text(0.04,y_comp_simd[0], f"Peak $\\pi$ SIMD ({y_comp_simd[0]} iops/cycle)", fontweight="bold", fontsize=12, va='bottom', ha='left', color=PLT_BOUND_COLOR)
+    plt.text(0.04,y_comp_simd[0], f"Peak $\\pi$ SIMD ({y_comp_simd[0]} flops/cycle)", fontweight="bold", fontsize=12, va='bottom', ha='left', color=PLT_BOUND_COLOR)
 
     plt.gca().yaxis.grid(True, which='major', color='w', linestyle='-', linewidth=1.5)
-    plt.xlabel("Operational Intensity I(n) [iops/byte]", fontsize=14, rotation=0, labelpad=5, ha='center')
-    plt.ylabel("Performance P(n) [iops/cycle]", fontsize=14, rotation=0, ha='left', labelpad=-15, position=(1,1))
+    plt.xlabel("Operational Intensity I(n) [flops/byte]", fontsize=14, rotation=0, labelpad=5, ha='center')
+    plt.ylabel("Performance P(n) [flops/cycle]", fontsize=14, rotation=0, ha='left', labelpad=-15, position=(1,1))
 
     # Plot bounds
     plt.xlim(np.min(x), XMAX)
