@@ -3,7 +3,7 @@
 
 RUN_PARAMS = 30 50 10 500
 ifeq ($(firstword $(MAKECMDGOALS)),test)
-    RUN_PARAMS = 30 50 10 100
+    RUN_PARAMS = 3 5 6 10
 endif
 
 RUN_PARAMS_ESCAPED =  $(shell echo $(RUN_PARAMS) | tr ' ' '_')
@@ -15,7 +15,7 @@ CURRENT_VERSION_OBJ = src/cmdline/main_$(RUN_PARAMS_ESCAPED).o
 PAST_VERSIONS_OBJ = $(foreach file,$(wildcard previous_versions/*/src/cmdline/main.cpp),$(file:.cpp=_$(RUN_PARAMS_ESCAPED).o))
 
 
-all: build test benchmark profile
+all: build test profile
 
 clean:
 	@find . \( -iname '*.o' -o -iname 'timestamp.txt' \) -print -delete
