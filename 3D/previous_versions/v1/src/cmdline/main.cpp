@@ -13,6 +13,10 @@
 #include <unistd.h>
 #include <fstream>
 
+#ifdef BENCHMARK
+#include <papi.h>
+#endif
+
 // the variables are in utils.h
 using namespace std;
 
@@ -44,6 +48,16 @@ vector_3_double *velocity_field;
 double *previous_particle_distributions;
 double *particle_distributions;
 int direction_size = 15;
+
+#ifdef BENCHMARK
+int papi_event_set = PAPI_NULL;
+
+long long papi_values[2];
+
+long long papi_density_values[2] = {0, 0};
+long long papi_collision_values[2] = {0, 0};
+long long papi_stream_values[2] = {0, 0};
+#endif
 
 inline int scalar_index(int x, int y, int z) { return (z * NX * NY) + (y * NX) + x; }
 inline int scalar_index(int x, int y, int z, int w) { return (x + y * NX + z * NX * NY + w * NX * NY * NZ); }
@@ -79,6 +93,10 @@ void initialise() {
   compute_density_momentum_profiler = init_profiler(NX * NY * NZ * direction_size * 7 + NX * NY * NZ * 3, 8 * NX * NY * NZ * direction_size * 7 + (NX * NY * NZ * 3 + 15) * 8);
   collision_profiler = init_profiler(NX * NY * NZ * direction_size * 29 + 2, 8 * (4 * NX * NY * NZ + 15 + 15));
   stream_profiler = init_profiler(NX*NZ*5*6, NX*NY*NZ*direction_size*8*2);
+
+#ifdef BENCHMARK
+  papi_init(&papi_event_set);
+#endif
 }
 
 double calculate_feq(int x, int y, int z, int i) {
@@ -263,17 +281,63 @@ void collision() { // Performs the collision step.
 void perform_timestep() {
   time_lbm++;
 
+
+// ----------------- DENSITY_MOMENTUM_MOMENT -----------------
+#ifdef BENCHMARK
+  if (PAPI_start(papi_event_set) != PAPI_OK) {
+    fprintf(stderr, "PAPI start error!\n");
+    exit(1);
+  }
+#endif
   start_run(compute_density_momentum_profiler);
   compute_density_momentum_moment();
   end_run(compute_density_momentum_profiler);
+#ifdef BENCHMARK
+  if (PAPI_stop(papi_event_set, papi_values) != PAPI_OK) {
+    fprintf(stderr, "PAPI stop error!\n");
+    exit(1);
+  }
+  papi_density_values[0] += 64 * papi_values[0];
+  papi_density_values[1] += papi_values[1];
+#endif
 
+// ----------------- COLLISION -----------------
+#ifdef BENCHMARK
+  if (PAPI_start(papi_event_set) != PAPI_OK) {
+    fprintf(stderr, "PAPI start error!\n");
+    exit(1);
+  }
+#endif
   start_run(collision_profiler);
   collision();
   end_run(collision_profiler);
+#ifdef BENCHMARK
+  if (PAPI_stop(papi_event_set, papi_values) != PAPI_OK) {
+    fprintf(stderr, "PAPI stop error!\n");
+    exit(1);
+  }
+  papi_collision_values[0] += 64 * papi_values[0];
+  papi_collision_values[1] += papi_values[1];
+#endif
 
+// ----------------- STREAM -----------------
+#ifdef BENCHMARK
+  if (PAPI_start(papi_event_set) != PAPI_OK) {
+    fprintf(stderr, "PAPI start error!\n");
+    exit(1);
+  }
+#endif
   start_run(stream_profiler);
   stream();
   end_run(stream_profiler);
+#ifdef BENCHMARK
+  if (PAPI_stop(papi_event_set, papi_values) != PAPI_OK) {
+    fprintf(stderr, "PAPI stop error!\n");
+    exit(1);
+  }
+  papi_stream_values[0] += 64 * papi_values[0];
+  papi_stream_values[1] += papi_values[1];
+#endif
 }
 
 int main(int argc, char const *argv[]) {
@@ -362,5 +426,23 @@ int main(int argc, char const *argv[]) {
          "Arithmetic intensity: %4.2f\n",
          stream_stats.performance, stream_stats.cycles, stream_stats.runs, stream_stats.arithmetic_intensity);
 #endif
+
+#ifdef BENCHMARK
+  printf("Density Momentum Moment Mem Transfer: %lld\n", papi_density_values[0] / NT);
+  printf("Density Momentum Moment Floating point operations: %lld\n", papi_density_values[1] / NT);
+  printf("Density Momentum Moment Arithmetic Intensity: %f\n", (double)papi_density_values[1] / (double)papi_density_values[0]);
+
+  printf("Collision Mem Transfer: %lld\n", papi_collision_values[0] / NT);
+  printf("Collision Floating point operations: %lld\n", papi_collision_values[1] / NT);
+  printf("Collision Arithmetic Intensity: %f\n", (double)papi_collision_values[1] / (double)papi_collision_values[0]);
+
+  printf("Stream Mem Transfer: %lld\n", papi_stream_values[0] / NT);
+  printf("Stream Floating point operations: %lld\n", papi_stream_values[1] / NT);
+  printf("Stream Arithmetic Intensity: %f\n", (double)papi_stream_values[1] / (double)papi_stream_values[0]);
+
+  // Cleanup PAPI
+  PAPI_shutdown();
+#endif
+
   return 0;
 }

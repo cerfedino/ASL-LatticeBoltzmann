@@ -257,6 +257,9 @@ def main():
     plt_stream.gca().set_ylim(min(min_performance_stream, PEAK_SCALAR)/2.5, 2.5 * PEAK_simd)
 
     bar_fig = plt.figure("bar", figsize=(20, 12), facecolor="white")
+    print(version_labels)
+    print("---")
+    print(loop_cycles)
     df = pd.DataFrame.from_dict(loop_cycles, columns=version_labels, orient='index')
     normalized_df = df/df.sum()
     normalized_df = normalized_df.transpose()
