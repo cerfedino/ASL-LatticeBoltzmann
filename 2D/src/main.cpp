@@ -77,6 +77,8 @@ double *F;
 double *vorticity;
 double *rho;
 bool *cylinder;
+size_t *cylinder_indexes;
+size_t cylinder_cells_count;
 int *collision_shape;
 double *ux;
 double *uy;
@@ -132,6 +134,8 @@ void initialize() {
   vorticity = (double *)aligned_alloc(32, Ny * Nx * sizeof(double));
   rho = (double *)aligned_alloc(32, Ny * Nx * sizeof(double));
   cylinder = (bool *)aligned_alloc(32, Ny * Nx * sizeof(bool));
+  cylinder_indexes = (size_t *)aligned_alloc(32, Ny * Nx * sizeof(size_t));
+  cylinder_cells_count = 0;
   ux = (double *)aligned_alloc(32, Ny * Nx * sizeof(double));
   uy = (double *)aligned_alloc(32, Ny * Nx * sizeof(double));
   F_temp = (double *)aligned_alloc(32, Ny * Nx * NL * sizeof(double));
@@ -201,12 +205,13 @@ void initialize() {
   for (int i = 0; i < Ny; i++) {
     for (int j = 0; j < Nx; j++) {
       if (cylinder[i * Nx + j] == 1) {
+        cylinder_indexes[cylinder_cells_count++] = i * Nx + j;
         bndryF_size++;
       }
     }
   }
 
-  bndryF = (double *)aligned_alloc(32, bndryF_size * NL * sizeof(double));
+  bndryF = (double *)malloc(bndryF_size * NL * sizeof(double));
 }
 
 void do_drift() {
@@ -509,66 +514,60 @@ void do_vort() {
   // Calculate k = 0 boundary
   double ux_roll = ux[Nx - 1] - ux[1];
   double uy_roll = uy[(Ny - 1) * Nx] - uy[Nx];
-  vorticity[0] = cylinder[0] == 1 ? 0 : ux_roll - uy_roll;
+  vorticity[0] = ux_roll - uy_roll;
 
   // Calculate k = [1, Nx - 2]
   for (int x = 1; x < Nx - 1; x++) {
-    if (cylinder[x] == 0) {
-      double ux_roll = ux[x - 1] - ux[x + 1];
-      double uy_roll = uy[scalar_index(Ny - 1, x)] - uy[scalar_index(1, x)];
-      vorticity[x] = ux_roll - uy_roll;
-    } else
-      vorticity[x] = 0;
+    double ux_roll = ux[x - 1] - ux[x + 1];
+    double uy_roll = uy[scalar_index(Ny - 1, x)] - uy[scalar_index(1, x)];
+    vorticity[x] = ux_roll - uy_roll;
   }
   // Calculate k = Nx - 1 boundary
   ux_roll = ux[Nx - 2] - ux[0];
   uy_roll = uy[(Ny - 1) * Nx + Nx - 1] - uy[Nx + Nx - 1];
-  vorticity[Nx - 1] = cylinder[Nx - 1] == 1 ? 0 : ux_roll - uy_roll;
+  vorticity[Nx - 1] = ux_roll - uy_roll;
 
   // Calculate j = [1, Ny - 2]
-  for (int j = 1; j < Ny; j++) {
+  for (int j = 1; j < Ny - 1; j++) {
     // Calculate k = 0 boundary
     double ux_roll = ux[scalar_index(j, Nx - 1)] - ux[scalar_index(j, 1)];
     double uy_roll = uy[scalar_index(j - 1, 0)] - uy[scalar_index(j + 1, 0)];
-    vorticity[scalar_index(j, 0)] = cylinder[scalar_index(j, 0)] == 1 ? 0 : ux_roll - uy_roll;
+    vorticity[scalar_index(j, 0)] = ux_roll - uy_roll;
 
     // Calculate k = [1, Nx - 2]
     for (int k = 1; k < Nx - 1; k++) {
-      if (cylinder[j * Nx + k] == 0) {
-        double ux_roll = ux[scalar_index(j, k - 1)] - ux[j * Nx + k + 1];
-        double uy_roll = uy[scalar_index(j - 1, k)] - uy[scalar_index(j + 1, k)];
-        vorticity[scalar_index(j, k)] = ux_roll - uy_roll;
-      } else
-        vorticity[scalar_index(j, k)] = 0;
+      double ux_roll = ux[scalar_index(j, k - 1)] - ux[j * Nx + k + 1];
+      double uy_roll = uy[scalar_index(j - 1, k)] - uy[scalar_index(j + 1, k)];
+      vorticity[scalar_index(j, k)] = ux_roll - uy_roll;
     }
 
     // Calculate k = Nx - 1 boundary
-    if (cylinder[j * Nx + Nx - 1] == 0) {
-      ux_roll = ux[scalar_index(j, Nx - 2)] - ux[scalar_index(j, 0)];
-      uy_roll = uy[scalar_index(j - 1, Nx - 1)] - uy[scalar_index(j + 1, Nx - 1)];
-      vorticity[scalar_index(j, Nx - 1)] = ux_roll - uy_roll;
-    } else
-      vorticity[scalar_index(j, Nx - 1)] = 0;
+    ux_roll = ux[scalar_index(j, Nx - 2)] - ux[scalar_index(j, 0)];
+    uy_roll = uy[scalar_index(j - 1, Nx - 1)] - uy[scalar_index(j + 1, Nx - 1)];
+    vorticity[scalar_index(j, Nx - 1)] = ux_roll - uy_roll;
   }
 
   // Calculate j = Ny - 1 boundary
   // Calculate k = 0 boundary
   ux_roll = ux[scalar_index(Ny - 1, Nx - 1)] - ux[scalar_index(Ny - 1, 1)];
   uy_roll = uy[scalar_index(Ny - 2, 0)] - uy[0];
-  vorticity[scalar_index(Ny - 1, 0)] = cylinder[scalar_index(Ny - 1, 0)] == 1 ? 0 : ux_roll - uy_roll;
+  vorticity[scalar_index(Ny - 1, 0)] = ux_roll - uy_roll;
 
   // Calculate k = [1, Nx - 2]
   for (int k = 1; k < Nx - 1; k++) {
-
     double ux_roll = ux[scalar_index(Ny - 1, k - 1)] - ux[scalar_index(Ny - 1, k + 1)];
     double uy_roll = uy[scalar_index(Ny - 2, k)] - uy[k];
-    vorticity[scalar_index(Ny - 1, k)] = cylinder[scalar_index(Ny - 1, k)] == 1 ? 0 : ux_roll - uy_roll;
+    vorticity[scalar_index(Ny - 1, k)] = ux_roll - uy_roll;
   }
 
   // Calculate k = Nx - 1 boundary
   ux_roll = ux[scalar_index(Ny - 1, Nx - 2)] - ux[scalar_index(Ny - 1, 0)];
   uy_roll = uy[scalar_index(Ny - 2, Nx - 1)] - uy[Nx - 1];
-  vorticity[scalar_index(Ny - 1, Nx - 1)] = cylinder[scalar_index(Ny - 1, Nx - 1)] == 1 ? 0 : ux_roll - uy_roll;
+  vorticity[scalar_index(Ny - 1, Nx - 1)] = ux_roll - uy_roll;
+
+  for (size_t i = 0; i < cylinder_cells_count; i++) {
+    vorticity[cylinder_indexes[i]] = 0;
+  }
 }
 void do_timestep() {
 // ----------------- DRIFT -----------------
