@@ -321,37 +321,23 @@ void do_drift() {
 
   // bndryF = F[cylinder,:]
   // flops = 0
-  int index_bndryF = 0;
-  for (int y = 0; y < Ny; y++) {
-    for (int x = 0; x < Nx; x++) {
-      if (cylinder[scalar_index(y, x)] == 1) {
-        for (int l = 0; l < NL; l++) {
-          bndryF[index_bndryF * NL + l] = F[scalar_index(y, l, x)];
-        }
-        index_bndryF++;
-      }
-    }
-  }
+  for (size_t i = 0; i < cylinder_cells_count; i++) {
+    size_t index = cylinder_indexes[i];
+    size_t x = index % Nx;
+    size_t y = (index - x) / Nx;
+    bndryF[i * NL + 0] = F[scalar_index(y, 0, x)];
 
-  // 0,1,2,3,4,5,6,7,8  INDEXES
-  // reorder columns bndryF = bndryF[:,[0,5,6,7,8,1,2,3,4]]
-  // flops = 0
-  for (int j = 0; j < bndryF_size; j++) {
-    double temp = bndryF[j * NL + 1];
-    bndryF[j * NL + 1] = bndryF[j * NL + 5];
-    bndryF[j * NL + 5] = temp;
+    bndryF[i * NL + 1] = F[scalar_index(y, 5, x)];
+    bndryF[i * NL + 5] = F[scalar_index(y, 1, x)];
 
-    temp = bndryF[j * NL + 2];
-    bndryF[j * NL + 2] = bndryF[j * NL + 6];
-    bndryF[j * NL + 6] = temp;
+    bndryF[i * NL + 2] = F[scalar_index(y, 6, x)];
+    bndryF[i * NL + 6] = F[scalar_index(y, 2, x)];
 
-    temp = bndryF[j * NL + 3];
-    bndryF[j * NL + 3] = bndryF[j * NL + 7];
-    bndryF[j * NL + 7] = temp;
+    bndryF[i * NL + 3] = F[scalar_index(y, 7, x)];
+    bndryF[i * NL + 7] = F[scalar_index(y, 3, x)];
 
-    temp = bndryF[j * NL + 4];
-    bndryF[j * NL + 4] = bndryF[j * NL + 8];
-    bndryF[j * NL + 8] = temp;
+    bndryF[i * NL + 4] = F[scalar_index(y, 8, x)];
+    bndryF[i * NL + 8] = F[scalar_index(y, 4, x)];
   }
 }
 
@@ -495,7 +481,6 @@ void do_feq() {}
 void do_f() {}
 
 void do_vort() {
-
   for (size_t i = 0; i < cylinder_cells_count; i++) {
     size_t index = cylinder_indexes[i];
     vorticity[index] = 0;
