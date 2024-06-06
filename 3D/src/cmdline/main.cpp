@@ -122,6 +122,7 @@ __m256d const_min_cs_2_inv_vec = _mm256_set1_pd(min_c_s_2_inv);
 
 __m256d const_cs_4_inv_vec = _mm256_set1_pd(c_s_4_inv);
 __m256d const_1_vec = _mm256_set1_pd(1.0);
+__m256d const_min_0_vec = _mm256_set1_pd(-0.0);
 __m256d const_weights_29_vec = _mm256_set1_pd(weights_29);
 __m256d const_weights_19_vec = _mm256_set1_pd(weights_19);
 __m256d const_weights_172_vec = _mm256_set1_pd(weights_172);
@@ -171,28 +172,79 @@ void compute_density_momentum_moment() {
 
   for (int z = 0; z < NZ; z++) {
     for (int y = 0; y < NY; y++) {
-      for (int x = 0; x < NX; x++) {
-        double new_density = particle_distributions[scalar_index(x, y, z, 0)] + particle_distributions[scalar_index(x, y, z, 1)] + particle_distributions[scalar_index(x, y, z, 2)] + particle_distributions[scalar_index(x, y, z, 3)] +
-                             particle_distributions[scalar_index(x, y, z, 4)] + particle_distributions[scalar_index(x, y, z, 5)] + particle_distributions[scalar_index(x, y, z, 6)] + particle_distributions[scalar_index(x, y, z, 7)] +
-                             particle_distributions[scalar_index(x, y, z, 8)] + particle_distributions[scalar_index(x, y, z, 9)] + particle_distributions[scalar_index(x, y, z, 10)] + particle_distributions[scalar_index(x, y, z, 11)] +
-                             particle_distributions[scalar_index(x, y, z, 12)] + particle_distributions[scalar_index(x, y, z, 13)] + particle_distributions[scalar_index(x, y, z, 14)];
+      for (int x = 0; x < NX; x += 4) {
+        __m256d particle_dist_0 = _mm256_load_pd(&particle_distributions[scalar_index(x, y, z, 0)]);
+        __m256d particle_dist_1 = _mm256_load_pd(&particle_distributions[scalar_index(x, y, z, 1)]);
+        __m256d particle_dist_2 = _mm256_load_pd(&particle_distributions[scalar_index(x, y, z, 2)]);
+        __m256d particle_dist_3 = _mm256_load_pd(&particle_distributions[scalar_index(x, y, z, 3)]);
+        __m256d particle_dist_4 = _mm256_load_pd(&particle_distributions[scalar_index(x, y, z, 4)]);
+        __m256d particle_dist_5 = _mm256_load_pd(&particle_distributions[scalar_index(x, y, z, 5)]);
+        __m256d particle_dist_6 = _mm256_load_pd(&particle_distributions[scalar_index(x, y, z, 6)]);
+        __m256d particle_dist_7 = _mm256_load_pd(&particle_distributions[scalar_index(x, y, z, 7)]);
+        __m256d particle_dist_8 = _mm256_load_pd(&particle_distributions[scalar_index(x, y, z, 8)]);
+        __m256d particle_dist_9 = _mm256_load_pd(&particle_distributions[scalar_index(x, y, z, 9)]);
+        __m256d particle_dist_10 = _mm256_load_pd(&particle_distributions[scalar_index(x, y, z, 10)]);
+        __m256d particle_dist_11 = _mm256_load_pd(&particle_distributions[scalar_index(x, y, z, 11)]);
+        __m256d particle_dist_12 = _mm256_load_pd(&particle_distributions[scalar_index(x, y, z, 12)]);
+        __m256d particle_dist_13 = _mm256_load_pd(&particle_distributions[scalar_index(x, y, z, 13)]);
+        __m256d particle_dist_14 = _mm256_load_pd(&particle_distributions[scalar_index(x, y, z, 14)]);
 
-        double x_sum = particle_distributions[scalar_index(x, y, z, 1)] - particle_distributions[scalar_index(x, y, z, 2)] + particle_distributions[scalar_index(x, y, z, 7)] - particle_distributions[scalar_index(x, y, z, 8)] +
-                       particle_distributions[scalar_index(x, y, z, 9)] - particle_distributions[scalar_index(x, y, z, 10)] + particle_distributions[scalar_index(x, y, z, 11)] - particle_distributions[scalar_index(x, y, z, 12)] -
-                       particle_distributions[scalar_index(x, y, z, 13)] + particle_distributions[scalar_index(x, y, z, 14)];
+        __m256d _1_14 = _mm256_add_pd(particle_dist_1, particle_dist_14);
+        __m256d _2_12 = _mm256_add_pd(particle_dist_2, particle_dist_12);
+        __m256d _3_9 = _mm256_add_pd(particle_dist_3, particle_dist_9);
+        __m256d _4_6 = _mm256_add_pd(particle_dist_4, particle_dist_6);
+        __m256d _5_13 = _mm256_add_pd(particle_dist_5, particle_dist_13);
+        __m256d _7_11 = _mm256_add_pd(particle_dist_7, particle_dist_11);
+        __m256d _8_9 = _mm256_add_pd(particle_dist_8, particle_dist_9);
+        __m256d _8_10 = _mm256_add_pd(particle_dist_8, particle_dist_10);
+        __m256d _12_14 = _mm256_add_pd(particle_dist_12, particle_dist_14);
+        __m256d _9_m13 = _mm256_sub_pd(particle_dist_9, particle_dist_13);
+        __m256d _10_m6 = _mm256_sub_pd(particle_dist_10, particle_dist_6);
+        __m256d _13_m4 = _mm256_sub_pd(particle_dist_13, particle_dist_4);
+        __m256d m_2_12 = _mm256_xor_pd(const_min_0_vec, _2_12);
+        __m256d m_8_10 = _mm256_xor_pd(const_min_0_vec, _8_10);
+        __m256d m_12_14 = _mm256_xor_pd(const_min_0_vec, _12_14);
 
-        double y_sum = particle_distributions[scalar_index(x, y, z, 3)] - particle_distributions[scalar_index(x, y, z, 4)] + particle_distributions[scalar_index(x, y, z, 7)] - particle_distributions[scalar_index(x, y, z, 8)] +
-                       particle_distributions[scalar_index(x, y, z, 9)] - particle_distributions[scalar_index(x, y, z, 10)] - particle_distributions[scalar_index(x, y, z, 11)] + particle_distributions[scalar_index(x, y, z, 12)] +
-                       particle_distributions[scalar_index(x, y, z, 13)] - particle_distributions[scalar_index(x, y, z, 14)];
+        // ------------- new density -------------
+        __m256d _1_2_12_14 = _mm256_add_pd(_1_14, _2_12);
+        __m256d _3_9_4_6 = _mm256_add_pd(_3_9, _4_6);
+        __m256d _1_2_3_4_6_9_12_14 = _mm256_add_pd(_1_2_12_14, _3_9_4_6);
+        __m256d _5_13_7_11 = _mm256_add_pd(_5_13, _7_11);
+        __m256d _5_7_11_13_8_10 = _mm256_add_pd(_5_13_7_11, _8_10);
+        __m256d _1_2_3_4_6_9_12_14_5_7_11_13_8_10 = _mm256_add_pd(_1_2_3_4_6_9_12_14, _5_7_11_13_8_10);
 
-        double z_sum = particle_distributions[scalar_index(x, y, z, 5)] - particle_distributions[scalar_index(x, y, z, 6)] + particle_distributions[scalar_index(x, y, z, 7)] - particle_distributions[scalar_index(x, y, z, 8)] -
-                       particle_distributions[scalar_index(x, y, z, 9)] + particle_distributions[scalar_index(x, y, z, 10)] + particle_distributions[scalar_index(x, y, z, 11)] - particle_distributions[scalar_index(x, y, z, 12)] +
-                       particle_distributions[scalar_index(x, y, z, 13)] - particle_distributions[scalar_index(x, y, z, 14)];
+        __m256d new_density = _mm256_add_pd(_1_2_3_4_6_9_12_14_5_7_11_13_8_10, particle_dist_0);
+        _mm256_store_pd(&density_field[scalar_index(x, y, z)], new_density);
+        __m256d new_dens_inv = _mm256_div_pd(const_1_vec, new_density);
 
-        density_field[scalar_index(x, y, z)] = new_density;
-        velocity_field_x[scalar_index(x, y, z)] = x_sum / new_density;
-        velocity_field_y[scalar_index(x, y, z)] = y_sum / new_density;
-        velocity_field_z[scalar_index(x, y, z)] = z_sum / new_density;
+        // ------------- x_sum -------------
+        __m256d _1_14_9_m13 = _mm256_add_pd(_1_14, _9_m13);
+        __m256d m_2_12_7_11 = _mm256_add_pd(m_2_12, _7_11);
+        __m256d _1_14_9_m13m_2_12_7_11 = _mm256_add_pd(_1_14_9_m13, m_2_12_7_11);
+
+        __m256d x_sum = _mm256_add_pd(_1_14_9_m13m_2_12_7_11, m_8_10);
+        __m256d vel_field_x = _mm256_mul_pd(x_sum, new_dens_inv);
+        _mm256_store_pd(&velocity_field_x[scalar_index(x, y, z)], vel_field_x);
+
+        // ------------- y_sum -------------
+        __m256d _7_m4 = _mm256_sub_pd(particle_dist_7, particle_dist_4);
+        __m256d _12_m11 = _mm256_sub_pd(particle_dist_12, particle_dist_11);
+        __m256d _13_m14 = _mm256_sub_pd(particle_dist_13, particle_dist_14);
+        __m256d _3_9_m_8_10 = _mm256_add_pd(_3_9, m_8_10);
+        __m256d _7_m4_12_m11 = _mm256_add_pd(_7_m4, _12_m11);
+        __m256d _3_9_m_8_10_13_m14 = _mm256_add_pd(_3_9_m_8_10, _13_m14);
+
+        __m256d y_sum = _mm256_add_pd(_7_m4_12_m11, _3_9_m_8_10_13_m14);
+        __m256d vel_field_y = _mm256_mul_pd(y_sum, new_dens_inv);
+        _mm256_store_pd(&velocity_field_y[scalar_index(x, y, z)], vel_field_y);
+
+        // ------------- z_sum -------------
+        __m256d _5_13_7_11_10_m6 = _mm256_add_pd(_5_13_7_11, _10_m6);
+        __m256d m_8_9_m_12_14 = _mm256_sub_pd(m_12_14, _8_9);
+
+        __m256d z_sum = _mm256_add_pd(_5_13_7_11_10_m6, m_8_9_m_12_14);
+        __m256d vel_field_z = _mm256_mul_pd(z_sum, new_dens_inv);
+        _mm256_store_pd(&velocity_field_z[scalar_index(x, y, z)], vel_field_z);
       }
     }
   }
