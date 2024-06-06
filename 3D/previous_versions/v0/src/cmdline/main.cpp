@@ -70,9 +70,9 @@ void initialise() {
           previous_particle_distributions[scalar_index(x, y, z, i)] = weights[i];
           particle_distributions[scalar_index(x, y, z, i)] = weights[i];
         }
-        velocity_field[scalar_index(x, y, z)].x = (double)(rand());
-        velocity_field[scalar_index(x, y, z)].y = (double)(rand());
-        velocity_field[scalar_index(x, y, z)].z = (double)(rand());
+        velocity_field[scalar_index(x, y, z)].x = 1 + 0.01 * (((double)rand() / (RAND_MAX)) + 1);
+        velocity_field[scalar_index(x, y, z)].y = 1 + 0.01 * (((double)rand() / (RAND_MAX)) + 1);
+        velocity_field[scalar_index(x, y, z)].z = 1 + 0.01 * (((double)rand() / (RAND_MAX)) + 1);
       }
     }
   }
@@ -167,11 +167,11 @@ void compute_density_momentum_moment() {
     for (int y = 0; y < NY; y++) {
       for (int z = 0; z < NZ; z++) {
 
-        double new_density = 0, new_density_1 = 0, new_density_2 = 0, new_density_3 = 0, new_density_4 = 0, new_density_5 = 0;
+        double new_density = 0.0, new_density_1 = 0.0, new_density_2 = 0.0, new_density_3 = 0.0, new_density_4 = 0.0, new_density_5 = 0.0;
         // vector_3_double u, u1, u2, u3, u4, u5;
-        double x_1 = 0, x_2 = 0, x_3 = 0, x_4 = 0, x_5 = 0;
-        double y_1 = 0, y_2 = 0, y_3 = 0, y_4 = 0, y_5 = 0;
-        double z_1 = 0, z_2 = 0, z_3 = 0, z_4 = 0, z_5 = 0;
+        double x_1 = 0.0, x_2 = 0.0, x_3 = 0.0, x_4 = 0.0, x_5 = 0.0;
+        double y_1 = 0.0, y_2 = 0.0, y_3 = 0.0, y_4 = 0.0, y_5 = 0.0;
+        double z_1 = 0.0, z_2 = 0.0, z_3 = 0.0, z_4 = 0.0, z_5 = 0.0;
 
         for (int i = 0; i < direction_size; i++) {
           scalar_index_curr = scalar_index(x, y, z, i);
@@ -179,34 +179,6 @@ void compute_density_momentum_moment() {
           x_1 += particle_distributions[scalar_index_curr] * directions[i].x;
           y_1 += particle_distributions[scalar_index_curr] * directions[i].y;
           z_1 += particle_distributions[scalar_index_curr] * directions[i].z;
-          scalar_index_curr += NX * NY * NZ;
-          i++;
-
-          new_density_2 += particle_distributions[scalar_index_curr];
-          x_2 += particle_distributions[scalar_index_curr] * directions[i].x;
-          y_2 += particle_distributions[scalar_index_curr] * directions[i].y;
-          z_2 += particle_distributions[scalar_index_curr] * directions[i].z;
-          scalar_index_curr += NX * NY * NZ;
-          i++;
-
-          new_density_3 += particle_distributions[scalar_index_curr];
-          x_3 += particle_distributions[scalar_index_curr] * directions[i].x;
-          y_3 += particle_distributions[scalar_index_curr] * directions[i].y;
-          z_3 += particle_distributions[scalar_index_curr] * directions[i].z;
-          scalar_index_curr += NX * NY * NZ;
-          i++;
-
-          new_density_4 += particle_distributions[scalar_index_curr];
-          x_4 += particle_distributions[scalar_index_curr] * directions[i].x;
-          y_4 += particle_distributions[scalar_index_curr] * directions[i].y;
-          z_4 += particle_distributions[scalar_index_curr] * directions[i].z;
-          scalar_index_curr += NX * NY * NZ;
-          i++;
-
-          new_density_5 += particle_distributions[scalar_index_curr];
-          x_5 += particle_distributions[scalar_index_curr] * directions[i].x;
-          y_5 += particle_distributions[scalar_index_curr] * directions[i].y;
-          z_5 += particle_distributions[scalar_index_curr] * directions[i].z;
         }
 
         new_density = new_density_1 + new_density_2 + new_density_3 + new_density_4 + new_density_5;
