@@ -496,19 +496,18 @@ void do_f() {}
 
 void do_vort() {
 
-  int index_bndryF2 = 0;
-  for (int y = 0; y < Ny; y++) {
-    for (int x = 0; x < Nx; x++) {
-      if (cylinder[scalar_index(y, x)] == 1) {
-        ux[scalar_index(y, x)] = 0;
-        uy[scalar_index(y, x)] = 0;
-        for (int l = 0; l < NL; l++) {
-          F[scalar_index(y, l, x)] = bndryF[index_bndryF2 * NL + l];
-        }
-        index_bndryF2++;
-      }
+  for (size_t i = 0; i < cylinder_cells_count; i++) {
+    size_t index = cylinder_indexes[i];
+    vorticity[index] = 0;
+    ux[index] = 0;
+    uy[index] = 0;
+    size_t x = index % Nx;
+    size_t y = (index - x) / Nx;
+    for (int l = 0; l < NL; l++) {
+      F[scalar_index(y, l, x)] = bndryF[i * NL + l];
     }
   }
+
   // flops = Ny*Nx*(3 adds)
   // Calculate j = 0 boundary
   // Calculate k = 0 boundary
