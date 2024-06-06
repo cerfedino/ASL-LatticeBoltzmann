@@ -2,11 +2,11 @@
 .PHONY: all clean build benchmark profile
 
 
-RUN_PARAMS = 30 50 10 500
+RUN_PARAMS = 30 50 10 100
 ifeq ($(firstword $(MAKECMDGOALS)),test)
-	RUN_PARAMS = 30 50 10 100
+	RUN_PARAMS = 30 50 10 400
 else ifeq ($(firstword $(MAKECMDGOALS)),sizevscyclesplot)
-	RUN_PARAMS = 3 5 1 10
+	RUN_PARAMS = 30 50 10 400
 endif
 
 RUN_PARAMS_ESCAPED =  $(shell echo $(RUN_PARAMS) | tr ' ' '_')
