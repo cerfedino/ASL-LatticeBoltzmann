@@ -4,6 +4,7 @@
 #include "profile.h"
 #include "utils.h"
 #include <fstream>
+#include <immintrin.h>
 #include <iostream>
 #include <math.h>
 #include <sys/stat.h>
@@ -53,13 +54,7 @@ long long papi_stream_values[2] = {0, 0};
 #endif
 
 inline int scalar_index(int x, int y, int z) { return (z * NX * NY) + (y * NX) + x; }
-inline int scalar_index(int x, int y, int z, int w) {
-  if (w == 1) {
-    // std::cout << time_lbm << " " << x << " " << abs((NX + x + time_lbm) % NX) << std::endl;
-    return (abs((NX + x - time_lbm % NX) % NX) + y * NX + z * NX * NY + w * NX * NY * NZ);
-  }
-  return (x + y * NX + z * NX * NY + w * NX * NY * NZ);
-}
+inline int scalar_index(int x, int y, int z, int w) { return (x + y * NX + z * NX * NY + w * NX * NY * NZ); }
 
 // Lattice directions using D3DQ15. assumed speed of sound c_s = 1/sqrt(3).
 vector_3_int *directions;
@@ -88,9 +83,9 @@ void initialise() {
           particle_distributions[scalar_index(x, y, z, i)] = weights[i];
         }
 
-        velocity_field_x[scalar_index(x, y, z)] = 1 + 0.01 * (((double)rand() / (RAND_MAX)) + 1);
-        velocity_field_y[scalar_index(x, y, z)] = 1 + 0.01 * (((double)rand() / (RAND_MAX)) + 1);
-        velocity_field_z[scalar_index(x, y, z)] = 1 + 0.01 * (((double)rand() / (RAND_MAX)) + 1);
+        velocity_field_x[scalar_index(x, y, z)] = 0.5;
+        velocity_field_y[scalar_index(x, y, z)] = 0.25;
+        velocity_field_z[scalar_index(x, y, z)] = 0.25;
       }
     }
   }
@@ -105,12 +100,31 @@ void initialise() {
 }
 
 #define c_s_4 (2 * c_s * c_s * c_s * c_s)
+#define c_s_4_inv (1.0 / (2 * c_s * c_s * c_s * c_s))
 #define c_s_2 (c_s * c_s)
+#define c_s_2_inv (1.0 / (c_s * c_s))
+#define min_c_s_2_inv (-1.0 / (c_s * c_s))
 #define c_s_2_2 (2 * c_s * c_s)
+#define c_s_2_2_inv (1.0 / (2 * c_s * c_s))
 #define weights_172 (1.0 / 72.0)
 #define weights_19 (1.0 / 9.0)
 #define weights_19 (1.0 / 9.0)
 #define weights_29 (2.0 / 9.0)
+#define tauinv (1.0 / tau)
+#define omtauinv (1.0 - tauinv)
+
+__m256d const_omtauinv_vec = _mm256_set1_pd(omtauinv);
+__m256d const_tauinv_vec = _mm256_set1_pd(tauinv);
+__m256d const_cs_2_2_vec = _mm256_set1_pd(c_s_2_2);
+__m256d const_cs_2_2_inv_vec = _mm256_set1_pd(c_s_2_2_inv);
+__m256d const_cs_2_inv_vec = _mm256_set1_pd(c_s_2_inv);
+__m256d const_min_cs_2_inv_vec = _mm256_set1_pd(min_c_s_2_inv);
+
+__m256d const_cs_4_inv_vec = _mm256_set1_pd(c_s_4_inv);
+__m256d const_1_vec = _mm256_set1_pd(1.0);
+__m256d const_weights_29_vec = _mm256_set1_pd(weights_29);
+__m256d const_weights_19_vec = _mm256_set1_pd(weights_19);
+__m256d const_weights_172_vec = _mm256_set1_pd(weights_172);
 
 void set_velocity_set() {
   // Allocate memory for an array of vector_3_int structs
@@ -190,8 +204,7 @@ void stream() {
   for (z = 0; z < NZ; z++) {
     for (y = 0; y < NY; y++) {
       for (x = 0; x < NX; x++) {
-        // particle_distributions[scalar_index(x, y, z, 1)] = previous_particle_distributions[scalar_index((NX + x - 1) % NX, y, z, 1)];
-
+        particle_distributions[scalar_index(x, y, z, 1)] = previous_particle_distributions[scalar_index((NX + x - 1) % NX, y, z, 1)];
         particle_distributions[scalar_index(x, y, z, 2)] = previous_particle_distributions[scalar_index((NX + x + 1) % NX, y, z, 2)];
         particle_distributions[scalar_index(x, y, z, 3)] = previous_particle_distributions[scalar_index(x, (NY + y - 1) % NY, z, 3)];
         particle_distributions[scalar_index(x, y, z, 4)] = previous_particle_distributions[scalar_index(x, (NY + y + 1) % NY, z, 4)];
@@ -209,77 +222,234 @@ void stream() {
     }
   }
 }
-void collision() { // Performs the collision step.
 
-  const double tauinv = 1.0 / tau;
-  const double omtauinv = 1.0 - tauinv; // 1 - 1/tau
-  std::cout << time_lbm << " " << scalar_index(0, 0, 0, 1) << " " << particle_distributions[scalar_index(0, 0, 0, 1)] << std::endl;
-  std::cout << time_lbm << " " << scalar_index(1, 0, 0, 1) << " " << particle_distributions[scalar_index(1, 0, 0, 1)] << std::endl;
+void collision() { // Performs the collision step.
   for (int z = 0; z < NZ; z++) {
     for (int y = 0; y < NY; y++) {
-      for (int x = 0; x < NX; x++) {
-        double norm_square = ((velocity_field_x[scalar_index(x, y, z)]) * (velocity_field_x[scalar_index(x, y, z)]) + velocity_field_y[scalar_index(x, y, z)] * velocity_field_y[scalar_index(x, y, z)] +
-                              velocity_field_z[scalar_index(x, y, z)] * velocity_field_z[scalar_index(x, y, z)]) /
-                             c_s_2_2;
+      for (int x = 0; x < NX; x += 4) {
+        __m256d density_field_vec = _mm256_load_pd(&density_field[scalar_index(x, y, z)]);         // density_field[x, y, z]
+        __m256d weights_19_mul_density = _mm256_mul_pd(const_weights_19_vec, density_field_vec);   // weights_19 * density_field[x, y, z]
+        __m256d weights_172_mul_density = _mm256_mul_pd(const_weights_172_vec, density_field_vec); // weights_127 * density_field[x, y, z]
 
-        double feq = weights_29 * density_field[scalar_index(x, y, z)] * (1.0 - norm_square);
-        particle_distributions[scalar_index(x, y, z, 0)] = omtauinv * particle_distributions[scalar_index(x, y, z, 0)] + tauinv * feq;
+        __m256d velocity_x_vec = _mm256_load_pd(&velocity_field_x[scalar_index(x, y, z)]); // velocity_field_x[x, y, z]
+        __m256d velocity_x_pow_vec = _mm256_mul_pd(velocity_x_vec, velocity_x_vec);        // velocity_field_x[x, y, z] ** 2
+        __m256d velocity_y_vec = _mm256_load_pd(&velocity_field_y[scalar_index(x, y, z)]); // velocity_field_y[x, y, z]
+        __m256d velocity_y_pow_vec = _mm256_mul_pd(velocity_y_vec, velocity_y_vec);        // velocity_field_y[x, y, z] ** 2
+        __m256d velocity_z_vec = _mm256_load_pd(&velocity_field_z[scalar_index(x, y, z)]); // velocity_field_z[x, y, z]
+        __m256d velocity_z_pow_vec = _mm256_mul_pd(velocity_z_vec, velocity_z_vec);        // velocity_field_z[x, y, z] ** 2
 
-        double feq1 = weights_19 * density_field[scalar_index(x, y, z)] * (1.0 + velocity_field_x[scalar_index(x, y, z)] / c_s_2 + velocity_field_x[scalar_index(x, y, z)] * velocity_field_x[scalar_index(x, y, z)] / c_s_4 - norm_square);
-        particle_distributions[scalar_index(x, y, z, 1)] = omtauinv * particle_distributions[scalar_index(x, y, z, 1)] + tauinv * feq1;
+        __m256d velocity_x_y_pow_sum_vec = _mm256_add_pd(velocity_x_pow_vec, velocity_y_pow_vec);                       // velocity_field_x[x, y, z] ** 2 + velocity_field_y[x, y, z] ** 2
+        __m256d velocity_x_y_z_pow_sum_vec = _mm256_fmadd_pd(velocity_z_vec, velocity_z_vec, velocity_x_y_pow_sum_vec); // velocity_field_x[x, y, z] ** 2 + velocity_field_y[x, y, z] ** 2 + velocity_field_z[x, y, z] ** 2
 
-        double feq2 = weights_19 * density_field[scalar_index(x, y, z)] * (1.0 - velocity_field_x[scalar_index(x, y, z)] / c_s_2 + velocity_field_x[scalar_index(x, y, z)] * velocity_field_x[scalar_index(x, y, z)] / c_s_4 - norm_square);
-        previous_particle_distributions[scalar_index(x, y, z, 2)] = omtauinv * particle_distributions[scalar_index(x, y, z, 2)] + tauinv * feq2;
+        __m256d norm_square_vec = _mm256_mul_pd(velocity_x_y_z_pow_sum_vec, const_cs_2_2_inv_vec); // norm_square
+        __m256d one_min_norm_square_vec = _mm256_sub_pd(const_1_vec, norm_square_vec);             // 1.0 - norm_square
 
-        double feq3 = weights_19 * density_field[scalar_index(x, y, z)] * (1.0 + velocity_field_y[scalar_index(x, y, z)] / c_s_2 + velocity_field_y[scalar_index(x, y, z)] * velocity_field_y[scalar_index(x, y, z)] / c_s_4 - norm_square);
-        previous_particle_distributions[scalar_index(x, y, z, 3)] = omtauinv * particle_distributions[scalar_index(x, y, z, 3)] + tauinv * feq3;
+        __m256d feq_prod_0_vec = _mm256_mul_pd(const_weights_29_vec, density_field_vec); // weights_29 * density_field[x, y, z]
+        __m256d feq_0_vec = _mm256_mul_pd(feq_prod_0_vec, one_min_norm_square_vec);      // feq
 
-        double feq4 = weights_19 * density_field[scalar_index(x, y, z)] * (1.0 - velocity_field_y[scalar_index(x, y, z)] / c_s_2 + velocity_field_y[scalar_index(x, y, z)] * velocity_field_y[scalar_index(x, y, z)] / c_s_4 - norm_square);
-        previous_particle_distributions[scalar_index(x, y, z, 4)] = omtauinv * particle_distributions[scalar_index(x, y, z, 4)] + tauinv * feq4;
+        __m256d particle_dist_0_vec = _mm256_load_pd(&particle_distributions[scalar_index(x, y, z, 0)]);    // particle_distributions[x, y, z, 0]
+        __m256d particle_dist_0_prod_0 = _mm256_mul_pd(const_omtauinv_vec, particle_dist_0_vec);            // omtauinv * particle_distributions[x, y, z, 0]
+        __m256d particle_dist_0_res = _mm256_fmadd_pd(const_tauinv_vec, feq_0_vec, particle_dist_0_prod_0); // omtauinv * particle_distributions[x, y, z, 0] + tauinv * feq
+        _mm256_store_pd(&particle_distributions[scalar_index(x, y, z, 0)], particle_dist_0_res);
 
-        double feq5 = weights_19 * density_field[scalar_index(x, y, z)] * (1.0 + velocity_field_z[scalar_index(x, y, z)] / c_s_2 + velocity_field_z[scalar_index(x, y, z)] * velocity_field_z[scalar_index(x, y, z)] / c_s_4 - norm_square);
-        previous_particle_distributions[scalar_index(x, y, z, 5)] = omtauinv * particle_distributions[scalar_index(x, y, z, 5)] + tauinv * feq5;
+        // ------------- l = 1 -------------
 
-        double feq6 = weights_19 * density_field[scalar_index(x, y, z)] * (1.0 - velocity_field_z[scalar_index(x, y, z)] / c_s_2 + velocity_field_z[scalar_index(x, y, z)] * velocity_field_z[scalar_index(x, y, z)] / c_s_4 - norm_square);
-        previous_particle_distributions[scalar_index(x, y, z, 6)] = omtauinv * particle_distributions[scalar_index(x, y, z, 6)] + tauinv * feq6;
+        __m256d vel_x_pow_div_c_s_4_vec = _mm256_mul_pd(velocity_x_pow_vec, const_cs_4_inv_vec);          // velocity_field_x[x, y, z] ** 2 / c_s_4
+        __m256d vel_x_sum = _mm256_fmadd_pd(velocity_x_vec, const_cs_2_inv_vec, vel_x_pow_div_c_s_4_vec); // velocity_field_x[x, y, z] ** 2 / c_s_4 + velocity_field_x[x, y, z] / c_s_2
 
-        double dot_product7 = velocity_field_x[scalar_index(x, y, z)] + velocity_field_y[scalar_index(x, y, z)] + velocity_field_z[scalar_index(x, y, z)];
-        double feq7 = weights_172 * density_field[scalar_index(x, y, z)] * (1.0 + dot_product7 / c_s_2 + dot_product7 * dot_product7 / c_s_4 - norm_square);
-        previous_particle_distributions[scalar_index(x, y, z, 7)] = omtauinv * particle_distributions[scalar_index(x, y, z, 7)] + tauinv * feq7;
+        __m256d particle_dist_1_vec = _mm256_load_pd(&particle_distributions[scalar_index(x, y, z, 1)]); // particle_distributions[x, y, z, 1]
+        __m256d particle_dist_1_prod_0 = _mm256_mul_pd(const_omtauinv_vec, particle_dist_1_vec);         // omtauinv * particle_distributions[x, y, z, 1]
 
-        double dot_product8 = -velocity_field_x[scalar_index(x, y, z)] - velocity_field_y[scalar_index(x, y, z)] - velocity_field_z[scalar_index(x, y, z)];
-        double feq8 = weights_172 * density_field[scalar_index(x, y, z)] * (1.0 + dot_product8 / c_s_2 + dot_product8 * dot_product8 / c_s_4 - norm_square);
-        previous_particle_distributions[scalar_index(x, y, z, 8)] = omtauinv * particle_distributions[scalar_index(x, y, z, 8)] + tauinv * feq8;
+        __m256d feq_1_sum = _mm256_add_pd(vel_x_sum, one_min_norm_square_vec); // 1.0 + velocity_field_x[scalar_index(x, y, z)] / c_s_2 + velocity_field_x[scalar_index(x, y, z)] * velocity_field_x[scalar_index(x, y, z)] / c_s_4 - norm_square
+        __m256d feq_1_prod = _mm256_mul_pd(feq_1_sum, weights_19_mul_density);
+        __m256d feq_1_res = _mm256_fmadd_pd(const_tauinv_vec, feq_1_prod, particle_dist_1_prod_0);
+        _mm256_store_pd(&previous_particle_distributions[scalar_index(x, y, z, 1)], feq_1_res);
 
-        double dot_product9 = velocity_field_x[scalar_index(x, y, z)] + velocity_field_y[scalar_index(x, y, z)] - velocity_field_z[scalar_index(x, y, z)];
-        double feq9 = weights_172 * density_field[scalar_index(x, y, z)] * (1.0 + dot_product9 / c_s_2 + dot_product9 * dot_product9 / c_s_4 - norm_square);
-        previous_particle_distributions[scalar_index(x, y, z, 9)] = omtauinv * particle_distributions[scalar_index(x, y, z, 9)] + tauinv * feq9;
+        // ------------- l = 2 -------------
 
-        double dot_product10 = -velocity_field_x[scalar_index(x, y, z)] - velocity_field_y[scalar_index(x, y, z)] + velocity_field_z[scalar_index(x, y, z)];
-        double feq10 = weights_172 * density_field[scalar_index(x, y, z)] * (1.0 + dot_product10 / c_s_2 + dot_product10 * dot_product10 / c_s_4 - norm_square);
-        previous_particle_distributions[scalar_index(x, y, z, 10)] = omtauinv * particle_distributions[scalar_index(x, y, z, 10)] + tauinv * feq10;
+        __m256d particle_dist_2_vec = _mm256_load_pd(&particle_distributions[scalar_index(x, y, z, 2)]); // particle_distributions[x, y, z, 2]
+        __m256d particle_dist_2_prod_0 = _mm256_mul_pd(const_omtauinv_vec, particle_dist_2_vec);         // omtauinv * particle_distributions[x, y, z, 2]
 
-        double dot_product11 = velocity_field_x[scalar_index(x, y, z)] - velocity_field_y[scalar_index(x, y, z)] + velocity_field_z[scalar_index(x, y, z)];
-        double feq11 = weights_172 * density_field[scalar_index(x, y, z)] * (1.0 + dot_product11 / c_s_2 + dot_product11 * dot_product11 / c_s_4 - norm_square);
-        previous_particle_distributions[scalar_index(x, y, z, 11)] = omtauinv * particle_distributions[scalar_index(x, y, z, 11)] + tauinv * feq11;
+        __m256d vel_x_diff = _mm256_fmadd_pd(velocity_x_vec, const_min_cs_2_inv_vec, vel_x_pow_div_c_s_4_vec); // velocity_field_x[x, y, z] ** 2 / c_s_4 - velocity_field_x[x, y, z] / c_s_2
+        __m256d feq_2_sum = _mm256_add_pd(vel_x_diff, one_min_norm_square_vec); // 1.0 + velocity_field_x[scalar_index(x, y, z)] / c_s_2 + velocity_field_x[scalar_index(x, y, z)] * velocity_field_x[scalar_index(x, y, z)] / c_s_4 - norm_square
+        __m256d feq_2_prod = _mm256_mul_pd(feq_2_sum, weights_19_mul_density);
+        __m256d feq_2_res = _mm256_fmadd_pd(const_tauinv_vec, feq_2_prod, particle_dist_2_prod_0);
+        _mm256_store_pd(&previous_particle_distributions[scalar_index(x, y, z, 2)], feq_2_res);
 
-        double dot_product12 = -velocity_field_x[scalar_index(x, y, z)] + velocity_field_y[scalar_index(x, y, z)] - velocity_field_z[scalar_index(x, y, z)];
-        double feq12 = weights_172 * density_field[scalar_index(x, y, z)] * (1.0 + dot_product12 / c_s_2 + dot_product12 * dot_product12 / c_s_4 - norm_square);
-        previous_particle_distributions[scalar_index(x, y, z, 12)] = omtauinv * particle_distributions[scalar_index(x, y, z, 12)] + tauinv * feq12;
+        // ------------- l = 3 -------------
 
-        double dot_product13 = -velocity_field_x[scalar_index(x, y, z)] + velocity_field_y[scalar_index(x, y, z)] + velocity_field_z[scalar_index(x, y, z)];
-        double feq13 = weights_172 * density_field[scalar_index(x, y, z)] * (1.0 + dot_product13 / c_s_2 + dot_product13 * dot_product13 / c_s_4 - norm_square);
-        previous_particle_distributions[scalar_index(x, y, z, 13)] = omtauinv * particle_distributions[scalar_index(x, y, z, 13)] + tauinv * feq13;
+        __m256d vel_y_pow_div_c_s_4_vec = _mm256_mul_pd(velocity_y_pow_vec, const_cs_4_inv_vec);          // velocity_field_y[x, y, z] ** 2 / c_s_4
+        __m256d vel_y_sum = _mm256_fmadd_pd(velocity_y_vec, const_cs_2_inv_vec, vel_y_pow_div_c_s_4_vec); // velocity_field_xyx, y, z] ** 2 / c_s_4 + velocity_field_y[x, y, z] / c_s_2
 
-        double dot_product14 = velocity_field_x[scalar_index(x, y, z)] - velocity_field_y[scalar_index(x, y, z)] - velocity_field_z[scalar_index(x, y, z)];
-        double feq14 = weights_172 * density_field[scalar_index(x, y, z)] * (1.0 + dot_product14 / c_s_2 + dot_product14 * dot_product14 / c_s_4 - norm_square);
-        previous_particle_distributions[scalar_index(x, y, z, 14)] = omtauinv * particle_distributions[scalar_index(x, y, z, 14)] + tauinv * feq14;
+        __m256d particle_dist_3_vec = _mm256_load_pd(&particle_distributions[scalar_index(x, y, z, 3)]); // particle_distributions[x, y, z, 3]
+        __m256d particle_dist_3_prod_0 = _mm256_mul_pd(const_omtauinv_vec, particle_dist_3_vec);         // omtauinv * particle_distributions[x, y, z, 3]
+
+        __m256d feq_3_sum = _mm256_add_pd(vel_y_sum, one_min_norm_square_vec); // 1.0 + velocity_field_y[scalar_index(x, y, z)] / c_s_2 + velocity_field_y[scalar_index(x, y, z)] * velocity_field_y[scalar_index(x, y, z)] / c_s_4 - norm_square
+        __m256d feq_3_prod = _mm256_mul_pd(feq_3_sum, weights_19_mul_density);
+        __m256d feq_3_res = _mm256_fmadd_pd(const_tauinv_vec, feq_3_prod, particle_dist_3_prod_0);
+        _mm256_store_pd(&previous_particle_distributions[scalar_index(x, y, z, 3)], feq_3_res);
+
+        // ------------- l = 4 -------------
+
+        __m256d particle_dist_4_vec = _mm256_load_pd(&particle_distributions[scalar_index(x, y, z, 4)]); // particle_distributions[x, y, z, 4]
+        __m256d particle_dist_4_prod_0 = _mm256_mul_pd(const_omtauinv_vec, particle_dist_4_vec);         // omtauinv * particle_distributions[x, y, z, 4]
+
+        __m256d vel_y_diff = _mm256_fmadd_pd(velocity_y_vec, const_min_cs_2_inv_vec, vel_y_pow_div_c_s_4_vec); // velocity_field_y[x, y, z] ** 2 / c_s_4 - velocity_field_y[x, y, z] / c_s_2
+        __m256d feq_4_sum = _mm256_add_pd(vel_y_diff, one_min_norm_square_vec); // 1.0 + velocity_field_x[scalar_indey(x, y, z)] / c_s_2 + velocity_field_y[scalar_index(x, y, z)] * velocity_field_y[scalar_index(x, y, z)] / c_s_4 - norm_square
+        __m256d feq_4_prod = _mm256_mul_pd(feq_4_sum, weights_19_mul_density);
+        __m256d feq_4_res = _mm256_fmadd_pd(const_tauinv_vec, feq_4_prod, particle_dist_4_prod_0);
+        _mm256_store_pd(&previous_particle_distributions[scalar_index(x, y, z, 4)], feq_4_res);
+
+        // ------------- l = 5 -------------
+
+        __m256d vel_z_pow_div_c_s_4_vec = _mm256_mul_pd(velocity_z_pow_vec, const_cs_4_inv_vec);          // velocity_field_z[x, y, z] ** 2 / c_s_4
+        __m256d vel_z_sum = _mm256_fmadd_pd(velocity_z_vec, const_cs_2_inv_vec, vel_z_pow_div_c_s_4_vec); // velocity_field_xzx, y, z] ** 2 / c_s_4 + velocity_field_z[x, y, z] / c_s_2
+
+        __m256d particle_dist_5_vec = _mm256_load_pd(&particle_distributions[scalar_index(x, y, z, 5)]); // particle_distributions[x, y, z, 4]
+        __m256d particle_dist_5_prod_0 = _mm256_mul_pd(const_omtauinv_vec, particle_dist_5_vec);         // omtauinv * particle_distributions[x, y, z, 4]
+
+        __m256d feq_5_sum = _mm256_add_pd(vel_z_sum, one_min_norm_square_vec); // 1.0 + velocity_field_z[scalar_index(x, y, z)] / c_s_2 + velocity_field_z[scalar_index(x, y, z)] * velocity_field_y[scalar_index(x, y, z)] / c_s_4 - norm_square
+        __m256d feq_5_prod = _mm256_mul_pd(feq_5_sum, weights_19_mul_density);
+        __m256d feq_5_res = _mm256_fmadd_pd(const_tauinv_vec, feq_5_prod, particle_dist_5_prod_0);
+        _mm256_store_pd(&previous_particle_distributions[scalar_index(x, y, z, 5)], feq_5_res);
+
+        // ------------- l = 6 -------------
+
+        __m256d particle_dist_6_vec = _mm256_load_pd(&particle_distributions[scalar_index(x, y, z, 6)]); // particle_distributions[x, y, z, 6]
+        __m256d particle_dist_6_prod_0 = _mm256_mul_pd(const_omtauinv_vec, particle_dist_6_vec);         // omtauinv * particle_distributions[x, y, z, 6]
+
+        __m256d vel_z_diff = _mm256_fmadd_pd(velocity_z_vec, const_min_cs_2_inv_vec, vel_z_pow_div_c_s_4_vec); // velocity_field_y[x, y, z] ** 2 / c_s_6 - velocity_field_y[x, y, z] / c_s_2
+        __m256d feq_6_sum = _mm256_add_pd(vel_z_diff, one_min_norm_square_vec); // 1.0 + velocity_field_x[scalar_indey(x, y, z)] / c_s_2 + velocity_field_y[scalar_index(x, y, z)] * velocity_field_y[scalar_index(x, y, z)] / c_s_6 - norm_square
+        __m256d feq_6_prod = _mm256_mul_pd(feq_6_sum, weights_19_mul_density);
+        __m256d feq_6_res = _mm256_fmadd_pd(const_tauinv_vec, feq_6_prod, particle_dist_6_prod_0);
+        _mm256_store_pd(&previous_particle_distributions[scalar_index(x, y, z, 6)], feq_6_res);
+
+        // ------------- l = 7 -------------
+
+        __m256d dot_product_7_sum_0 = _mm256_add_pd(velocity_x_vec, velocity_y_vec);
+        __m256d dot_product_7 = _mm256_add_pd(dot_product_7_sum_0, velocity_z_vec);
+
+        __m256d feq_7_prod_0 = _mm256_mul_pd(dot_product_7, dot_product_7);
+        __m256d feq_7_prod_1 = _mm256_mul_pd(dot_product_7, const_cs_2_inv_vec);
+        __m256d feq_7_sum_0 = _mm256_fmadd_pd(feq_7_prod_0, const_cs_4_inv_vec, one_min_norm_square_vec);
+        __m256d feq_7_sum_1 = _mm256_add_pd(feq_7_prod_1, feq_7_sum_0);
+        __m256d feq_7 = _mm256_mul_pd(weights_172_mul_density, feq_7_sum_1);
+
+        __m256d particle_dist_7_vec = _mm256_load_pd(&particle_distributions[scalar_index(x, y, z, 7)]); // particle_distributions[x, y, z, 7]
+        __m256d particle_dist_7_prod_0 = _mm256_mul_pd(const_omtauinv_vec, particle_dist_7_vec);         // omtauinv * particle_distributions[x, y, z, 7]
+
+        __m256d feq_7_res = _mm256_fmadd_pd(feq_7, const_tauinv_vec, particle_dist_7_prod_0);
+        _mm256_store_pd(&previous_particle_distributions[scalar_index(x, y, z, 7)], feq_7_res);
+
+        // ------------- l = 8 -------------
+
+        __m256d feq_8_prod_0 = _mm256_mul_pd(dot_product_7, dot_product_7);
+        __m256d feq_8_prod_1 = _mm256_mul_pd(dot_product_7, const_min_cs_2_inv_vec);
+        __m256d feq_8_sum_0 = _mm256_fmadd_pd(feq_8_prod_0, const_cs_4_inv_vec, one_min_norm_square_vec);
+        __m256d feq_8_sum_1 = _mm256_add_pd(feq_8_prod_1, feq_8_sum_0);
+        __m256d feq_8 = _mm256_mul_pd(weights_172_mul_density, feq_8_sum_1);
+
+        __m256d particle_dist_8_vec = _mm256_load_pd(&particle_distributions[scalar_index(x, y, z, 8)]); // particle_distributions[x, y, z, 8]
+        __m256d particle_dist_8_prod_0 = _mm256_mul_pd(const_omtauinv_vec, particle_dist_8_vec);         // omtauinv * particle_distributions[x, y, z, 8]
+
+        __m256d feq_8_res = _mm256_fmadd_pd(feq_8, const_tauinv_vec, particle_dist_8_prod_0);
+        _mm256_store_pd(&previous_particle_distributions[scalar_index(x, y, z, 8)], feq_8_res);
+
+        // ------------- l = 9 -------------
+
+        __m256d dot_product_9_sum_0 = _mm256_add_pd(velocity_x_vec, velocity_y_vec);
+        __m256d dot_product_9 = _mm256_sub_pd(dot_product_9_sum_0, velocity_z_vec);
+
+        __m256d feq_9_prod_0 = _mm256_mul_pd(dot_product_9, dot_product_9);
+        __m256d feq_9_prod_1 = _mm256_mul_pd(dot_product_9, const_cs_2_inv_vec);
+        __m256d feq_9_sum_0 = _mm256_fmadd_pd(feq_9_prod_0, const_cs_4_inv_vec, one_min_norm_square_vec);
+        __m256d feq_9_sum_1 = _mm256_add_pd(feq_9_prod_1, feq_9_sum_0);
+        __m256d feq_9 = _mm256_mul_pd(weights_172_mul_density, feq_9_sum_1);
+
+        __m256d particle_dist_9_vec = _mm256_load_pd(&particle_distributions[scalar_index(x, y, z, 9)]); // particle_distributions[x, y, z, 9]
+        __m256d particle_dist_9_prod_0 = _mm256_mul_pd(const_omtauinv_vec, particle_dist_9_vec);         // omtauinv * particle_distributions[x, y, z, 9]
+
+        __m256d feq_9_res = _mm256_fmadd_pd(feq_9, const_tauinv_vec, particle_dist_9_prod_0);
+        _mm256_store_pd(&previous_particle_distributions[scalar_index(x, y, z, 9)], feq_9_res);
+
+        // ------------- l = 10 -------------
+
+        __m256d feq_10_prod_0 = _mm256_mul_pd(dot_product_9, dot_product_9);
+        __m256d feq_10_prod_1 = _mm256_mul_pd(dot_product_9, const_min_cs_2_inv_vec);
+        __m256d feq_10_sum_0 = _mm256_fmadd_pd(feq_10_prod_0, const_cs_4_inv_vec, one_min_norm_square_vec);
+        __m256d feq_10_sum_1 = _mm256_add_pd(feq_10_prod_1, feq_10_sum_0);
+        __m256d feq_10 = _mm256_mul_pd(weights_172_mul_density, feq_10_sum_1);
+
+        __m256d particle_dist_10_vec = _mm256_load_pd(&particle_distributions[scalar_index(x, y, z, 10)]); // particle_distributions[x, y, z, 10]
+        __m256d particle_dist_10_prod_0 = _mm256_mul_pd(const_omtauinv_vec, particle_dist_10_vec);         // omtauinv * particle_distributions[x, y, z, 10]
+
+        __m256d feq_10_res = _mm256_fmadd_pd(feq_10, const_tauinv_vec, particle_dist_10_prod_0);
+        _mm256_store_pd(&previous_particle_distributions[scalar_index(x, y, z, 10)], feq_10_res);
+
+        // ------------- l = 11 -------------
+
+        __m256d dot_product_11_sum_0 = _mm256_sub_pd(velocity_x_vec, velocity_y_vec);
+        __m256d dot_product_11 = _mm256_add_pd(dot_product_11_sum_0, velocity_z_vec);
+
+        __m256d feq_11_prod_0 = _mm256_mul_pd(dot_product_11, dot_product_11);
+        __m256d feq_11_prod_1 = _mm256_mul_pd(dot_product_11, const_cs_2_inv_vec);
+        __m256d feq_11_sum_0 = _mm256_fmadd_pd(feq_11_prod_0, const_cs_4_inv_vec, one_min_norm_square_vec);
+        __m256d feq_11_sum_1 = _mm256_add_pd(feq_11_prod_1, feq_11_sum_0);
+        __m256d feq_11 = _mm256_mul_pd(weights_172_mul_density, feq_11_sum_1);
+
+        __m256d particle_dist_11_vec = _mm256_load_pd(&particle_distributions[scalar_index(x, y, z, 11)]); // particle_distributions[x, y, z, 11]
+        __m256d particle_dist_11_prod_0 = _mm256_mul_pd(const_omtauinv_vec, particle_dist_11_vec);         // omtauinv * particle_distributions[x, y, z, 11]
+
+        __m256d feq_11_res = _mm256_fmadd_pd(feq_11, const_tauinv_vec, particle_dist_11_prod_0);
+        _mm256_store_pd(&previous_particle_distributions[scalar_index(x, y, z, 11)], feq_11_res);
+
+        // ------------- l = 12 -------------
+
+        __m256d feq_12_prod_0 = _mm256_mul_pd(dot_product_11, dot_product_11);
+        __m256d feq_12_prod_1 = _mm256_mul_pd(dot_product_11, const_min_cs_2_inv_vec);
+        __m256d feq_12_sum_0 = _mm256_fmadd_pd(feq_12_prod_0, const_cs_4_inv_vec, one_min_norm_square_vec);
+        __m256d feq_12_sum_1 = _mm256_add_pd(feq_12_prod_1, feq_12_sum_0);
+        __m256d feq_12 = _mm256_mul_pd(weights_172_mul_density, feq_12_sum_1);
+
+        __m256d particle_dist_12_vec = _mm256_load_pd(&particle_distributions[scalar_index(x, y, z, 12)]); // particle_distributions[x, y, z, 12]
+        __m256d particle_dist_12_prod_0 = _mm256_mul_pd(const_omtauinv_vec, particle_dist_12_vec);         // omtauinv * particle_distributions[x, y, z, 12]
+
+        __m256d feq_12_res = _mm256_fmadd_pd(feq_12, const_tauinv_vec, particle_dist_12_prod_0);
+        _mm256_store_pd(&previous_particle_distributions[scalar_index(x, y, z, 12)], feq_12_res);
+
+        // ------------- l = 13 -------------
+
+        __m256d dot_product_13_sum_0 = _mm256_add_pd(velocity_y_vec, velocity_z_vec);
+        __m256d dot_product_13 = _mm256_sub_pd(dot_product_13_sum_0, velocity_x_vec);
+
+        __m256d feq_13_prod_0 = _mm256_mul_pd(dot_product_13, dot_product_13);
+        __m256d feq_13_prod_1 = _mm256_mul_pd(dot_product_13, const_cs_2_inv_vec);
+        __m256d feq_13_sum_0 = _mm256_fmadd_pd(feq_13_prod_0, const_cs_4_inv_vec, one_min_norm_square_vec);
+        __m256d feq_13_sum_1 = _mm256_add_pd(feq_13_prod_1, feq_13_sum_0);
+        __m256d feq_13 = _mm256_mul_pd(weights_172_mul_density, feq_13_sum_1);
+
+        __m256d particle_dist_13_vec = _mm256_load_pd(&particle_distributions[scalar_index(x, y, z, 13)]); // particle_distributions[x, y, z, 13]
+        __m256d particle_dist_13_prod_0 = _mm256_mul_pd(const_omtauinv_vec, particle_dist_13_vec);         // omtauinv * particle_distributions[x, y, z, 13]
+
+        __m256d feq_13_res = _mm256_fmadd_pd(feq_13, const_tauinv_vec, particle_dist_13_prod_0);
+        _mm256_store_pd(&previous_particle_distributions[scalar_index(x, y, z, 13)], feq_13_res);
+
+        // ------------- l = 14 -------------
+
+        __m256d feq_14_prod_0 = _mm256_mul_pd(dot_product_13, dot_product_13);
+        __m256d feq_14_prod_1 = _mm256_mul_pd(dot_product_13, const_min_cs_2_inv_vec);
+        __m256d feq_14_sum_0 = _mm256_fmadd_pd(feq_14_prod_0, const_cs_4_inv_vec, one_min_norm_square_vec);
+        __m256d feq_14_sum_1 = _mm256_add_pd(feq_14_prod_1, feq_14_sum_0);
+        __m256d feq_14 = _mm256_mul_pd(weights_172_mul_density, feq_14_sum_1);
+
+        __m256d particle_dist_14_vec = _mm256_load_pd(&particle_distributions[scalar_index(x, y, z, 14)]); // particle_distributions[x, y, z, 14]
+        __m256d particle_dist_14_prod_0 = _mm256_mul_pd(const_omtauinv_vec, particle_dist_14_vec);         // omtauinv * particle_distributions[x, y, z, 14]
+
+        __m256d feq_14_res = _mm256_fmadd_pd(feq_14, const_tauinv_vec, particle_dist_14_prod_0);
+        _mm256_store_pd(&previous_particle_distributions[scalar_index(x, y, z, 14)], feq_14_res);
       }
     }
   }
-  std::cout << time_lbm << " " << scalar_index(0, 0, 0, 1) << " " << particle_distributions[scalar_index(0, 0, 0, 1)] << std::endl;
-  std::cout << time_lbm << " " << scalar_index(1, 0, 0, 1) << " " << particle_distributions[scalar_index(1, 0, 0, 1)] << std::endl;
-  std::cout << time_lbm << " " << scalar_index(NX - 1, 0, 0, 1) << " " << particle_distributions[scalar_index(NX - 1, 0, 0, 1)] << std::endl;
 }
 
 void perform_timestep() {
@@ -389,7 +559,7 @@ int main(int argc, char const *argv[]) {
 #ifndef TIMING
 #ifdef OUTPUT
       if ((i + 1) % save_every == 0) {
-        double percentage = (double)(i + 1) / (double)(runs)*100.0;
+        double percentage = (double)(i + 1) / (double)(runs) * 100.0;
         std::cout << "Saving data - " << (i + 1) << "/" << runs << " (" << percentage << "%)" << '\n';
         output_lbm_data("output/" + std::to_string(i + 1) + ".csv", true);
       }
