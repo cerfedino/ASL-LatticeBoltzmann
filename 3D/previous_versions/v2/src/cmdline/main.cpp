@@ -229,9 +229,9 @@ void compute_density_momentum_moment() {
 }
 
 void stream() {
-  for (int x = 0; x < NX; x++) {
+  for (int z = 0; z < NZ; z++) {
     for (int y = 0; y < NY; y++) {
-      for (int z = 0; z < NZ; z++) {
+      for (int x = 0; x < NX; x++) {
         for (int i = 0; i < direction_size; i++) {
           // Periodic boundary conditions taken from Taylor green in Chapter 13.
           if (true) {

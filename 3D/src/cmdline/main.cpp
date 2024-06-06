@@ -56,7 +56,7 @@ inline int scalar_index(int x, int y, int z) { return (z * NX * NY) + (y * NX) +
 inline int scalar_index(int x, int y, int z, int w) {
   if (w == 1) {
     // std::cout << time_lbm << " " << x << " " << abs((NX + x + time_lbm) % NX) << std::endl;
-    return (abs((NX + x - time_lbm) % NX) + y * NX + z * NX * NY + w * NX * NY * NZ);
+    return (abs((NX + x - time_lbm % NX) % NX) + y * NX + z * NX * NY + w * NX * NY * NZ);
   }
   return (x + y * NX + z * NX * NY + w * NX * NY * NZ);
 }
@@ -154,8 +154,7 @@ void set_velocity_set() {
 }
 
 void compute_density_momentum_moment() {
-  std::cout << time_lbm << " " << scalar_index(0, 0, 0, 1) << " " << particle_distributions[scalar_index(0, 0, 0, 1)] << std::endl;
-  std::cout << time_lbm << " " << scalar_index(1, 0, 0, 1) << " " << particle_distributions[scalar_index(1, 0, 0, 1)] << std::endl;
+
   for (int z = 0; z < NZ; z++) {
     for (int y = 0; y < NY; y++) {
       for (int x = 0; x < NX; x++) {
@@ -191,7 +190,8 @@ void stream() {
   for (z = 0; z < NZ; z++) {
     for (y = 0; y < NY; y++) {
       for (x = 0; x < NX; x++) {
-        //  particle_distributions[scalar_index(x, y, z, 1)] = previous_particle_distributions[scalar_index((NX + x - 1) % NX, y, z, 1)];
+        // particle_distributions[scalar_index(x, y, z, 1)] = previous_particle_distributions[scalar_index((NX + x - 1) % NX, y, z, 1)];
+
         particle_distributions[scalar_index(x, y, z, 2)] = previous_particle_distributions[scalar_index((NX + x + 1) % NX, y, z, 2)];
         particle_distributions[scalar_index(x, y, z, 3)] = previous_particle_distributions[scalar_index(x, (NY + y - 1) % NY, z, 3)];
         particle_distributions[scalar_index(x, y, z, 4)] = previous_particle_distributions[scalar_index(x, (NY + y + 1) % NY, z, 4)];
@@ -279,6 +279,7 @@ void collision() { // Performs the collision step.
   }
   std::cout << time_lbm << " " << scalar_index(0, 0, 0, 1) << " " << particle_distributions[scalar_index(0, 0, 0, 1)] << std::endl;
   std::cout << time_lbm << " " << scalar_index(1, 0, 0, 1) << " " << particle_distributions[scalar_index(1, 0, 0, 1)] << std::endl;
+  std::cout << time_lbm << " " << scalar_index(NX - 1, 0, 0, 1) << " " << particle_distributions[scalar_index(NX - 1, 0, 0, 1)] << std::endl;
 }
 
 void perform_timestep() {
