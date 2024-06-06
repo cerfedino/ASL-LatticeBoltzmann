@@ -475,8 +475,6 @@ void stream() {
 
 
   for (z = 1; z < NZ-1; z++) {
-    y = 0;
-    x = 0;
     particle_distributions[scalar_index(0, 0, z, 0)] = previous_particle_distributions[scalar_index(0, 0, z, 0)];
     particle_distributions[scalar_index(0, 0, z, 1)] = previous_particle_distributions[scalar_index(NX-1, 0, z, 1)];
     particle_distributions[scalar_index(0, 0, z, 2)] = previous_particle_distributions[scalar_index(1, 0, z, 2)];
