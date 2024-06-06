@@ -1,6 +1,6 @@
 .SECONDEXPANSION:
 CFLAGS = -g -march=native
-OPTIM_FLAGS = -Ofast
+OPTIM_FLAGS = -Ofast -floop-nest-optimize -ffinite-math-only
 
 
 
