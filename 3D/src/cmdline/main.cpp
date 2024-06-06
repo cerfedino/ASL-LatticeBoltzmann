@@ -64,12 +64,12 @@ int *reverse_indexes;
 void initialise() {
   int box_flatten_length = NX * NY * NZ;
   int distributions_flatten_length = box_flatten_length * direction_size;
-  density_field = (double *)malloc(box_flatten_length * sizeof(double));
-  velocity_field_x = (double *)malloc(box_flatten_length * sizeof(double));
-  velocity_field_y = (double *)malloc(box_flatten_length * sizeof(double));
-  velocity_field_z = (double *)malloc(box_flatten_length * sizeof(double));
-  previous_particle_distributions = (double *)malloc(distributions_flatten_length * sizeof(double));
-  particle_distributions = (double *)malloc(distributions_flatten_length * sizeof(double));
+  density_field = (double *)aligned_alloc(32, box_flatten_length * sizeof(double));
+  velocity_field_x = (double *)aligned_alloc(32, box_flatten_length * sizeof(double));
+  velocity_field_y = (double *)aligned_alloc(32, box_flatten_length * sizeof(double));
+  velocity_field_z = (double *)aligned_alloc(32, box_flatten_length * sizeof(double));
+  previous_particle_distributions = (double *)aligned_alloc(32, distributions_flatten_length * sizeof(double));
+  particle_distributions = (double *)aligned_alloc(32, distributions_flatten_length * sizeof(double));
   srand(42);
 
   for (int i = 0; i < NX * NY * NZ; i++) {
