@@ -1,4 +1,5 @@
-add_compile_options(-Ofast -fno-fast-math)
+add_compile_options(-Ofast -march=native -mavx -mfma)
+add_link_options(-Ofast -march=native -mavx -mfma)
 
 option(MNx "Define MNx macro")
 option(MNy "Define MNy macro")
