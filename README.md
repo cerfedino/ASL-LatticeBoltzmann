@@ -1,5 +1,5 @@
 # Project topic: Lattice Boltzmann method
-*Authors: Albert Cerfeda, Karlo Piskor, Dominic Wüst, Kamelia Ivanova*
+*Authors: Albert Cerfeda, Karlo Piškor, Dominic Wüst, Kamelia Ivanova*
 
 
 
