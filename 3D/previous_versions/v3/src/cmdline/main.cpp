@@ -17,10 +17,6 @@
 // the variables are in utils.h
 using namespace std;
 
-// for now one can define OUTPUT, TIMING
-//#define OUTPUT
-
-//#define TIMING
 profiler *compute_density_momentum_profiler, *collision_profiler, *stream_profiler;
 
 int time_lbm = 0;
@@ -54,7 +50,6 @@ long long papi_collision_values[2] = {0, 0};
 long long papi_stream_values[2] = {0, 0};
 #endif
 
-
 inline int scalar_index(int x, int y, int z) { return (z * NX * NY) + (y * NX) + x; }
 inline int scalar_index(int x, int y, int z, int w) { return (x + y * NX + z * NX * NY + w * NX * NY * NZ); }
 
@@ -71,55 +66,37 @@ void initialise() {
 
   previous_particle_distributions = (double *)malloc(distributions_flatten_length * sizeof(double));
   particle_distributions = (double *)malloc(distributions_flatten_length * sizeof(double));
+  srand(42);
 
   for (int i = 0; i < NX * NY * NZ; i++) {
-    density_field[i] = 1;
+    density_field[i] = 1.0;
   }
-  for (int z = 0; z < NZ; z++) {
+  for (int x = 0; x < NX; x++) {
     for (int y = 0; y < NY; y++) {
-      for (int x = 0; x < NX; x++) {
+      for (int z = 0; z < NZ; z++) {
         for (int i = 0; i < direction_size; i++) {
           previous_particle_distributions[scalar_index(x, y, z, i)] = weights[i];
           particle_distributions[scalar_index(x, y, z, i)] = weights[i];
         }
+        velocity_field[scalar_index(x, y, z)].x = (double)(rand());
+        velocity_field[scalar_index(x, y, z)].y = (double)(rand());
+        velocity_field[scalar_index(x, y, z)].z = (double)(rand());
       }
     }
   }
 
   compute_density_momentum_profiler = init_profiler(NX * NY * NZ * direction_size * 7 + NX * NY * NZ * 3, 8 * NX * NY * NZ * direction_size * 7 + (NX * NY * NZ * 3 + 15) * 8);
-  collision_profiler = init_profiler((NX * NY * NZ * direction_size * 22), 8 * (4 * NX * NY * NZ + 15 + 15));
-  stream_profiler = init_profiler(NX*NZ*5*6, NX*NY*NZ*direction_size*8*2);
+  collision_profiler = init_profiler((NX * NY * NZ * direction_size * 29 + 2), 8 * (4 * NX * NY * NZ + 15 + 15));
+  stream_profiler = init_profiler(NX * NZ * 5 * 6, NX * NY * NZ * direction_size * 8 * 2);
 
 #ifdef BENCHMARK
   papi_init(&papi_event_set);
 #endif
 }
 
-const double c_s_4 = 2 * c_s * c_s * c_s * c_s;
-const double c_s_2 = c_s * c_s;
-const double c_s_2_inv = 1 / c_s_2;
-const double c_s_4_inv = 1 / c_s_4;
-const double c_s_2_inv_2 = 1 / (2 * c_s_2);
-
-// inline double norm_square(vector_3_double d) { return (d.x * d.x + d.y * d.y + d.z * d.z); }
-// flops = 19
-double calculate_feq_4(int x, int y, int z, int i) {
-  int index = scalar_index(x, y, z);
-  double dot_product = velocity_field[index].x * (double)directions[i].x + velocity_field[index].y * (double)directions[i].y + velocity_field[index].z * (double)directions[i].z;
-  double norm_square = velocity_field[index].x * velocity_field[index].x + velocity_field[index].y * velocity_field[index].y + velocity_field[index].z * velocity_field[index].z;
-
-  double feq = weights[i] * density_field[index] * (1.0 + dot_product * c_s_2_inv + dot_product * dot_product * c_s_4_inv - norm_square * c_s_2_inv_2);
-  return feq;
-}
-
-double calculate_feq_5(int x, int y, int z, int i, double u_le_x) {
-  int index = scalar_index(x, y, z);
-  double dot_product = (velocity_field[index].x + u_le_x) * directions[i].x + velocity_field[index].y * directions[i].y + velocity_field[index].z * directions[i].z;
-  double norm_square = (velocity_field[index].x + u_le_x) * (velocity_field[index].x + u_le_x) + velocity_field[index].y * directions[i].y + velocity_field[index].z * directions[i].z;
-  // Equation 3.4 with c_s^2 = 1/3
-  double feq = weights[i] * density_field[index] * (1.0 + dot_product * c_s_2_inv + dot_product * dot_product * c_s_4_inv - norm_square * c_s_2_inv_2);
-  return feq;
-}
+#define c_s_4 (2 * c_s * c_s * c_s * c_s)
+#define c_s_2 (c_s * c_s)
+#define c_s_2_2 (2 * c_s * c_s)
 
 void set_velocity_set() {
   // Allocate memory for an array of vector_3_int structs
@@ -180,9 +157,6 @@ void set_density(int x_field, int y_field, int z_field, double density) { densit
 
 void compute_density_momentum_moment() {
   int scalar_index_curr = 0;
-  // we got some terrible memory accesses here...
-  //  we gotta do some blocking most probably
-  //  oof
   for (int z = 0; z < NZ; z++) {
     for (int y = 0; y < NY; y++) {
       for (int x = 0; x < NX; x++) {
@@ -244,39 +218,36 @@ void compute_density_momentum_moment() {
 }
 
 void stream() {
-  // flops = NX*NZ*5*6
-  // bytes = NX*NY*NZ*direction_size*8*2
-  for (int z = 0; z < NZ; z++) {
+  for (int x = 0; x < NX; x++) {
     for (int y = 0; y < NY; y++) {
-      for (int x = 0; x < NX; x++) {
+      for (int z = 0; z < NZ; z++) {
         for (int i = 0; i < direction_size; i++) {
-          if (y == 0 && directions[i].y == 1) {
-            particle_distributions[scalar_index(x, y, z, i)] = previous_particle_distributions[scalar_index(x, y, z, reverse_indexes[i])];
-          } else if (y == NY - 1 && directions[i].y == -1) {
-            double u_max = 0.1;
-            particle_distributions[scalar_index(x, y, z, i)] = previous_particle_distributions[scalar_index(x, y, z, reverse_indexes[i])] + directions[i].x * 2 * weights[i] / (c_s * c_s) * u_max;
-          } else {
-            int xmd = (NX + x - directions[i].x) % NX;
-            int ymd = y - directions[i].y;
-            int zmd = (NZ + z - directions[i].z) % NZ;
+          // Periodic boundary conditions taken from Taylor green in Chapter 13.
+          if (true) {
+            // X position Minus the Direction (xmd) applies to y and z.
+            int xmd = (NX + x - (int)directions[i].x) % NX;
+            int ymd = (NY + y - (int)directions[i].y) % NY;
+            int zmd = (NZ + z - (int)directions[i].z) % NZ;
             particle_distributions[scalar_index(x, y, z, i)] = previous_particle_distributions[scalar_index(xmd, ymd, zmd, i)];
+            // Equation 3.10 with periodic boundary conditions.
           }
         }
       }
     }
   }
 }
-
 void collision() { // Performs the collision step.
   const double tauinv = 1.0 / tau;
   const double omtauinv = 1.0 - tauinv; // 1 - 1/tau
-
   for (int z = 0; z < NZ; z++) {
     for (int y = 0; y < NY; y++) {
       for (int x = 0; x < NX; x++) {
-
         for (int i = 0; i < direction_size; i++) {
-          double feq = calculate_feq_4(x, y, z, i);
+          double dot_product = velocity_field[scalar_index(x, y, z)].x * (double)directions[i].x + velocity_field[scalar_index(x, y, z)].y * (double)directions[i].y + velocity_field[scalar_index(x, y, z)].z * (double)directions[i].z;
+          double norm_square = (velocity_field[scalar_index(x, y, z)].x) * (velocity_field[scalar_index(x, y, z)].x) + velocity_field[scalar_index(x, y, z)].y * velocity_field[scalar_index(x, y, z)].y +
+                               velocity_field[scalar_index(x, y, z)].z * velocity_field[scalar_index(x, y, z)].z;
+          double feq = weights[i] * density_field[scalar_index(x, y, z)] * (1.0 + dot_product / c_s_2 + dot_product * dot_product / c_s_4 - norm_square / c_s_2_2);
+
           // Equation 3.9
           previous_particle_distributions[scalar_index(x, y, z, i)] = omtauinv * particle_distributions[scalar_index(x, y, z, i)] + tauinv * feq;
         }
@@ -287,25 +258,6 @@ void collision() { // Performs the collision step.
 
 void perform_timestep() {
   time_lbm++;
-
-// ----------------- DENSITY_MOMENTUM_MOMENT -----------------
-#ifdef BENCHMARK
-  if (PAPI_start(papi_event_set) != PAPI_OK) {
-    fprintf(stderr, "PAPI start error!\n");
-    exit(1);
-  }
-#endif
-  start_run(compute_density_momentum_profiler);
-  compute_density_momentum_moment();
-  end_run(compute_density_momentum_profiler);
-#ifdef BENCHMARK
-  if (PAPI_stop(papi_event_set, papi_values) != PAPI_OK) {
-    fprintf(stderr, "PAPI stop error!\n");
-    exit(1);
-  }
-  papi_density_values[0] += 64 * papi_values[0];
-  papi_density_values[1] += papi_values[1];
-#endif
 
 // ----------------- COLLISION -----------------
 #ifdef BENCHMARK
@@ -344,11 +296,33 @@ void perform_timestep() {
   papi_stream_values[0] += 64 * papi_values[0];
   papi_stream_values[1] += papi_values[1];
 #endif
+// ----------------- DENSITY_MOMENTUM_MOMENT -----------------
+#ifdef BENCHMARK
+  if (PAPI_start(papi_event_set) != PAPI_OK) {
+    fprintf(stderr, "PAPI start error!\n");
+    exit(1);
+  }
+#endif
+  start_run(compute_density_momentum_profiler);
+  compute_density_momentum_moment();
+  end_run(compute_density_momentum_profiler);
+#ifdef BENCHMARK
+  if (PAPI_stop(papi_event_set, papi_values) != PAPI_OK) {
+    fprintf(stderr, "PAPI stop error!\n");
+    exit(1);
+  }
+  papi_density_values[0] += 64 * papi_values[0];
+  papi_density_values[1] += papi_values[1];
+#endif
 }
 
 int main(int argc, char const *argv[]) {
-  if(system("rm -rf output") == -1){std::cout<<"UNSUCCESSFULLY REMOVED OUTPUT FOLDER"<<std::endl;}
-  if(system("mkdir output")== -1){std::cout<<"UNSUCCESSFULLY CREATED OUTPUT FOLDER"<<std::endl;}
+  if (system("rm -rf output") == -1) {
+    std::cout << "UNSUCCESSFULLY REMOVED OUTPUT FOLDER" << std::endl;
+  }
+  if (system("mkdir output") == -1) {
+    std::cout << "UNSUCCESSFULLY CREATED OUTPUT FOLDER" << std::endl;
+  }
 
   unsigned long long start_cycle, end_cycle;
   time_t start_sec, end_sec;
@@ -390,7 +364,7 @@ int main(int argc, char const *argv[]) {
 #ifndef TIMING
 #ifdef OUTPUT
       if ((i + 1) % save_every == 0) {
-        double percentage = (double)(i + 1) / (double)(runs) * 100.0;
+        double percentage = (double)(i + 1) / (double)(runs)*100.0;
         std::cout << "Saving data - " << (i + 1) << "/" << runs << " (" << percentage << "%)" << '\n';
         output_lbm_data("output/" + std::to_string(i + 1) + ".csv", true);
       }

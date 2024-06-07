@@ -1,4 +1,4 @@
-add_compile_options(-march=native)
+add_compile_options()
 
 option(MNx "Define MNx macro")
 option(MNy "Define MNy macro")
