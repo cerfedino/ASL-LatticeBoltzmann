@@ -189,7 +189,7 @@ def main():
         WORK = conf["WORK"]
         DATA_MOVEMENT = conf["DATA_MOV"]
 
-        version_labels.append(f"{TITLE}\n{DESC}")
+        version_labels.append(VERSION)
 
         print("\nVERSION: ", VERSION)
         print("Path: ", PATH)

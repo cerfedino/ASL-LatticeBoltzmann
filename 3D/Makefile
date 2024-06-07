@@ -6,7 +6,7 @@ RUN_PARAMS = 30 50 10 100
 ifeq ($(firstword $(MAKECMDGOALS)),test)
 	RUN_PARAMS = 30 50 10 400
 else ifeq ($(firstword $(MAKECMDGOALS)),sizevscyclesplot)
-	RUN_PARAMS = 30 50 10 400
+	RUN_PARAMS = 4 4 4 10
 endif
 
 RUN_PARAMS_ESCAPED =  $(shell echo $(RUN_PARAMS) | tr ' ' '_')
