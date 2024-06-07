@@ -63,7 +63,7 @@ def init_plot():
 
     plt.gca().yaxis.grid(True, which='major', color='w', linestyle='-', linewidth=1.5)
     plt.xlabel("Input size [bytes]", fontsize=14, rotation=0, labelpad=5, ha='center')
-    plt.ylabel("Cycles [log scale]", fontsize=14, rotation=0, ha='left', labelpad=-15, position=(1,1))
+    plt.ylabel("Cycles/Input size [cycles/bytes] [log scale]", fontsize=14, rotation=0, ha='left', labelpad=-15, position=(1,1))
 
     return fig
 
@@ -102,6 +102,8 @@ def main():
 
   YMAX = 0
   for v_idx,path in enumerate(previous_versions):
+    if os.path.basename(path).startswith("_"):
+      continue
     print("=========")
     
     conf = dotenv_values(path+"/.env")
@@ -174,9 +176,9 @@ def main():
     
     colorrange = (0, 90)
     curcolor = hsv_to_rgb([[(colorrange[0]+((colorrange[1]-colorrange[0])*((v_idx+1)/len(previous_versions))))/360,  1, 0.7]])[0]
-    plt.gca().plot(input_sizes, total_cycles, '-ro', label=TITLE, color=curcolor)
+    plt.gca().plot(input_sizes, [cycle/input_sizes[i] for i,cycle in enumerate(total_cycles)], '-ro', label=TITLE, color=curcolor)
     
-    YMAX = max(YMAX, max(total_cycles))
+    YMAX = max(YMAX, max([cycle/input_sizes[i] for i,cycle in enumerate(total_cycles)]))
     
   YMAX*=1.1
 
@@ -189,7 +191,7 @@ def main():
   plt.axvline(x=(L1_SIZE_BYTES+L2_SIZE_BYTES+L3_SIZE_BYTES), color='gray', linestyle='--', label=f"L3 Cache Size: {int(L3_SIZE_BYTES)} bytes")
   plt.text((L1_SIZE_BYTES+L2_SIZE_BYTES+L3_SIZE_BYTES), YMAX*0.99, f"L3", va='top', ha='right')
 
-  plt.title(f"Size vs Cycles ({Nt} iterations)", fontsize=20, pad=20)
+  plt.title(f"Cycles to input size ratio ({Nt} iterations)", fontsize=20, pad=20)
   plt.gca().get_yaxis().get_major_formatter().set_scientific(False)  # Disable scientific notation
   plt.yscale('log')
   plt.xlim(0, XMAX)

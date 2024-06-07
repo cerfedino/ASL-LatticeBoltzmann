@@ -7,14 +7,8 @@
 #define nu 0.16666666666
 #define tau 0.6
 #define gamma_dot 0.01
-#define boundary_conditions "couette"
-#define tauinv (1.0 / tau)
-#define omtauinv (1.0 - tauinv)
+#define boundary_conditions "periodic"
 
-#define weights_29 (2.0 / 9.0)
-#define weights_19 (1.0 / 9.0)
-#define weights_172 (1.0 / 72.0)
-#define direction_size 15
 #include <string>
 
 struct vector_3_int {
@@ -28,19 +22,13 @@ struct vector_3_int {
   }
 };
 
-struct vector_3_double {
-  double x = 0.0;
-  double y = 0.0;
-  double z = 0.0;
-};
-
-inline double norm_square(vector_3_double d) { return (d.x * d.x + d.y * d.y + d.z * d.z); }
-
 extern double *density_field;
-extern double *velocity_field;
+extern double *velocity_field_x;
+extern double *velocity_field_y;
+extern double *velocity_field_z;
 extern double *previous_particle_distributions;
 extern double *particle_distributions;
-
+extern int direction_size;
 extern int NX, NY, NZ, NT;
 
 inline void free_up() {

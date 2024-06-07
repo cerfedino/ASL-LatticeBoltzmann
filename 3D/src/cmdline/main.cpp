@@ -21,6 +21,9 @@ using namespace std;
 profiler *compute_density_momentum_profiler, *collision_profiler, *stream_profiler;
 
 int time_lbm = 0;
+int time_lbm_x = 0;
+int time_lbm_y = 0;
+int time_lbm_z = 0;
 
 #ifdef MNx
 #define NX (MNx)
