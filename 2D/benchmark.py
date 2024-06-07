@@ -336,14 +336,14 @@ def main():
     normalized_df = normalized_df.transpose()
     bottom = np.zeros(len(version_labels))
     for col in normalized_df.columns:
-        p = bar_fig.gca().bar(version_labels, normalized_df[col], 0.5, label=col, bottom=bottom)
-        bar_fig.gca().bar_label(p, fmt=col.upper(), label_type='center', size='x-large')
+        p = bar_fig.gca().bar(['_'+i for i in version_labels], normalized_df[col], 0.5, label=col, bottom=bottom)
+        # bar_fig.gca().bar_label(p, fmt=col.upper(), label_type='center', size='x-large')
         bottom += normalized_df[col]
     bar_fig.gca().legend(loc="upper right", fontsize='large') 
     bar_fig.gca().tick_params(labelsize='large')
     
     x_ticks = range(len(version_labels))
-    x_labels = version_labels
+    x_labels = ['v'+i for i in version_labels]
     plt.xticks(x_ticks, x_labels, rotation=0, horizontalalignment='center')
 
     plt_all.legend(loc="upper right", fontsize='large')
