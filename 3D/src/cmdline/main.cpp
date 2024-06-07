@@ -168,6 +168,31 @@ void set_velocity_set() {
   weights[14] = 1.0 / 72.0;
 }
 
+void stream() {
+  int z = 0, y = 0, x = 0;
+
+  for (z = 0; z < NZ; z++) {
+    for (y = 0; y < NY; y++) {
+      for (x = 0; x < NX; x++) {
+        particle_distributions[scalar_index(x, y, z, 1)] = previous_particle_distributions[scalar_index((NX + x - 1) % NX, y, z, 1)];
+        particle_distributions[scalar_index(x, y, z, 2)] = previous_particle_distributions[scalar_index((NX + x + 1) % NX, y, z, 2)];
+        particle_distributions[scalar_index(x, y, z, 3)] = previous_particle_distributions[scalar_index(x, (NY + y - 1) % NY, z, 3)];
+        particle_distributions[scalar_index(x, y, z, 4)] = previous_particle_distributions[scalar_index(x, (NY + y + 1) % NY, z, 4)];
+        particle_distributions[scalar_index(x, y, z, 5)] = previous_particle_distributions[scalar_index(x, y, (NZ + z - 1) % NZ, 5)];
+        particle_distributions[scalar_index(x, y, z, 6)] = previous_particle_distributions[scalar_index(x, y, (NZ + z + 1) % NZ, 6)];
+        particle_distributions[scalar_index(x, y, z, 7)] = previous_particle_distributions[scalar_index((NX + x - 1) % NX, (NY + y - 1) % NY, (NZ + z - 1) % NZ, 7)];
+        particle_distributions[scalar_index(x, y, z, 8)] = previous_particle_distributions[scalar_index((NX + x + 1) % NX, (NY + y + 1) % NY, (NZ + z + 1) % NZ, 8)];
+        particle_distributions[scalar_index(x, y, z, 9)] = previous_particle_distributions[scalar_index((NX + x - 1) % NX, (NY + y - 1) % NY, (NZ + z + 1) % NZ, 9)];
+        particle_distributions[scalar_index(x, y, z, 10)] = previous_particle_distributions[scalar_index((NX + x + 1) % NX, (NY + y + 1) % NY, (NZ + z - 1) % NZ, 10)];
+        particle_distributions[scalar_index(x, y, z, 11)] = previous_particle_distributions[scalar_index((NX + x - 1) % NX, (NY + y + 1) % NY, (NZ + z - 1) % NZ, 11)];
+        particle_distributions[scalar_index(x, y, z, 12)] = previous_particle_distributions[scalar_index((NX + x + 1) % NX, (NY + y - 1) % NY, (NZ + z + 1) % NZ, 12)];
+        particle_distributions[scalar_index(x, y, z, 13)] = previous_particle_distributions[scalar_index((NX + x + 1) % NX, (NY + y - 1) % NY, (NZ + z - 1) % NZ, 13)];
+        particle_distributions[scalar_index(x, y, z, 14)] = previous_particle_distributions[scalar_index((NX + x - 1) % NX, (NY + y + 1) % NY, (NZ + z + 1) % NZ, 14)];
+      }
+    }
+  }
+}
+
 void compute_density_momentum_moment() {
 
   for (int z = 0; z < NZ; z++) {
@@ -245,31 +270,6 @@ void compute_density_momentum_moment() {
         __m256d z_sum = _mm256_add_pd(_5_13_7_11_10_m6, m_8_9_m_12_14);
         __m256d vel_field_z = _mm256_mul_pd(z_sum, new_dens_inv);
         _mm256_store_pd(&velocity_field_z[scalar_index(x, y, z)], vel_field_z);
-      }
-    }
-  }
-}
-
-void stream() {
-  int z = 0, y = 0, x = 0;
-
-  for (z = 0; z < NZ; z++) {
-    for (y = 0; y < NY; y++) {
-      for (x = 0; x < NX; x++) {
-        particle_distributions[scalar_index(x, y, z, 1)] = previous_particle_distributions[scalar_index((NX + x - 1) % NX, y, z, 1)];
-        particle_distributions[scalar_index(x, y, z, 2)] = previous_particle_distributions[scalar_index((NX + x + 1) % NX, y, z, 2)];
-        particle_distributions[scalar_index(x, y, z, 3)] = previous_particle_distributions[scalar_index(x, (NY + y - 1) % NY, z, 3)];
-        particle_distributions[scalar_index(x, y, z, 4)] = previous_particle_distributions[scalar_index(x, (NY + y + 1) % NY, z, 4)];
-        particle_distributions[scalar_index(x, y, z, 5)] = previous_particle_distributions[scalar_index(x, y, (NZ + z - 1) % NZ, 5)];
-        particle_distributions[scalar_index(x, y, z, 6)] = previous_particle_distributions[scalar_index(x, y, (NZ + z + 1) % NZ, 6)];
-        particle_distributions[scalar_index(x, y, z, 7)] = previous_particle_distributions[scalar_index((NX + x - 1) % NX, (NY + y - 1) % NY, (NZ + z - 1) % NZ, 7)];
-        particle_distributions[scalar_index(x, y, z, 8)] = previous_particle_distributions[scalar_index((NX + x + 1) % NX, (NY + y + 1) % NY, (NZ + z + 1) % NZ, 8)];
-        particle_distributions[scalar_index(x, y, z, 9)] = previous_particle_distributions[scalar_index((NX + x - 1) % NX, (NY + y - 1) % NY, (NZ + z + 1) % NZ, 9)];
-        particle_distributions[scalar_index(x, y, z, 10)] = previous_particle_distributions[scalar_index((NX + x + 1) % NX, (NY + y + 1) % NY, (NZ + z - 1) % NZ, 10)];
-        particle_distributions[scalar_index(x, y, z, 11)] = previous_particle_distributions[scalar_index((NX + x - 1) % NX, (NY + y + 1) % NY, (NZ + z - 1) % NZ, 11)];
-        particle_distributions[scalar_index(x, y, z, 12)] = previous_particle_distributions[scalar_index((NX + x + 1) % NX, (NY + y - 1) % NY, (NZ + z + 1) % NZ, 12)];
-        particle_distributions[scalar_index(x, y, z, 13)] = previous_particle_distributions[scalar_index((NX + x + 1) % NX, (NY + y - 1) % NY, (NZ + z - 1) % NZ, 13)];
-        particle_distributions[scalar_index(x, y, z, 14)] = previous_particle_distributions[scalar_index((NX + x - 1) % NX, (NY + y + 1) % NY, (NZ + z + 1) % NZ, 14)];
       }
     }
   }
@@ -506,25 +506,6 @@ void collision() { // Performs the collision step.
 
 void perform_timestep() {
 
-// ----------------- COLLISION -----------------
-#ifdef BENCHMARK
-  if (PAPI_start(papi_event_set) != PAPI_OK) {
-    fprintf(stderr, "PAPI start error!\n");
-    exit(1);
-  }
-#endif
-  start_run(collision_profiler);
-  collision();
-  end_run(collision_profiler);
-#ifdef BENCHMARK
-  if (PAPI_stop(papi_event_set, papi_values) != PAPI_OK) {
-    fprintf(stderr, "PAPI stop error!\n");
-    exit(1);
-  }
-  papi_collision_values[0] += 64 * papi_values[0];
-  papi_collision_values[1] += papi_values[1];
-#endif
-  time_lbm++;
 // ----------------- STREAM -----------------
 #ifdef BENCHMARK
   if (PAPI_start(papi_event_set) != PAPI_OK) {
@@ -561,6 +542,25 @@ void perform_timestep() {
   papi_density_values[0] += 64 * papi_values[0];
   papi_density_values[1] += papi_values[1];
 #endif
+// ----------------- COLLISION -----------------
+#ifdef BENCHMARK
+  if (PAPI_start(papi_event_set) != PAPI_OK) {
+    fprintf(stderr, "PAPI start error!\n");
+    exit(1);
+  }
+#endif
+  start_run(collision_profiler);
+  collision();
+  end_run(collision_profiler);
+#ifdef BENCHMARK
+  if (PAPI_stop(papi_event_set, papi_values) != PAPI_OK) {
+    fprintf(stderr, "PAPI stop error!\n");
+    exit(1);
+  }
+  papi_collision_values[0] += 64 * papi_values[0];
+  papi_collision_values[1] += papi_values[1];
+#endif
+  time_lbm++;
 }
 
 int main(int argc, char const *argv[]) {
@@ -603,6 +603,8 @@ int main(int argc, char const *argv[]) {
 #endif
 
     // finish setup
+
+    collision();
 
     // start simulation
     for (int i = 0; i < runs; i = i + 1) {
