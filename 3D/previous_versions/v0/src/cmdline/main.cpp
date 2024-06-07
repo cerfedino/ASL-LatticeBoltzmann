@@ -70,9 +70,9 @@ void initialise() {
           previous_particle_distributions[scalar_index(x, y, z, i)] = weights[i];
           particle_distributions[scalar_index(x, y, z, i)] = weights[i];
         }
-        velocity_field[scalar_index(x, y, z)].x = 1 + 0.01 * (((double)rand() / (RAND_MAX)) + 1);
-        velocity_field[scalar_index(x, y, z)].y = 1 + 0.01 * (((double)rand() / (RAND_MAX)) + 1);
-        velocity_field[scalar_index(x, y, z)].z = 1 + 0.01 * (((double)rand() / (RAND_MAX)) + 1);
+        velocity_field[scalar_index(x, y, z)].x = 0.5;
+        velocity_field[scalar_index(x, y, z)].y = 0.25;
+        velocity_field[scalar_index(x, y, z)].z = 0.25;
       }
     }
   }
@@ -348,7 +348,7 @@ int main(int argc, char const *argv[]) {
 #ifndef TIMING
 #ifdef OUTPUT
       if (((i + 1) % save_every) == 0) {
-        double percentage = (double)(i + 1) / (double)(runs)*100.0;
+        double percentage = (double)(i + 1) / (double)(runs) * 100.0;
         std::cout << "Saving data - " << (i + 1) << "/" << runs << " (" << percentage << "%)" << '\n';
         output_lbm_data("output/" + std::to_string(i + 1) + ".csv", true);
       }
