@@ -6,6 +6,8 @@ RUN_PARAMS = 20 20 20 100
 ifeq ($(firstword $(MAKECMDGOALS)),test)
 	RUN_PARAMS = 20 20 20 400
 else ifeq ($(firstword $(MAKECMDGOALS)),sizevscyclesplot)
+    RUN_PARAMS = 16 8 50
+else ifeq ($(firstword $(MAKECMDGOALS)),sizevscyclesplot_report)
 	RUN_PARAMS = 4 4 4 10
 endif
 
@@ -53,6 +55,9 @@ endef
 
 sizevscyclesplot: $(PAST_VERSIONS_PROFILE_OBJ_RANGE)
 	mkdir -p artifacts/; python3 sizevscyclesplot.py $(RUN_PARAMS) $(RANGE_I)
+
+sizevscyclesplot_report: $(PAST_VERSIONS_PROFILE_OBJ_RANGE)
+	mkdir -p artifacts/; python3 sizevscyclesplot_report.py $(RUN_PARAMS) $(RANGE_I)
 
 
 # Recipe for building any version

@@ -10,6 +10,8 @@ else ifeq ($(firstword $(MAKECMDGOALS)),profile)
     RUN_PARAMS = 80 40 300
 else ifeq ($(firstword $(MAKECMDGOALS)),sizevscyclesplot)
     RUN_PARAMS = 16 8 50
+else ifeq ($(firstword $(MAKECMDGOALS)),sizevscyclesplot_report)
+    RUN_PARAMS = 16 8 50
 else
 	# $(info 'USING DEFAULT RUN_PARAMS')
 	RUN_PARAMS = 400 200 300
@@ -59,6 +61,8 @@ endef
 sizevscyclesplot: $(PAST_VERSIONS_PROFILE_OBJ_RANGE)
 	mkdir -p artifacts/; python3 sizevscyclesplot.py $(RUN_PARAMS) $(RANGE_I)
 
+sizevscyclesplot_report: $(PAST_VERSIONS_PROFILE_OBJ_RANGE)
+	mkdir -p artifacts/; python3 sizevscyclesplot_report.py $(RUN_PARAMS) $(RANGE_I)
 
 output/00_latest_$(RUN_PARAMS_ESCAPED)/timestamp_$(RUN_PARAMS_ESCAPED).txt: ./src/main_optimized_debug_$(RUN_PARAMS_ESCAPED).o
 	mkdir -p output/; ./src/main_optimized_debug_$(RUN_PARAMS_ESCAPED).o $(RUN_PARAMS);

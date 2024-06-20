@@ -52,19 +52,6 @@ print("L3_SIZE_BYTES: ", L3_SIZE_BYTES)
 
 
 
-def init_plot():
-
-    PLT_FACECOLOR="#E4E4E4"
-    PLT_BOUND_COLOR="#55575C"
-
-    fig = plt.figure(figsize=(6, 4), facecolor="white")
-    plt.gca().set_facecolor(PLT_FACECOLOR)
-
-    plt.gca().yaxis.grid(True, which='major', color='w', linestyle='-', linewidth=2)
-    
-    return fig
-
-
 def run_executable_and_get_output(executable_path, args):
     try:
         print(f"Running {executable_path} {' '.join(args)}")
@@ -93,7 +80,13 @@ def main():
   # Get sorted indexes of previous_versions
   previous_versions.sort(key=lambda x: int(os.path.basename(x).lstrip("_").lstrip("v")))
   
-  fig = init_plot()
+  
+  PLT_FACECOLOR="#E4E4E4"
+  PLT_BOUND_COLOR="#55575C"
+
+  fig, ax = plt.subplots(figsize=(6, 4), facecolor="white")
+  plt.gca().set_facecolor(PLT_FACECOLOR)
+  plt.gca().yaxis.grid(True, which='major', color='w', linestyle='-', linewidth=2)
   
   y0 = []
 
@@ -203,10 +196,15 @@ def main():
   plt.xticks(xticks, [f"{int(x/1000000)}MB" for x in xticks])
   # plt.yticks(yticks, yticks, fontsize=25)
   
+  plt.subplots_adjust(top=0.85)
+  plt.text(0, YMAX*1.4, 'Lattice Boltzmann 2D implementations on Intel Core i7-7700 (single core)', fontsize=8, fontweight='bold')
+  plt.text(0, YMAX*1.1, 'Cycles/Input size [Cycles/Bytes] vs. Input size [Bytes]', fontsize=8)
+  
+  
   plt.xlim(0, XMAX)
   plt.ylim(0, YMAX)
   # fig.legend()
-  fig.savefig(f"{OUTPUT_FOLDER}/sizevscycles.out.pdf", bbox_inches='tight', pad_inches=0)
+  fig.savefig(f"{OUTPUT_FOLDER}/sizevscycles_report.out.pdf", bbox_inches='tight', pad_inches=0)
 
   fig.show()
 
