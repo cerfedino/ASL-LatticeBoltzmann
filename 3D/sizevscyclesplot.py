@@ -197,7 +197,7 @@ def main():
   plt.xlim(0, XMAX)
   plt.ylim(0, YMAX)
   fig.legend()
-  fig.savefig(f"{OUTPUT_FOLDER}/sizevscycles.out.pdf")
+  fig.savefig(f"{OUTPUT_FOLDER}/sizevscycles.out.pdf", bbox_inches='tight', pad_inches=0)
 
   fig.show()
 

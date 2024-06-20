@@ -320,10 +320,10 @@ def main():
 
     plt_all.legend(loc="upper right", fontsize='large')
     
-    plt_all.savefig(f"{OUTPUT_FOLDER}/nostream_roofline_plot.out.pdf")
-    plt_density_momentum.savefig(f"{OUTPUT_FOLDER}/nostream_roofline_plot_density_momentum.out.pdf")
-    plt_collision.savefig(f"{OUTPUT_FOLDER}/nostream_roofline_plot_collision.out.pdf")
-    bar_fig.savefig(f"{OUTPUT_FOLDER}/nostream_bar_plot.out.pdf")
+    plt_all.savefig(f"{OUTPUT_FOLDER}/nostream_roofline_plot.out.pdf", bbox_inches='tight', pad_inches=0)
+    plt_density_momentum.savefig(f"{OUTPUT_FOLDER}/nostream_roofline_plot_density_momentum.out.pdf", bbox_inches='tight', pad_inches=0)
+    plt_collision.savefig(f"{OUTPUT_FOLDER}/nostream_roofline_plot_collision.out.pdf", bbox_inches='tight', pad_inches=0)
+    bar_fig.savefig(f"{OUTPUT_FOLDER}/nostream_bar_plot.out.pdf", bbox_inches='tight', pad_inches=0)
     
     # create one plot with all plots in one big 
     #fig, axs = plt.subplots(2, 2, figsize=(20, 12), facecolor="white")

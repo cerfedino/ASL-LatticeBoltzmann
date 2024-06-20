@@ -347,12 +347,12 @@ def main():
     plt.xticks(x_ticks, x_labels, rotation=0, horizontalalignment='center')
 
     plt_all.legend(loc="upper right", fontsize='large')
-    plt_all.savefig(f"{OUTPUT_FOLDER}/roofline_plot.out.pdf")
-    plt_rho.savefig(f"{OUTPUT_FOLDER}/roofline_plot_rho.out.pdf")
-    plt_feq.savefig(f"{OUTPUT_FOLDER}/roofline_plot_feq.out.pdf")
-    plt_f.savefig(f"{OUTPUT_FOLDER}/roofline_plot_f.out.pdf")
-    plt_vort.savefig(f"{OUTPUT_FOLDER}/roofline_plot_vort.out.pdf")
-    bar_fig.savefig(f"{OUTPUT_FOLDER}/bar_plot.out.pdf")
+    plt_all.savefig(f"{OUTPUT_FOLDER}/roofline_plot.out.pdf", bbox_inches='tight', pad_inches=0)
+    plt_rho.savefig(f"{OUTPUT_FOLDER}/roofline_plot_rho.out.pdf", bbox_inches='tight', pad_inches=0)
+    plt_feq.savefig(f"{OUTPUT_FOLDER}/roofline_plot_feq.out.pdf", bbox_inches='tight', pad_inches=0)
+    plt_f.savefig(f"{OUTPUT_FOLDER}/roofline_plot_f.out.pdf", bbox_inches='tight', pad_inches=0)
+    plt_vort.savefig(f"{OUTPUT_FOLDER}/roofline_plot_vort.out.pdf", bbox_inches='tight', pad_inches=0)
+    bar_fig.savefig(f"{OUTPUT_FOLDER}/bar_plot.out.pdf", bbox_inches='tight', pad_inches=0)
 
     plt.show()
 
