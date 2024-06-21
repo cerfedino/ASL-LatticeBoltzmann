@@ -202,8 +202,8 @@ def main():
   # plt.yticks(yticks, yticks, fontsize=25)
   
   plt.subplots_adjust(top=0.85)
-  plt.text(0, YMAX*1.4, 'Lattice Boltzmann 3D implementations on Intel Core i7-7700 (single core)', fontsize=8, fontweight='bold')
-  plt.text(0, YMAX*1.1, 'Cycles/Input size [Cycles/Bytes] vs. Input size [Bytes]', fontsize=8)
+  plt.text(0, YMAX*1.4, 'LBM 3D on AMD Ryzen 7 Pro (single core)', fontsize=10, fontweight='bold')
+  plt.text(0, YMAX*1.1, 'Cycles/Input size [Cycles/Bytes] vs. Input size [Bytes]', fontsize=10)
 
   
   plt.xlim(0, XMAX)
